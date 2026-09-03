@@ -304,6 +304,9 @@ async def _handle_peer_capture(group_id: int, source: str, data: dict):
         # 更新该 bot 的已注册命令列表（供 LLM 了解可调用命令）
         _peer_scanned_commands[source] = data["commands"]
         logger.debug(f"[Peer] 更新命令列表: bot={source}, {len(data['commands'])} 个")
+    # 未启用群：不入缓冲、不做 VLM
+    if group_id not in plugin_config.aigfm_enabled_groups:
+        return
     if data.get("text"):
         _add_peer_message(group_id, source, data["text"])
     if data.get("image_url") or data.get("image_base64"):

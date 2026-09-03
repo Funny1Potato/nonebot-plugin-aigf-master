@@ -38,6 +38,10 @@ def register_hooks(bus: ContextBus, invoker: PluginInvoker,
         if not group_id:
             return
 
+        # 仅处理启用群的插件消息（未启用群不入缓冲、不做 VLM）
+        if int(group_id) not in plugin_config.aigfm_enabled_groups:
+            return
+
         # 如果是 invoker 调用中，捕获给 invoker
         if invoker.is_active:
             message = data.get("message", "")
