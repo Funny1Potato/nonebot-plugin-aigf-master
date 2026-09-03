@@ -136,7 +136,7 @@ AIGFM_PEER_BOTS=[]                      # 其它 bot 列表，每项含 name/por
                                         # [{"name": "botB", "port": 8080, "token": "aaa114514"}]
 ```
 
-### 其它 bot 配置（安装子插件 nonebot-plugin-aigfm-peer）
+### 其它 bot 配置（安装子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer)）
 
 在其它 bot 的 `.env` 中配置：
 
@@ -223,7 +223,7 @@ LLM 基于插件响应回复
 
 ## 🌐 跨 bot 通信
 
-利用子插件 nonebot-plugin-aigfm-peer 通过 HTTP 与其它 bot 通信，实现：
+利用子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 通过 HTTP 与其它 bot 通信，实现：
 1. **消息获取**：其它 bot 的插件输出推送到本插件，进入 LLM 上下文（标注 `[bot名]`）
 2. **远程插件调用**：LLM 调用其它 bot 的命令，路由到对应 bot 远程执行
 
@@ -245,7 +245,7 @@ LLM 要调用其它 bot 的命令时：
 
 ### 部署
 
-1. 在其他bot上安装 nonebot-plugin-aigfm-peer
+1. 在其他bot上安装 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer)
 2. 在本插件 `.env` 配置 `AIGFM_PEER_BOTS`，在其它 bot `.env` 配置推送端口/token/bot名
 3. 两端 token 必须一致
 
