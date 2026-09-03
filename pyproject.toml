@@ -1,0 +1,23 @@
+[project]
+name = "nonebot-plugin-aigf-master"
+version = "0.1.0"
+description = "群聊特化LLM聊天机器人（增强版），具有记忆、表情包、跨插件调用和跨bot通信能力"
+readme = "README.md"
+requires-python = ">=3.10, <4.0"
+dependencies = [
+    "nonebot2>=2.5.0",
+    "nonebot-adapter-onebot>=2.4.6",
+    "nonebot-plugin-localstore",
+    "openai",
+    "httpx",
+    "anyio",
+    "Pillow",
+    "numpy",
+    "pydantic",
+]
+
+[project.optional-dependencies]
+search = ["tavily-python"]
+
+[tool.nonebot]
+plugins = ["nonebot_plugin_aigf_master"]
