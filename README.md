@@ -4,7 +4,7 @@
 
 ## ✨ AI-group-friend-manager ✨
 
-群聊特化 LLM 聊天机器人，具备跨插件感知、插件调用、LLM 命令学习等能力。
+群聊特化 LLM 聊天机器人，具备表情包管理、记忆存储、联网搜索、跨插件感知、插件调用、LLM 命令学习等能力。
 
 <p>
     <img src="https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python&logoColor=white" alt="python">
