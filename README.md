@@ -97,4 +97,4 @@ AIGFM_PEER_BOTS=[]                   # [{"name": "botB", "port": 8080, "token": 
 
 ## License
 
-AGPL-3.0
+MIT
