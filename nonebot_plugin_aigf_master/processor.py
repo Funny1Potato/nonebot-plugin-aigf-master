@@ -3,7 +3,7 @@
 import random
 from datetime import datetime
 
-from nonebot import logger
+from nonebot import get_driver, logger
 
 from .config import PluginConfig
 from .context_bus import ContextBus
@@ -18,6 +18,20 @@ from .preset_store import PresetStore
 from .prompt_builder import build_prompt
 from .response_parser import extract_command_learning, extract_memory_ops, extract_reply_segments, parse_llm_response
 from .search_client import SearchClient
+
+
+def _command_head(command: str) -> str:
+    """去掉命令前缀并取主命令名（用于调用核对）"""
+    command = command.strip()
+    try:
+        command_start = get_driver().config.command_start
+    except Exception:
+        command_start = set()
+    for prefix in sorted((p for p in command_start if p), key=len, reverse=True):
+        if command.startswith(prefix):
+            command = command[len(prefix):]
+            break
+    return command.split(None, 1)[0] if command else command
 
 
 class MessageProcessor:
@@ -121,7 +135,11 @@ class MessageProcessor:
 
         # 获取命令列表
         from .plugin_discovery import discover_commands
-        static_commands = discover_commands()
+        if self.config.aigfm_capture_plugins:
+            static_commands = [c for c in discover_commands()
+                               if c.plugin_name in self.config.aigfm_capture_plugins]
+        else:
+            static_commands = []          # 白名单空 → 不扫描静态命令
         learned_commands = self.learner.get_all_commands()
         # 合并：重名时用学习命令的丰富描述覆盖静态，保留静态的 plugin_name/aliases
         cmd_map: dict[str, PluginCommand] = {}
@@ -315,6 +333,14 @@ class MessageProcessor:
             elif name == "invoke_plugin":
                 command = args.get("command", "")
                 uid = args.get("user_id", self._current_user_id)
+                # 白名单核对：非空时，命令归属插件必须在白名单内
+                if self.config.aigfm_capture_plugins:
+                    from .plugin_discovery import build_command_plugin_map
+                    main = _command_head(command)
+                    plugin = build_command_plugin_map().get(main) or self.learner.find_command_plugin(main)
+                    if plugin not in self.config.aigfm_capture_plugins:
+                        logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
+                        return "该插件不在允许调用的白名单内，已拒绝调用"
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
                 results = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,

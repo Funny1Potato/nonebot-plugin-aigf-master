@@ -52,7 +52,7 @@ class PluginConfig(BaseModel):
     aigfm_https_proxy: str = Field("", description="HTTPS 代理地址")
 
     # 跨插件上下文
-    aigfm_capture_plugins: list[str] = Field(default_factory=list, description="要捕获输出的插件名列表，为空则捕获所有")
+    aigfm_capture_plugins: list[str] = Field(default_factory=list, description="插件白名单（捕获+命令扫描+调用核对共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有插件输出、但不扫描静态命令、调用不核对")
     aigfm_context_max_messages: int = Field(50, description="每群最大上下文缓冲条数")
     aigfm_context_in_prompt: int = Field(10, description="注入到 prompt 中的其它插件消息条数")
     aigfm_capture_images: bool = Field(True, description="是否捕获并解析其它插件输出的图片")
@@ -60,7 +60,6 @@ class PluginConfig(BaseModel):
     # 插件调用
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")
     aigfm_invoke_timeout: float = Field(30.0, description="插件调用超时时间（秒）")
-    aigfm_invoke_plugins: list[str] = Field(default_factory=list, description="允许调用的插件名列表，为空则全部")
 
     # 命令学习
     aigfm_learn_commands: bool = Field(True, description="是否通过群聊学习未注册的命令")

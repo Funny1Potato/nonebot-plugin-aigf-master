@@ -21,6 +21,16 @@ def discover_commands() -> list[PluginCommand]:
     return commands
 
 
+def build_command_plugin_map() -> dict[str, str]:
+    """全量扫描 → {主命令名/别名: plugin_name}，供调用核对（不受白名单影响）"""
+    mapping: dict[str, str] = {}
+    for cmd in discover_commands():
+        mapping[cmd.name] = cmd.plugin_name
+        for alias in cmd.aliases:
+            mapping[alias] = cmd.plugin_name
+    return mapping
+
+
 def _extract_command(matcher_cls) -> PluginCommand | None:
     """从 Matcher 中提取命令信息"""
     try:

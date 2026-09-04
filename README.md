@@ -118,8 +118,8 @@ AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
 AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的 key）
 
-# --- 跨插件感知 ---
-AIGFM_CAPTURE_PLUGINS=[]                # 要捕获输出的插件名列表，为空则捕获所有
+# --- 跨插件感知 / 插件白名单 ---
+AIGFM_CAPTURE_PLUGINS=[]                # 插件白名单（捕获+命令扫描+调用核对 共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有但不扫描静态命令、调用不核对
 AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析其它插件输出的图片（默认 true）
 AIGFM_CONTEXT_IN_PROMPT=10              # 注入到 prompt 中的其它插件消息条数（默认 10）
 
@@ -220,6 +220,17 @@ LLM 基于插件响应回复
   - `COMMAND_START=[""]` → 命令无前缀
   - `COMMAND_START=["/"]` → 自动补 `/`（如 `/今日小猪`）
 - 本地与 peer 插件均按各自所在 bot 的配置适配前缀
+
+### 插件白名单（`AIGFM_CAPTURE_PLUGINS`）
+
+一个白名单同时控制三件事；peer 子插件对称使用 `AIGFM_PEER_CAPTURE_PLUGINS`：
+
+| 白名单 | 捕获输出 | 静态命令扫描/上报 | 调用核对 |
+|---|---|---|---|
+| 非空 | 只捕获这些插件的输出 | 只扫描/展示这些插件的命令 | 只允许调用这些插件，其余拒绝 |
+| 空 | 捕获所有插件输出 | 不扫描静态命令（学习命令仍注入） | 不核对，任意可调用 |
+
+> 设计意图：代理/感知范围与可调用范围通常是同一批插件，合并为一个白名单简化配置。
 
 ## 🌐 跨 bot 通信
 

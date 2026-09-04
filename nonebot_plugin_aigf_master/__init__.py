@@ -37,10 +37,10 @@ from .processor import MessageProcessor
 from .search_client import create_search_client
 
 __plugin_meta__ = PluginMetadata(
-    name="nonebot-plugin-aigf-master", description="群聊特化LLM聊天机器人（增强版），具有记忆、表情包和跨插件能力",
+    name="AI群友（增强版）", description="群聊特化LLM聊天机器人（增强版），具有记忆、表情包和跨插件能力",
     usage="群聊特化LLM聊天机器人", type="application",
     config=PluginConfig, supported_adapters={"~onebot.v11"},
-    homepage="https://github.com/Funny1Potato/nonebot-plugin-aigf",
+    homepage="https://github.com/Funny1Potato/nonebot-plugin-aigf-master",
     extra={"author": "Funny1Potato"},
 )
 

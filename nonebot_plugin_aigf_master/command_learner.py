@@ -162,3 +162,11 @@ class CommandLearner:
                 "confidence": cmd["confidence"],
             })
         return result
+
+    def find_command_plugin(self, name: str) -> str | None:
+        """查学习命令归属插件名（查 _commands 与 _peer_commands），用于调用核对"""
+        for store in (self._commands, self._peer_commands):
+            cmd = store.get(name)
+            if cmd:
+                return cmd.get("plugin") or None
+        return None
