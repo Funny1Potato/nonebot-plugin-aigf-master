@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nonebot-plugin-aigf-master"
-version = "0.1.4"
+version = "1.0.0"
 description = "群聊特化LLM聊天机器人（增强版），具有记忆、表情包、跨插件调用和跨bot通信能力"
 readme = "README.md"
 license = "MIT"
