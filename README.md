@@ -74,10 +74,18 @@ plugins = ["nonebot-plugin-aigf-master"]
 ### 必填
 
 ```env
+# --- 基础设置 ---
 AIGFM_LLM_API_KEY="sk-xxxxxxxxxxxx"                               # LLM API Key
 AIGFM_LLM_BASE_URL="https://api.deepseek.com"                     # LLM API 地址
 AIGFM_LLM_MODEL="deepseek-v4-flash"                               # LLM 模型名称
 AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群号列表
+
+# --- 图片理解（VLM） ---
+AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
+AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效，默认 true）
+AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
+AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
+AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的 key）
 ```
 
 ### 可选
@@ -110,13 +118,6 @@ AIGFM_OPENWEBSEARCH_URL=""              # open-websearch 本地服务地址（ap
 AIGFM_PROXY_ENABLED=false                  # 是否启用代理（默认 false）
 AIGFM_HTTP_PROXY="http://127.0.0.1:7890"   # HTTP 代理地址
 AIGFM_HTTPS_PROXY="http://127.0.0.1:7890"  # HTTPS 代理地址
-
-# --- 图片理解（VLM） ---
-AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
-AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效，默认 true）
-AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
-AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
-AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的 key）
 
 # --- 跨插件感知 / 插件白名单 ---
 AIGFM_CAPTURE_PLUGINS=[]                # 插件白名单（捕获+命令扫描+调用核对 共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有但不扫描静态命令、调用不核对
