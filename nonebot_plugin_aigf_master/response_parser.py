@@ -6,12 +6,61 @@ import re
 from .models import MemoryOps, ReplySegment
 
 
+def _extract_json_object(text: str) -> str | None:
+    """扫描每个 '{' 起点做花括号平衡（正确处理字符串内的 {} 与 \\" 转义），
+    返回第一个能成功解析为 JSON 的对象子串；找不到返回 None。"""
+    n = len(text)
+    i = 0
+    while i < n:
+        if text[i] != "{":
+            i += 1
+            continue
+        depth = 0
+        in_str = False
+        esc = False
+        j = i
+        while j < n:
+            ch = text[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            else:
+                if ch == '"':
+                    in_str = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+            j += 1
+        if j < n:
+            candidate = text[i:j + 1]
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                pass
+        i += 1
+    return None
+
+
 def parse_llm_response(raw: str) -> dict | None:
-    """解析 LLM 返回的 JSON，去除 think 标签和代码块标记"""
+    """解析 LLM 返回的 JSON，去除 think 标签和代码块标记；容忍前导/尾随文字"""
     cleaned = re.sub(r"^```json\s*|\s*```$", "", raw.strip())
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
+        candidate = _extract_json_object(cleaned)
+        if candidate:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                return None
         return None
 
 

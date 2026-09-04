@@ -52,6 +52,7 @@ class LLMClient:
     async def chat_with_tools(
         self, prompt: str, model: str,
         tools: list[dict], tool_handler,
+        json_mode: bool = False,
     ) -> tuple[str | None, bool]:
         """支持 function calling 的响应生成"""
         messages = [{"role": "user", "content": prompt}]
@@ -81,6 +82,8 @@ class LLMClient:
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
 
             kwargs: dict = {"messages": messages, "model": model, "temperature": 0.5, "timeout": 300}
+            if json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
             response = await self._client.chat.completions.create(**kwargs)
             content = response.choices[0].message.content
             return (_strip_think_tags(content) if content else None), used_tool

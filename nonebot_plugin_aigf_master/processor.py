@@ -373,7 +373,10 @@ class MessageProcessor:
                 return result
             return f"未知工具: {name}"
 
-        return await self.llm.chat_with_tools(prompt, self.config.aigfm_llm_model, tools, handler)
+        return await self.llm.chat_with_tools(
+            prompt, self.config.aigfm_llm_model, tools, handler,
+            json_mode=self.config.aigfm_llm_json_mode,
+        )
 
     async def _save_memes(self, save_meme: list, cached_stickers: list[dict]):
         current_ids = {s["id"] for s in cached_stickers}
