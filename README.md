@@ -313,8 +313,10 @@ LLM 可以：
 |-----|------|---------|----------------|
 | `tavily`（默认） | 专为 AI 设计，返回格式友好 | `tavily-python` | https://app.tavily.com |
 | `bocha` | 国产 AI 搜索 API，中文搜索效果好 | 无 | https://open.bochaai.com |
-| `bing` | 微软必应搜索（Azure Bing Search API v7） | 无 | https://www.bing.com/apis/search |
+| `bing` | 微软必应搜索（Azure Bing Search API v7） | 无 | https://portal.azure.com |
 | `openwebsearch` | 本地 Node.js 搜索服务，聚合多引擎（bing/baidu/duckduckgo 等） | 需先启动 daemon：`cd open-webSearch && npm install && npm run serve`，配置 `AIGFM_OPENWEBSEARCH_URL` | 无需 Key，项目：https://github.com/Aas-ee/open-webSearch |
+
+> **Tavily** 需额外安装依赖：`pip install tavily-python`（或安装本插件时带上 extra：`pip install "nonebot-plugin-aigf-master[tavily]"`）
 
 ## 🧠 记忆系统
 
