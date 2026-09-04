@@ -145,7 +145,7 @@ def build_prompt(
 当用户要求使用以下**本机**功能，且聊天记录中**还没有**该命令的调用记录时，调用 invoke_plugin 工具来执行命令，不要自己编造回复：
 {cmd_list}
 
-调用示例：用户说"今日小猪"，且你此前未调用过，应调用 invoke_plugin(command="今日小猪")
+调用示例：用户说"帮我查一下今日小猪"，且你此前未调用过，应调用 invoke_plugin(command="今日小猪")
 
 ## 调用身份
 调用 invoke_plugin 或 invoke_peer_plugin 时，可通过 user_id 参数指定以哪位群友的身份调用（从上方"相关群友信息/已知群友昵称"中选择 QQ 号）。
@@ -156,7 +156,7 @@ def build_prompt(
 调用 invoke_plugin / invoke_peer_plugin 后，插件的响应（文本或图片描述）会以 `[插件名] 内容` 或 `[bot名] 内容` 的形式作为**新消息**出现在后续聊天记录中。
 - 调用后，本次回复必须为空（`"reply": []`），**不要说话**，等插件响应出现
 - 当聊天记录中出现 `[插件名] 内容` 或 `[bot名] 内容` 后，再根据插件响应决定是否回复、回复什么，**不要编造**插件的内容
-- **不要重复调用**：如果聊天记录中已经出现 `[小助手] 已调用命令「xxx」`，说明该命令已调用过，**绝不要再调用**，直接根据已有内容判断是否回复
+- **不要重复调用**：如果聊天记录中已经出现 `[你的名字] 已调用命令「xxx」`，说明该命令已调用过，**绝不要再调用**，直接根据已有内容判断是否回复
 - 如果插件响应一直未出现，再视情况告知用户插件未响应
 
 ## 重要：已知命令的处理
@@ -287,9 +287,14 @@ fields: info(一般信息), aliases(称呼), nickname(QQ昵称), past_nicknames(
     "friends": {{"123456": {{"add": [], "modify": [], "delete": [], "add_alias": [], "remove_alias": []}}}},
     "save_meme": [{{ "id": "cache_id", "description": "描述", "keywords": ["关键词"] }}],
     "culture": {{"add": [{{"term": "", "meaning": "", "context": ""}}], "modify": [], "delete": []}}
-  }}
+  }},
+  "command_learning": [{{"name": "命令名", "parameters": "可选参数说明(无则留空)", "usage": "命令 [参数]", "hook_type": "current或peer", "source": "current填插件名/peer填bot名", "examples": ["用户发送的原文"]}}],
+  "command_edit": [{{"name": "命令名", "parameters": "更新后参数说明", "usage": "更新后用法", "examples": ["更新后示例"]}}],
+  "command_delete": ["命令名"]
 }}
 ```
+
+> `command_learning` / `command_edit` / `command_delete` 是**可选**顶层字段：只在识别到新命令、需修正或删除已有命令时才输出，无相关操作时**整个字段省略**（`reply`、`memory` 各子项为空数组时也要保留外层结构）。
 
 ## 回复决策
 - 有人 @ 你 → 通常回复
