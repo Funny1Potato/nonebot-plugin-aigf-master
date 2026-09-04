@@ -309,12 +309,12 @@ LLM 可以：
 
 ### 搜索 API
 
-| API | 说明 | 额外依赖 |
-|-----|------|---------|
-| `tavily`（默认） | 专为 AI 设计，返回格式友好 | `tavily-python` |
-| `bocha` | 国产 AI 搜索 API，中文搜索效果好 | 无 |
-| `bing` | 微软必应搜索 | 无 |
-| `openwebsearch` | 本地 Node.js 搜索服务，聚合多引擎（bing/baidu/duckduckgo 等） | 需先启动 daemon：`cd open-webSearch && npm install && npm run serve`，配置 `AIGFM_OPENWEBSEARCH_URL` |
+| API | 说明 | 额外依赖 | 获取 Key / 部署 |
+|-----|------|---------|----------------|
+| `tavily`（默认） | 专为 AI 设计，返回格式友好 | `tavily-python` | https://app.tavily.com |
+| `bocha` | 国产 AI 搜索 API，中文搜索效果好 | 无 | https://open.bochaai.com |
+| `bing` | 微软必应搜索（Azure Bing Search API v7） | 无 | https://www.bing.com/apis/search |
+| `openwebsearch` | 本地 Node.js 搜索服务，聚合多引擎（bing/baidu/duckduckgo 等） | 需先启动 daemon：`cd open-webSearch && npm install && npm run serve`，配置 `AIGFM_OPENWEBSEARCH_URL` | 无需 Key，项目：https://github.com/Aas-ee/open-webSearch |
 
 ## 🧠 记忆系统
 
