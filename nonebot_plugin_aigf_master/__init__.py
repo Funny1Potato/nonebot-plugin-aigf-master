@@ -166,7 +166,7 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                             content += f"\n[发送了一张图片, id: {cache_id}] [内容:{desc.description}]\n"
                     else:
                         # VLM 失败/超时/未启用也要留下痕迹，否则纯图片消息会整条消失
-                        content += "\n[发送了一张图片]\n"
+                        content += "\n[发送了一张图片]（识图失败）\n"
             except Exception as e:
                 logger.error(f"图片处理错误: {e}")
                 content += "\n[图片加载失败]\n"
@@ -312,7 +312,7 @@ async def _describe_peer_image(group_id: int, source: str, image_url: str = "", 
             return
         image_b64 = base64.b64encode(image_bytes).decode()
         desc = await _image_handler.describe(image_b64, False)
-        content = f"[图片] {desc.description}" if desc else "[图片]"
+        content = f"[图片] {desc.description if desc else '（识图失败）'}"
         _add_peer_message(group_id, source, content, reset_timer=False)
         logger.info(f"[Peer] 捕获图片: [{source}] {content[:80]}")
     except Exception as e:

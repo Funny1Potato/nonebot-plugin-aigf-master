@@ -121,7 +121,7 @@ AIGFM_HTTPS_PROXY="http://127.0.0.1:7890"  # HTTPS 代理地址
 
 # --- 跨插件感知 / 插件白名单 ---
 AIGFM_CAPTURE_PLUGINS=[]                # 插件白名单（捕获+命令扫描+调用核对 共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有但不扫描静态命令、调用不核对
-AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析其它插件输出的图片（默认 true）
+AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析其它插件输出的图片（默认 true；仅本机插件，不影响 peer 推送）
 AIGFM_CONTEXT_IN_PROMPT=10              # 注入到 prompt 中的其它插件消息条数（默认 10）
 
 # --- 插件调用 ---
@@ -439,7 +439,7 @@ memes/
 
 - 图片内容来源依次支持 `url`、`file`（含 `http…`、`file://…`、`base64://…`）、`base64` 三种字段；群消息、其它插件输出、peer 推送都走同一套解析
 - 描述与情感两次请求**并发**发出；普通图片（非表情包）不再请求情感，只跑一次 VLM
-- 单次识图总超时为 `AIGFM_INCOMPLETE_TIMEOUT`（默认 40 秒），超时/失败/`AIGFM_VLM_ENABLED=false` 时该图片以 `[发送了一张图片]` 进入上下文（消息不会被丢弃），下一批也没有描述
+- 单次识图总超时为 `AIGFM_INCOMPLETE_TIMEOUT`（默认 40 秒），超时/失败/`AIGFM_VLM_ENABLED=false` 时群消息以 `[发送了一张图片]（识图失败）`、其它插件与 peer 推送的图片以 `[图片] （识图失败）` 进入上下文（消息不会被丢弃）
 - 解析未完成时该批会被推迟（见「触发机制」），因此慢 VLM 会推迟该群的回复；相同图片内容有 md5 结果缓存，命中即秒回
 
 ## 🎭 预设系统
