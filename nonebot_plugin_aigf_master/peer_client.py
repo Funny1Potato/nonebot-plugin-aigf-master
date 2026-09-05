@@ -35,7 +35,8 @@ class PeerClient:
                 resp = await client.post(url, json=payload, headers=headers)
                 resp.raise_for_status()
                 logger.success(f"[Peer] 调用 {peer_name} 成功: {command}")
-                return f"插件已执行（{peer_name}），响应将作为新消息出现在聊天记录中"
+                return (f"命令已投递给 {peer_name}。只有后续聊天记录里出现 [{peer_name}] 的响应才算执行成功；"
+                        "一直没有响应说明该命令不存在或对方未处理，不要当作已完成")
         except Exception as e:
             logger.error(f"[Peer] 调用 {peer_name} 失败: {e}")
             return f"远程调用 {peer_name} 失败: {e}"
