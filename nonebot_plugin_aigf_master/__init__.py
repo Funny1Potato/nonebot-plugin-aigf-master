@@ -442,6 +442,8 @@ def _is_group_msg(event: Event) -> bool:
     return isinstance(event, GroupMessageEvent)
 
 
+# 这里新增/改名的管理命令必须同步 processor.SELF_COMMANDS：
+# synthetic 事件携带真实触发用户的 user_id，少了同步会让 LLM 有机会代为执行这些命令
 status_cmd = on_command(rule=_is_group_msg, permission=SUPERUSER,
                         cmd="status", aliases={"状态"}, priority=0, block=True)
 set_role_cmd = on_command(rule=_is_group_msg, permission=SUPERUSER,

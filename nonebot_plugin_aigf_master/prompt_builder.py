@@ -117,7 +117,7 @@ def build_prompt(
 - 若群友连续发了多张图片，通常是在分享普通图片
 - 若群友只发了一张图片，而前后均没有与这张图片相关的内容，或是在图片前后仅有对该图片的介绍或评论，通常是在分享普通图片
 - 若群友发的图片内容与之前的内容有关联，或这张图片是在其它群友发言之后发出的，且**包含较为明显的情感**（开心、愤怒、疑惑等），则可能是表情包
-如果值得收藏，在 memory.save_meme 中填入 id、简短描述和关键词。
+如果值得收藏，在 memory.save_meme 中填入 id、简短描述和关键词（这是 JSON 输出字段，不是命令）。
 可用 id：""" + ", ".join(sticker_ids)
         else:
             sticker_section = """
@@ -131,7 +131,7 @@ def build_prompt(
 - 若群友连续发了多张图片，通常是在分享普通图片
 - 若群友只发了一张图片，而前后均没有与这张图片相关的内容，或是在图片前后仅有对该图片的介绍或评论，通常是在分享普通图片
 - 若群友发的图片内容与之前的内容有关联，或这张图片是在其它群友发言之后发出的，且**包含较为明显的情感**（开心、愤怒、疑惑等），则可能是表情包
-如果值得收藏，在 memory.save_meme 中填入 id 和你写的简短描述。
+如果值得收藏，在 memory.save_meme 中填入 id 和你写的简短描述（这是 JSON 输出字段，不是命令）。
 可用 id：""" + ", ".join(sticker_ids)
 
     # 群友列表
@@ -205,6 +205,20 @@ def build_prompt(
 {peer_cmd_list}
 """
 
+    # 工具调用边界：清单为空时 plugin_section 整段不注入，所以这段必须独立注入
+    # （只要开放了 invoke 工具就要有边界，否则模型有工具、无清单，只能猜命令名）
+    tool_boundary_section = ""
+    if config.aigfm_invoke_enabled:
+        tool_boundary_section = """
+## 功能调用的边界
+- 只能调用「可用的群功能」「其它 bot 的命令」清单里**逐字出现**的命令；清单里没有的命令一律不要调用
+- 上面没有列出任何清单时，不要使用 invoke_plugin / invoke_peer_plugin 工具，按普通聊天处理
+- 下方 JSON 里的 reply / memory / short_term / long_term / friends / save_meme / culture / command_learning 等都是**输出字段名，不是命令**；群里不存在 save_meme、help、send、status 这类命令
+- 收藏表情包只能通过 `memory.save_meme` 字段完成，没有任何"保存表情包"的命令可供调用
+- 没有要执行的命令时不要调用工具，更不要用「无」「没有」「none」这类占位值填写 command
+- 本插件自身的命令（状态、重置、改角色、重载表情包等）不可代为执行，调用会被直接拒绝
+"""
+
     # 文化知识
     culture_section = ""
     if matched_culture:
@@ -268,7 +282,7 @@ fields: info(一般信息), aliases(称呼), nickname(QQ昵称), past_nicknames(
 
 ## 已知群友昵称
 {user_list_str}
-{plugin_section}
+{plugin_section}{tool_boundary_section}
 ---
 
 你可以在回复的同时管理你的记忆。请输出 JSON：
@@ -294,6 +308,7 @@ fields: info(一般信息), aliases(称呼), nickname(QQ昵称), past_nicknames(
 ```
 
 > `command_learning` / `command_edit` / `command_delete` 是**可选**顶层字段：只在识别到新命令、需修正或删除已有命令时才输出，无相关操作时**整个字段省略**（`reply`、`memory` 各子项为空数组时也要保留外层结构）。
+> 上面这些键名（包括 `save_meme`、`memory`、`reply`）都**只是输出字段，不是可以调用的命令**。
 
 ## 回复决策
 - 有人 @ 你 → 通常回复

@@ -34,6 +34,20 @@ def _command_head(command: str) -> str:
     return command.split(None, 1)[0] if command else command
 
 
+# 本插件自身的管理命令不允许被 LLM 代为执行：synthetic 事件携带真实触发用户的 user_id，
+# 若该用户是 superuser，`/status`、`/reset` 等会被真的执行
+SELF_PLUGIN_NAMES = {"nonebot_plugin_aigf_master", "nonebot-plugin-aigf-master"}
+# 与 __init__.py 的 on_command 主名 + 别名保持同步（新增/改名管理命令需一并维护）
+SELF_COMMANDS = {
+    "status", "状态",
+    "reset", "重置",
+    "set_role", "设置角色",
+    "presets", "preset",
+    "set_preset", "set_presets",
+    "reload_meme", "重载表情包",
+}
+
+
 class MessageProcessor:
     """消息处理编排器，协调所有组件"""
 
@@ -290,9 +304,9 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_plugin",
-                    "description": "调用本机群内的其它功能插件",
+                    "description": "调用本机群内的其它功能插件（仅限清单中列出的命令）",
                     "parameters": {"type": "object", "properties": {
-                        "command": {"type": "string", "description": "命令（不带前缀），如 weather 北京"},
+                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」或「其它 bot 的命令」清单。只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
                     }, "required": ["command"]},
                 },
@@ -302,10 +316,10 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_peer_plugin",
-                    "description": f"调用其它 bot（{peer_names}）上的功能插件",
+                    "description": f"调用其它 bot（{peer_names}）上的功能插件（仅限清单中列出的命令）",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
-                        "command": {"type": "string", "description": "命令（不带前缀），如 weather 北京"},
+                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」或「其它 bot 的命令」清单。只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
                     }, "required": ["bot", "command"]},
                 },
@@ -318,11 +332,15 @@ class MessageProcessor:
             elif name == "invoke_plugin":
                 command = args.get("command", "")
                 uid = args.get("user_id", self._current_user_id)
+                from .plugin_discovery import build_command_plugin_map
+                main = _command_head(command)
+                plugin = build_command_plugin_map().get(main) or self.learner.find_command_plugin(main)
+                # 先拒本插件自身的管理命令（不投递、不写自述，避免留下"已执行"的假记录）
+                if main in SELF_COMMANDS or plugin in SELF_PLUGIN_NAMES:
+                    logger.info(f"[调用] 拒绝: command={command}（本插件管理命令，不可代为执行）")
+                    return "这是本插件自己的管理命令，不能代为执行；不要再调用它"
                 # 白名单核对：非空时，命令归属插件必须在白名单内
                 if self.config.aigfm_capture_plugins:
-                    from .plugin_discovery import build_command_plugin_map
-                    main = _command_head(command)
-                    plugin = build_command_plugin_map().get(main) or self.learner.find_command_plugin(main)
                     if plugin not in self.config.aigfm_capture_plugins:
                         logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
                         return "该插件不在允许调用的白名单内，已拒绝调用"
@@ -345,8 +363,9 @@ class MessageProcessor:
                 if outcome == "error":
                     logger.error(f"[调用] invoke_plugin 投递失败: {command}")
                     return "命令投递失败（详见日志），插件不会响应"
-                logger.success(f"[调用] invoke_plugin 成功: {command}")
-                return "插件已执行，响应将作为新消息出现在聊天记录中"
+                logger.success(f"[调用] invoke_plugin 已投递: {command}")
+                return ("命令已投递。只有后续聊天记录里真的出现 [插件名]/[bot名] 的响应才算执行成功；"
+                        "一直没有响应说明该命令不存在或无人处理，不要当作已完成")
             elif name == "invoke_peer_plugin":
                 peer_name = args.get("bot", "")
                 command = args.get("command", "")
