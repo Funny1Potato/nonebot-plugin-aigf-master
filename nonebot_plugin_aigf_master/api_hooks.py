@@ -73,12 +73,18 @@ def register_hooks(bus: ContextBus, image_handler: ImageHandler,
             elif seg["type"] == "image" and plugin_config.aigfm_capture_images:
                 if on_image_start:
                     on_image_start(group_id)
-                if seg.get("url"):
-                    await _handle_image_url(bus, image_handler, seg["url"], source, group_id, on_plugin_message, on_image_done)
-                elif seg.get("base64"):
-                    await _handle_image_base64(bus, image_handler, seg["base64"], source, group_id, on_plugin_message, on_image_done)
-                elif seg.get("file"):
-                    await _handle_image_file(bus, image_handler, seg["file"], source, group_id, on_plugin_message, on_image_done)
+                try:
+                    if seg.get("url"):
+                        await _handle_image_url(bus, image_handler, seg["url"], source, group_id, on_plugin_message)
+                    elif seg.get("base64"):
+                        await _handle_image_base64(bus, image_handler, seg["base64"], source, group_id, on_plugin_message)
+                    elif seg.get("file"):
+                        await _handle_image_file(bus, image_handler, seg["file"], source, group_id, on_plugin_message)
+                finally:
+                    # 下载/解码在 _process_image_bytes 之前就会失败，计数必须在这里闭合，
+                    # 否则 _pending_images 常驻会让该群每次批处理都等到上限才放行
+                    if on_image_done:
+                        on_image_done(group_id)
 
 
 def _parse_segments(message) -> list[dict]:
@@ -123,8 +129,16 @@ def _parse_segments(message) -> list[dict]:
     return []
 
 
+def _file_uri_to_path(uri: str) -> str:
+    """file:///D:/a/b.png → D:/a/b.png；file:///tmp/a.png → /tmp/a.png"""
+    path = uri[len("file://"):]
+    if path.startswith("/") and len(path) > 3 and path[2] == ":":
+        path = path[1:]          # Windows 的 /D:/... 形式
+    return path
+
+
 def _extract_image_data(data: dict) -> dict:
-    """从图片段落的 data 中提取图片数据，处理 base64:// 前缀"""
+    """从图片段落的 data 中提取图片数据，处理 base64:// 与 file:// 前缀"""
     file_value = data.get("file", "")
     url = data.get("url", "")
     b64 = data.get("base64", "")
@@ -133,6 +147,8 @@ def _extract_image_data(data: dict) -> dict:
     if file_value.startswith("base64://"):
         b64 = file_value[9:]  # 去掉 "base64://" 前缀
         file_value = ""
+    elif file_value.startswith("file://"):
+        file_value = _file_uri_to_path(file_value)
 
     return {
         "type": "image",
@@ -143,29 +159,25 @@ def _extract_image_data(data: dict) -> dict:
 
 
 async def _process_image_bytes(bus: ContextBus, image_handler: ImageHandler, image_bytes: bytes,
-                               source: str, group_id: int, on_plugin_message=None, on_image_done=None):
+                               source: str, group_id: int, on_plugin_message=None):
     """公共图片处理逻辑"""
-    try:
-        image_base64 = base64.b64encode(image_bytes).decode()
-        desc = await image_handler.describe(image_base64, False)
-        content = desc.description if desc else "图片"
+    image_base64 = base64.b64encode(image_bytes).decode()
+    desc = await image_handler.describe(image_base64, False)
+    content = desc.description if desc else "（识图失败）"
 
-        bus.push(PluginMessage(
-            content=content, source_plugin=source,
-            group_id=group_id, timestamp=datetime.now(), message_type="image",
-            image_base64=image_base64 if desc else None,
-        ))
+    bus.push(PluginMessage(
+        content=content, source_plugin=source,
+        group_id=group_id, timestamp=datetime.now(), message_type="image",
+        image_base64=image_base64 if desc else None,
+    ))
 
-        if on_plugin_message and content:
-            logger.info(f"[ContextBus] 捕获图片: [{source}] {content[:80]}")
-            on_plugin_message(group_id, source, f"[图片] {content}", reset_timer=False)
-    finally:
-        if on_image_done:
-            on_image_done(group_id)
+    if on_plugin_message and content:
+        logger.info(f"[ContextBus] 捕获图片: [{source}] {content[:80]}")
+        on_plugin_message(group_id, source, f"[图片] {content}", reset_timer=False)
 
 
 async def _handle_image_url(bus: ContextBus, image_handler: ImageHandler, url: str,
-                            source: str, group_id: int, on_plugin_message=None, on_image_done=None):
+                            source: str, group_id: int, on_plugin_message=None):
     """处理 URL 格式的图片"""
     try:
         ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -174,27 +186,27 @@ async def _handle_image_url(bus: ContextBus, image_handler: ImageHandler, url: s
             resp = await client.get(url)
             resp.raise_for_status()
             image_bytes = resp.content
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, on_image_done)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
     except Exception as e:
         logger.error(f"[ContextBus] URL图片处理失败: {e}")
 
 
 async def _handle_image_base64(bus: ContextBus, image_handler: ImageHandler, b64: str,
-                               source: str, group_id: int, on_plugin_message=None, on_image_done=None):
+                               source: str, group_id: int, on_plugin_message=None):
     """处理 base64 格式的图片"""
     try:
         image_bytes = base64.b64decode(b64)
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, on_image_done)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
     except Exception as e:
         logger.error(f"[ContextBus] base64图片处理失败: {e}")
 
 
 async def _handle_image_file(bus: ContextBus, image_handler: ImageHandler, file_path: str,
-                             source: str, group_id: int, on_plugin_message=None, on_image_done=None):
+                             source: str, group_id: int, on_plugin_message=None):
     """处理本地文件格式的图片"""
     try:
         async with await anyio.open_file(file_path, "rb") as f:
             image_bytes = await f.read()
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, on_image_done)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
     except Exception as e:
         logger.error(f"[ContextBus] 本地图片处理失败: {e}")

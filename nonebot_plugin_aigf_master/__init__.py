@@ -21,7 +21,7 @@ from nonebot.plugin import PluginMetadata
 require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 
-from .api_hooks import register_hooks
+from .api_hooks import register_hooks, _extract_image_data
 from .config import PluginConfig, plugin_config
 from .context_bus import ContextBus
 from .command_learner import CommandLearner
@@ -96,6 +96,41 @@ async def _resolve_user_id(bot: Bot, event: GroupMessageEvent, nickname: str) ->
     return None
 
 
+async def _load_image_bytes(img: dict) -> bytes:
+    """按 url → http 形式的 file → base64 → 本地文件 依次取回图片字节
+
+    与 api_hooks 的段落解析保持一致（客户端可能只给 file=xxx 或 base64://...，不一定带 url）
+    """
+    target = img["url"] or (img["file"] if img["file"].startswith(("http://", "https://")) else "")
+    if target:
+        cache_path = _cache_dir / "raw"
+        cache_path.mkdir(parents=True, exist_ok=True)
+        key_match = re.search(r"[?&]fileid=([a-zA-Z0-9_-]+)", target)
+        key = key_match.group(1) if key_match else None
+
+        if key and (cache_path / key).exists():
+            async with await anyio.open_file(cache_path / key, "rb") as f:
+                return await f.read()
+
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_ctx.set_ciphers("ALL:@SECLEVEL=1")
+        async with httpx.AsyncClient(verify=ssl_ctx) as client:
+            resp = await client.get(target)
+            resp.raise_for_status()
+            data = resp.content
+        if key:
+            async with await anyio.open_file(cache_path / key, "wb") as f:
+                await f.write(data)
+        return data
+
+    if img["base64"]:
+        return base64.b64decode(img["base64"])
+    if img["file"]:
+        async with await anyio.open_file(img["file"], "rb") as f:
+            return await f.read()
+    raise ValueError("图片段缺少 url / file / base64")
+
+
 async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, bot_name: str) -> tuple[str, bool]:
     """解析消息内容，返回 (content, is_at_only)"""
     content = ""
@@ -111,29 +146,11 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
             has_non_at = True
             _on_image_start(event.group_id)
             try:
-                url = seg.data.get("url", "")
+                img = _extract_image_data(seg.data)
                 is_sticker = seg.data.get("sub_type") == 1
-                logger.debug(f"[消息解析] 图片: url={url[:60]}, is_sticker={is_sticker}")
-                cache_path = _cache_dir / "raw"
-                cache_path.mkdir(parents=True, exist_ok=True)
-                key_match = re.search(r"[?&]fileid=([a-zA-Z0-9_-]+)", url)
-                key = key_match.group(1) if key_match else None
-
-                if key and (cache_path / key).exists():
-                    async with await anyio.open_file(cache_path / key, "rb") as f:
-                        image_bytes = await f.read()
-                else:
-                    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-                    ssl_ctx.set_ciphers("ALL:@SECLEVEL=1")
-                    async with httpx.AsyncClient(verify=ssl_ctx) as client:
-                        resp = await client.get(url)
-                        resp.raise_for_status()
-                        image_bytes = resp.content
-                    if key:
-                        async with await anyio.open_file(cache_path / key, "wb") as f:
-                            await f.write(image_bytes)
-
-                is_sticker = seg.data.get("sub_type") == 1
+                logger.debug(f"[消息解析] 图片: url={img['url'][:60]}, file={img['file'][:60]}, "
+                             f"base64={bool(img['base64'])}, is_sticker={is_sticker}")
+                image_bytes = await _load_image_bytes(img)
                 image_base64 = base64.b64encode(image_bytes).decode()
 
                 if plugin_config.aigfm_image_mode == "llm":
