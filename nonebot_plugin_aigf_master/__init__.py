@@ -479,6 +479,8 @@ async def _(event: GroupMessageEvent):
     processor.bot_name = "小助手"
     processor.bot_role = "一个友好的群聊助手"
     processor.recent_messages.clear()
+    # 插件响应另有一份存在 ContextBus 里，不清会跨 reset 残留进后续 prompt
+    processor.context_bus.clear(int(event.group_id))
     processor.social_energy = 0.75
     await processor.load_preset(plugin_config.aigfm_default_preset)
     await reset_cmd.finish("已重置会话")

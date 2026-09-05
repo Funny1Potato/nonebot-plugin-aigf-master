@@ -168,7 +168,6 @@ async def _process_image_bytes(bus: ContextBus, image_handler: ImageHandler, ima
     bus.push(PluginMessage(
         content=content, source_plugin=source,
         group_id=group_id, timestamp=datetime.now(), message_type="image",
-        image_base64=image_base64 if desc else None,
     ))
 
     if on_plugin_message and content:

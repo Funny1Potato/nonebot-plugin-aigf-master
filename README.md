@@ -154,7 +154,7 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 |------|------|------|
 | `status` / `状态` | 查看机器人状态（角色、社交能量、最近消息） | SUPERUSER |
 | `set_role <名字> <设定>` | 设置机器人角色 | SUPERUSER |
-| `reset` / `重置` | 重置会话（清空所有记忆） | SUPERUSER |
+| `reset` / `重置` | 重置会话：清空近期聊天记录与其它插件的输出缓冲（ContextBus），恢复默认预设与社交能量。**不删除**持久化的四层记忆与已学命令 | SUPERUSER |
 | `presets` | 查看可用的角色预设 | SUPERUSER |
 | `set_preset <预设名>` | 加载指定的角色预设 | SUPERUSER |
 | `reload_meme` / `重载表情包` | 热重载表情包配置 | SUPERUSER |

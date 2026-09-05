@@ -43,7 +43,6 @@ class PluginMessage:
     group_id: int
     timestamp: datetime
     message_type: Literal["text", "image"]
-    image_base64: str | None = None
 
 
 @dataclass
