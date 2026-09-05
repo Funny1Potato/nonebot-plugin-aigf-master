@@ -322,7 +322,7 @@ async def _describe_peer_image(group_id: int, source: str, image_url: str = "", 
 
 
 async def _handle_peer_capture(group_id: int, source: str, data: dict):
-    """后台处理其它 bot 推送的消息（文本直接入缓冲，图片 VLM 描述后入缓冲）"""
+    """后台处理其它 bot 推送的消息（文本直接入缓冲；图片按 aigfm_capture_images 决定是否走 VLM）"""
     if data.get("commands"):
         # 更新该 bot 的已注册命令列表（供 LLM 了解可调用命令）
         _peer_scanned_commands[source] = data["commands"]
@@ -332,7 +332,8 @@ async def _handle_peer_capture(group_id: int, source: str, data: dict):
         return
     if data.get("text"):
         _add_peer_message(group_id, source, data["text"])
-    if data.get("image_url") or data.get("image_base64"):
+    # 与本机插件捕获同开关：关闭时不下载、不做 VLM、也不入缓冲
+    if (data.get("image_url") or data.get("image_base64")) and plugin_config.aigfm_capture_images:
         await _describe_peer_image(group_id, source, data.get("image_url", ""), data.get("image_base64", ""))
 
 

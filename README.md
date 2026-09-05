@@ -121,7 +121,7 @@ AIGFM_HTTPS_PROXY="http://127.0.0.1:7890"  # HTTPS 代理地址
 
 # --- 跨插件感知 / 插件白名单 ---
 AIGFM_CAPTURE_PLUGINS=[]                # 插件白名单（捕获+命令扫描+调用核对 共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有但不扫描静态命令、调用不核对
-AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析其它插件输出的图片（默认 true；仅本机插件，不影响 peer 推送）
+AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析图片（默认 true；同时作用于本机插件输出与 peer 推送）
 AIGFM_CONTEXT_IN_PROMPT=10              # 注入到 prompt 中的其它插件消息条数（默认 10）
 
 # --- 插件调用 ---
