@@ -62,17 +62,27 @@ class ImageHandler:
             gif_b64 = await asyncio.to_thread(_transform_gif, image_base64)
             if not gif_b64:
                 return None
-            desc = await self._vlm.request(
-                "用中文简短描述这张动态图的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。", gif_b64, "jpeg")
-            emo = await self._vlm.request(
-                "用3个词概括这个表情包的情感，用顿号分隔，如：开心、得意、搞笑", gif_b64, "jpeg")
+            payload, desc_format = gif_b64, "jpeg"
+            desc_prompt = "用中文简短描述这张动态图的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。"
         else:
-            desc = await self._vlm.request(
-                "用中文简短描述这张图片的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。", image_base64, image_format.lower())
-            emo = await self._vlm.request(
-                "用3个词概括这个表情包的情感，用顿号分隔，如：开心、得意、搞笑", image_base64, "jpeg")
+            payload, desc_format = image_base64, image_format.lower()
+            desc_prompt = "用中文简短描述这张图片的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。"
 
-        if not desc or not emo:
+        # 情感只用于贴纸的展示与收藏判断，普通图片拿到的情感不进 prompt → 省掉这次往返；
+        # 剩下的请求并发发出，识图耗时从两次串行压成一次
+        requests = [self._vlm.request(desc_prompt, payload, desc_format)]
+        if is_sticker:
+            requests.append(self._vlm.request(
+                "用3个词概括这个表情包的情感，用顿号分隔，如：开心、得意、搞笑", payload, "jpeg"))
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(*requests), timeout=plugin_config.aigfm_incomplete_timeout)
+        except asyncio.TimeoutError:
+            logger.error(f"[VLM] 识图超时: hash={image_hash[:8]}, 上限 {int(plugin_config.aigfm_incomplete_timeout)}s")
+            return None
+
+        desc, emo = results[0], (results[1] if len(results) > 1 else "")
+        if not desc or (is_sticker and not emo):
             return None
 
         logger.info(f"[VLM] 描述: {desc[:80]}, 情感: {emo}")

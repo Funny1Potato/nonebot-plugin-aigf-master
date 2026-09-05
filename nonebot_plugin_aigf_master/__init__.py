@@ -109,6 +109,7 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                 has_non_at = True
         elif seg.type in ("image", "emoji"):
             has_non_at = True
+            _on_image_start(event.group_id)
             try:
                 url = seg.data.get("url", "")
                 is_sticker = seg.data.get("sub_type") == 1
@@ -146,9 +147,14 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                             content += f"\n[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]\n"
                         else:
                             content += f"\n[发送了一张图片, id: {cache_id}] [内容:{desc.description}]\n"
+                    else:
+                        # VLM 失败/超时/未启用也要留下痕迹，否则纯图片消息会整条消失
+                        content += "\n[发送了一张图片]\n"
             except Exception as e:
                 logger.error(f"图片处理错误: {e}")
                 content += "\n[图片加载失败]\n"
+            finally:
+                _on_image_done(event.group_id)
         elif seg.type == "at":
             uid = seg.data.get("qq")
             if not uid:
@@ -339,6 +345,15 @@ async def _batch_processor(group_id: int):
             now = asyncio.get_event_loop().time()
             last_time = _group_last_time.get(group_id, 0)
 
+            # 有图片正在下载/VLM 解析时整批推迟触发，等内容填好再发，避免把无描述的占位消息给 LLM；
+            # 超过绝对上限仍挂着（解析卡死或计数泄漏）则放行，保证该群不会永久沉默
+            pending = _pending_images.get(group_id, 0)
+            if pending > 0:
+                if (now - last_time) < (plugin_config.aigfm_batch_timeout + plugin_config.aigfm_incomplete_timeout):
+                    logger.debug(f"[图片] 群{group_id} {pending} 张解析中，推迟触发")
+                    continue
+                logger.warning(f"[图片] 群{group_id} 解析超过上限，按占位内容触发")
+
             # 判断是否触发
             reached_count = len(chunk) >= plugin_config.aigfm_batch_count
             last_msg = chunk[-1]
@@ -493,11 +508,18 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
 
     # 先加入 chunk（占位），并设置计时器/bot/event。
     # 防止解析期间插件响应先入 chunk，批处理用 last_time=0 立即触发，导致用户消息被拆到下一批
+    # 占位带上即时可得的内容（只拼文本段，不调任何 API），含图片则标注解析中：
+    # 这样即便批处理在解析期间触发，LLM 也不会收到空消息
+    segs = event.original_message
+    instant = "".join(s.data.get("text", "") for s in segs if s.type == "text")
+    if any(s.type in ("image", "emoji") for s in segs):
+        instant += "\n[图片解析中]\n"
+
     msg = ChatMessage(
         time=datetime.now(),
         user_name=str(event.get_user_id()),
         user_id=event.get_user_id(),
-        content="",
+        content=instant,
         is_at_only=False,
     )
     async with _get_lock(group_id):
@@ -507,6 +529,8 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
         _group_last_time[group_id] = asyncio.get_event_loop().time()
         _group_bot[group_id] = bot
         _group_event[group_id] = event
+        # 解析可能挂几十秒（VLM），身份要先就位，否则期间触发的插件调用会用上一个人的 QQ
+        processor._current_user_id = int(event.get_user_id())
 
     # 锁外异步解析消息内容（含图片下载/VLM 等慢操作）
     content, is_at_only = await _parse_message(bot, event, event.original_message, processor.bot_name)
@@ -531,9 +555,6 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
     msg.user_name = nickname
     msg.content = content
     msg.is_at_only = is_at_only
-
-    # 设置当前用户 ID（供 invoker 使用）
-    processor._current_user_id = int(event.get_user_id())
 
     # 自动更新昵称
     try:
