@@ -136,12 +136,12 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                 image_base64 = base64.b64encode(image_bytes).decode()
 
                 if plugin_config.aigfm_image_mode == "llm":
-                    cache_id = await _memes.save_to_cache(image_bytes, "", "")
+                    cache_id = await _memes.save_to_cache(event.group_id, image_bytes, "", "")
                     content += f"\n[发送了一张图片, id: {cache_id}]\n"
                 else:
                     desc = await _image_handler.describe(image_base64, is_sticker)
                     if desc:
-                        cache_id = await _memes.save_to_cache(image_bytes, desc.description, desc.emotion)
+                        cache_id = await _memes.save_to_cache(event.group_id, image_bytes, desc.description, desc.emotion)
                         if is_sticker:
                             content += f"\n[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]\n"
                         else:
@@ -328,6 +328,14 @@ async def _batch_processor(group_id: int):
             chunk = _group_chunks.get(group_id, [])
             if not chunk:
                 continue
+            bot = _group_bot.get(group_id)
+            event = _group_event.get(group_id)
+            if not bot or not event:
+                # 本进程内该群还没有真实用户消息（只有插件/peer 推送）：没有可回复的事件，
+                # 保留缓冲等首条用户消息到达后一起处理，只截断长度防止无限增长
+                if len(chunk) > plugin_config.aigfm_context_max_messages:
+                    del chunk[: len(chunk) - plugin_config.aigfm_context_max_messages]
+                continue
             now = asyncio.get_event_loop().time()
             last_time = _group_last_time.get(group_id, 0)
 
@@ -353,19 +361,14 @@ async def _batch_processor(group_id: int):
             _group_chunks[group_id].clear()
 
         # 处理
-        bot = _group_bot.get(group_id)
-        event = _group_event.get(group_id)
-        if not bot or not event:
-            continue
-
         processor = _get_processor(group_id)
         processor._bot = bot
-        stickers = _memes.get_cached()
+        stickers = _memes.get_cached(group_id)
 
         try:
             responses = await processor.process(messages, cached_stickers=stickers)
             if stickers:
-                _memes.clear_cache()
+                _memes.clear_cache(group_id)
         except Exception as e:
             logger.error(f"[处理失败] 群{group_id}: {e}")
             import traceback
@@ -481,8 +484,8 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
         return
     if event.get_user_id() == str(bot.self_id):
         return
-    # 跳过 invoker 活跃期间的 synthetic 消息，防止死循环
-    if _invoker and _invoker.is_active:
+    # 只跳过 invoker 自己合成的事件（否则自己发起的命令会被当成用户重复发送）
+    if _invoker and _invoker.is_synthetic(event):
         return
     logger.success(f"[接收] 群{group_id} 收到消息 from {event.user_id}")
 
@@ -575,7 +578,7 @@ async def _on_startup():
         if reset_timer:
             _group_last_time[group_id] = asyncio.get_event_loop().time()
 
-    register_hooks(_bus, _invoker, _image_handler, _on_plugin_message, _on_image_start, _on_image_done)
+    register_hooks(_bus, _image_handler, _on_plugin_message, _on_image_start, _on_image_done)
 
     # 注册跨 bot 接收端点（其它 bot 推送消息到此）
     if _peer_client:

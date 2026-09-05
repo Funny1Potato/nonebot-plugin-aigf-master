@@ -26,7 +26,7 @@ class MemeStore:
         self._collected_memes: dict[str, MemeEntry] = {}
         self._recent: list[str] = []
         self._recent_max = 5
-        self._cache_index: dict[str, dict] = {}
+        self._cache_index: dict[int, dict[str, dict]] = {}  # group_id -> {cache_id: 缓存信息}
 
     @property
     def all_memes(self) -> dict[str, MemeEntry]:
@@ -93,9 +93,9 @@ class MemeStore:
         """持久化自动收集表情包索引（含使用次数/保存时间）"""
         await self._save_collected()
 
-    # ========== 缓存管理 ==========
+    # ========== 缓存管理（按群分桶，避免跨群串台） ==========
 
-    async def save_to_cache(self, image_bytes: bytes, description: str, emotion: str) -> str:
+    async def save_to_cache(self, group_id: int, image_bytes: bytes, description: str, emotion: str) -> str:
         cache_id = hashlib.md5(image_bytes).hexdigest()[:12]
         try:
             img_format = await asyncio.to_thread(lambda: Image.open(BytesIO(image_bytes)).format)
@@ -106,25 +106,32 @@ class MemeStore:
         if not cache_path.exists():
             async with await anyio.open_file(cache_path, "wb") as f:
                 await f.write(image_bytes)
-        self._cache_index[cache_id] = {
+        bucket = self._cache_index.setdefault(group_id, {})
+        bucket[cache_id] = {
             "path": str(cache_path), "description": description, "emotion": emotion,
         }
+        # 该群长时间不触发批处理（如始终没有真实用户消息）时索引不会被清空，按上限丢最旧的
+        from .config import plugin_config
+        max_count = plugin_config.aigfm_context_max_messages
+        if len(bucket) > max_count:
+            for stale in list(bucket)[: len(bucket) - max_count]:
+                bucket.pop(stale, None)
         return cache_id
 
-    def get_cached(self) -> list[dict]:
+    def get_cached(self, group_id: int) -> list[dict]:
         return [
             {"id": cid, "description": info["description"], "emotion": info["emotion"]}
-            for cid, info in self._cache_index.items()
+            for cid, info in self._cache_index.get(group_id, {}).items()
         ]
 
-    def get_cache_info(self, cache_id: str) -> dict | None:
-        return self._cache_index.get(cache_id)
+    def get_cache_info(self, group_id: int, cache_id: str) -> dict | None:
+        return self._cache_index.get(group_id, {}).get(cache_id)
 
-    def clear_cache(self):
-        self._cache_index.clear()
+    def clear_cache(self, group_id: int):
+        self._cache_index.pop(group_id, None)
 
-    async def save_from_cache(self, cache_id: str, description: str, keywords: list[str]) -> bool:
-        cache_info = self._cache_index.get(cache_id)
+    async def save_from_cache(self, group_id: int, cache_id: str, description: str, keywords: list[str]) -> bool:
+        cache_info = self._cache_index.get(group_id, {}).get(cache_id)
         if not cache_info:
             return False
         cache_path = Path(cache_info["path"])

@@ -49,7 +49,6 @@ def build_prompt(
     new_messages: list[ChatMessage],
     meme_prompt_list: str,
     cached_stickers: list[dict],
-    search_results: list[dict] | None,
     matched_culture: list[dict],
     plugin_commands: list[PluginCommand],
     peer_commands: list[dict],
@@ -157,6 +156,7 @@ def build_prompt(
 - 调用后，本次回复必须为空（`"reply": []`），**不要说话**，等插件响应出现
 - 当聊天记录中出现 `[插件名] 内容` 或 `[bot名] 内容` 后，再根据插件响应决定是否回复、回复什么，**不要编造**插件的内容
 - **不要重复调用**：如果聊天记录中已经出现 `[你的名字] 已调用命令「xxx」`，说明该命令已调用过，**绝不要再调用**，直接根据已有内容判断是否回复
+- 工具返回"插件未在 N 秒内完成执行"只是**投递超时**，插件稍后仍可能回复 → 等下一批看结果，不要立刻断定失败
 - 如果插件响应一直未出现，再视情况告知用户插件未响应
 
 ## 重要：已知命令的处理
@@ -176,6 +176,14 @@ def build_prompt(
 3. **删除命令**：如果某个命令已不再可用或完全错误，请添加 command_delete 字段：
    "command_delete": ["命令名"]
    注意：删除操作需要多次确认才会生效，所以如果确定命令有问题，请每次都说。
+
+4. **不要学习你无法代为执行的命令**：下面这类命令即使你调用也只会得到"插件无响应"，看到"用户发送 → 插件响应"时**不要学习**；如果已经学习过，用 command_delete 删除：
+   - 需要 @你 或呼叫你的昵称才触发的命令
+   - 需要管理员/群主/超级用户权限的命令
+   - 只在私聊里用的命令
+   - 必须先回复/引用某条消息才能执行的命令
+   - 依赖群名片、头衔、等级等资料字段判断身份的命令
+   注意：不学习 ≠ 可以抢答。它们仍然是命令，只要聊天记录里有插件/bot 响应，你依然不要重复回复。
 
 如果没有需要学习/编辑/删除的命令，不需要添加这些字段。
 {cmd_list}
@@ -201,15 +209,6 @@ def build_prompt(
         culture_str = "\n".join(f"- {t.get('term', '')}: {t.get('meaning', '')} ({t.get('context', '')})" for t in matched_culture)
         culture_section = f"## 相关文化知识\n以下是当前聊天中涉及的文化词汇：\n{culture_str}\n\n"
 
-    # 搜索结果
-    search_section = ""
-    if search_results:
-        formatted = []
-        for i, r in enumerate(search_results, 1):
-            formatted.append(f"{i}. {r.get('title', '')}\n   {r.get('content', '')}\n   来源: {r.get('url', '')}")
-        search_str = "\n\n".join(formatted) or "未找到相关搜索结果"
-        search_section = f"## 搜索结果\n{search_str}\n\n"
-
     # 组装 prompt
     prompt = f"你是 {bot_name}，{bot_role}\n\n"
     prompt += f"""## 回复风格
@@ -229,8 +228,6 @@ def build_prompt(
         prompt += "## 你的知识\n" + preset_knowledge + "\n\n"
     if culture_section:
         prompt += culture_section
-    if search_section:
-        prompt += search_section
 
     prompt += f"""## 你的记忆
 

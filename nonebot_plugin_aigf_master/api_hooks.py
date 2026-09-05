@@ -8,18 +8,16 @@ import anyio
 import httpx
 from nonebot import logger
 from nonebot.adapters import Bot
-from nonebot.adapters.onebot.v11 import Message as OneBotMessage, MessageSegment
+from nonebot.adapters.onebot.v11 import Message as OneBotMessage
 from nonebot.internal.matcher import current_matcher
 
 from .config import plugin_config
 from .context_bus import ContextBus
 from .image_handler import ImageHandler
 from .models import PluginMessage
-from .plugin_invoker import PluginInvoker
 
 
-def register_hooks(bus: ContextBus, invoker: PluginInvoker,
-                   image_handler: ImageHandler,
+def register_hooks(bus: ContextBus, image_handler: ImageHandler,
                    on_plugin_message=None, on_image_start=None, on_image_done=None):
     """注册钩子
 
@@ -41,19 +39,6 @@ def register_hooks(bus: ContextBus, invoker: PluginInvoker,
         # 仅处理启用群的插件消息（未启用群不入缓冲、不做 VLM）
         if int(group_id) not in plugin_config.aigfm_enabled_groups:
             return
-
-        # 如果是 invoker 调用中，捕获给 invoker
-        if invoker.is_active:
-            message = data.get("message", "")
-            text = _extract_text(message)
-            segments = _parse_segments(message)
-            has_image = any(seg["type"] == "image" for seg in segments)
-            if text or has_image:
-                invoker.capture_if_active(group_id, {
-                    "text": text or ("[图片已发送]" if has_image else ""),
-                    "api": api,
-                    "has_image": has_image,
-                })
 
         # 获取来源插件名（必须有活跃 matcher 才是插件调用）
         try:
@@ -94,24 +79,6 @@ def register_hooks(bus: ContextBus, invoker: PluginInvoker,
                     await _handle_image_base64(bus, image_handler, seg["base64"], source, group_id, on_plugin_message, on_image_done)
                 elif seg.get("file"):
                     await _handle_image_file(bus, image_handler, seg["file"], source, group_id, on_plugin_message, on_image_done)
-
-
-def _extract_text(message) -> str:
-    """从消息中提取纯文本"""
-    if isinstance(message, str):
-        msg = OneBotMessage(message)
-    elif isinstance(message, list):
-        msg = OneBotMessage()
-        for seg in message:
-            if isinstance(seg, dict) and "type" in seg:
-                msg.append(MessageSegment(type=seg["type"], data=seg.get("data", {})))
-    else:
-        try:
-            return str(message)[:50]
-        except Exception:
-            return ""
-    text = msg.extract_plain_text().strip()
-    return text[:50] if text else ""
 
 
 def _parse_segments(message) -> list[dict]:

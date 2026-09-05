@@ -108,7 +108,7 @@ class MessageProcessor:
         if self.config.aigfm_image_mode == "llm" and cached_stickers:
             import base64
             for s in cached_stickers:
-                cache_info = self.memes.get_cache_info(s["id"])
+                cache_info = self.memes.get_cache_info(int(self.group_id), s["id"])
                 if cache_info:
                     try:
                         import anyio
@@ -183,7 +183,7 @@ class MessageProcessor:
             recent_messages=self.recent_messages, new_messages=messages,
             meme_prompt_list=meme_prompt_list,
             cached_stickers=cached_stickers or [],
-            search_results=None, matched_culture=matched_culture,
+            matched_culture=matched_culture,
             plugin_commands=plugin_commands, peer_commands=peer_commands,
             context_bus_messages=bus_messages,
             preset=preset, image_mode=self.config.aigfm_image_mode, config=self.config,
@@ -194,9 +194,9 @@ class MessageProcessor:
         recent_5 = "\n".join(f"  [{m.user_name}] {m.content[:80]}" for m in self.recent_messages[-5:])
         logger.debug(f"[处理] 最近聊天记录(最新5条):\n{recent_5}")
 
-        used_search = False
+        used_tool = False
         if (self.config.aigfm_search_enabled and self.search):
-            response_str, used_search = await self._call_llm_with_tools(prompt, sticker_images)
+            response_str, used_tool = await self._call_llm_with_tools(prompt, sticker_images)
         else:
             response_str = await self.llm.chat(
                 prompt, self.config.aigfm_llm_model,
@@ -212,23 +212,11 @@ class MessageProcessor:
         # 解析响应
         result = parse_llm_response(response_str)
         if not result:
-            if search_results or used_search:
-                logger.warning("[处理] JSON 解析失败，去掉搜索结果重试")
-                prompt_no_search = build_prompt(
-                    bot_name=self.bot_name, bot_role=self.bot_role,
-                    social_energy=self.social_energy,
-                    short_term=short_term, long_term=long_term, friends=friends,
-                    recent_messages=self.recent_messages, new_messages=messages,
-                    meme_prompt_list=meme_prompt_list,
-                    cached_stickers=cached_stickers or [],
-                    search_results=None, matched_culture=matched_culture,
-                    plugin_commands=plugin_commands, peer_commands=peer_commands,
-                    context_bus_messages=bus_messages,
-                    preset=preset, image_mode=self.config.aigfm_image_mode, config=self.config,
-                )
-                prompt_no_search += "\n## 注意\n搜索失败，请仅根据对话上下文回复。**必须输出 JSON 格式**。\n\n"
+            if used_tool:
+                logger.warning("[处理] JSON 解析失败，去掉 tools 重试一次")
+                retry_prompt = prompt + "\n## 注意\n上一次输出无法解析为 JSON。请仅根据对话上下文回复，**只输出 JSON，不要附带任何多余文字**。\n\n"
                 response_str = await self.llm.chat(
-                    prompt_no_search, self.config.aigfm_llm_model,
+                    retry_prompt, self.config.aigfm_llm_model,
                     json_mode=self.config.aigfm_llm_json_mode,
                     images=sticker_images if sticker_images else None,
                 )
@@ -290,7 +278,6 @@ class MessageProcessor:
 
     async def _call_llm_with_tools(self, prompt: str, sticker_images: list[str]) -> tuple[str | None, bool]:
         tools = []
-        tool_defs = {}
         if self.config.aigfm_search_enabled:
             tools.append({
                 "type": "function", "function": {
@@ -299,7 +286,6 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
                 },
             })
-            tool_defs["search_internet"] = "search"
         if self.config.aigfm_invoke_enabled:
             tools.append({
                 "type": "function", "function": {
@@ -324,7 +310,6 @@ class MessageProcessor:
                     }, "required": ["bot", "command"]},
                 },
             })
-            tool_defs["invoke_peer_plugin"] = "invoke"
 
         async def handler(name: str, args: dict) -> str:
             if name == "search_internet" and self.search:
@@ -342,19 +327,25 @@ class MessageProcessor:
                         logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
                         return "该插件不在允许调用的白名单内，已拒绝调用"
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
-                results = await self.invoker.invoke(
+                outcome = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
                     user_id=uid,
                 )
-                if not results:
-                    return "插件无响应"
-                logger.success(f"[调用] invoke_plugin 成功: {command}")
-                # 记录 bot 自述，让下一次批处理时 LLM 知道是自己调用了插件（含选用身份）
+                # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
+                # 投递成功/超时/出错都要记，否则 LLM 会重复调用同一条命令
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(),
                     user_name=self.bot_name,
                     content=f"已调用命令「{command}」（user_id={uid}）",
                 ))
+                if outcome == "timeout":
+                    logger.warning(f"[调用] invoke_plugin 超时: {command}")
+                    return (f"命令已投递，但插件未在 {int(self.config.aigfm_invoke_timeout)} 秒内完成执行，"
+                            "响应稍后仍可能作为新消息出现，先不要断言失败")
+                if outcome == "error":
+                    logger.error(f"[调用] invoke_plugin 投递失败: {command}")
+                    return "命令投递失败（详见日志），插件不会响应"
+                logger.success(f"[调用] invoke_plugin 成功: {command}")
                 return "插件已执行，响应将作为新消息出现在聊天记录中"
             elif name == "invoke_peer_plugin":
                 peer_name = args.get("bot", "")
@@ -388,7 +379,7 @@ class MessageProcessor:
                 keywords = ["表情包"]
             if cache_id and description and cache_id in current_ids:
                 try:
-                    await self.memes.save_from_cache(cache_id, description, keywords)
+                    await self.memes.save_from_cache(int(self.group_id), cache_id, description, keywords)
                 except Exception as e:
                     logger.error(f"表情包保存失败: {e}")
 

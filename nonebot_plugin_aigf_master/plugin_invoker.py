@@ -2,10 +2,17 @@
 
 import asyncio
 from datetime import datetime
+from typing import Literal
 
 from nonebot import get_driver, logger
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Message, MessageSegment
 from nonebot.message import handle_event
+
+# nonebot 的 Event 基类允许额外字段（ConfigDict(extra="allow")），用它标记合成事件，
+# 不碰任何插件会读取的协议字段
+SYNTHETIC_FLAG = "aigf_synthetic"
+
+InvokeResult = Literal["ok", "timeout", "error"]
 
 
 def _apply_command_prefix(command: str) -> str:
@@ -22,45 +29,49 @@ def _apply_command_prefix(command: str) -> str:
 
 
 class PluginInvoker:
-    """调用本实例的其它插件并捕获响应"""
+    """调用本实例的其它插件
+
+    插件的响应不在这里收集：它由 api_hooks 的 on_calling_api 钩子写入消息缓冲区，
+    下一批处理时 LLM 自然看到。本类只负责投递命令并报告投递结果，
+    因此不含跨群共享的可变状态。
+    """
 
     def __init__(self):
-        self._active = False
-        self._captured: list[dict] = []
-        self._target_group: int | None = None
+        # {id(event): event}，强引用避免 id 被复用
+        self._synthetic: dict[int, object] = {}
 
-    @property
-    def is_active(self) -> bool:
-        return self._active
+    def is_synthetic(self, event) -> bool:
+        """判断事件是否由本调用器合成（供 auto_chat 精确跳过，不误伤真实用户消息）"""
+        return id(event) in self._synthetic or bool(getattr(event, SYNTHETIC_FLAG, False))
 
     async def invoke(self, bot, group_id: int, command: str, timeout: float = 30.0,
-                     user_id: int = 0) -> list[dict]:
-        """调用插件命令，返回捕获的消息列表
-        
+                     user_id: int = 0) -> InvokeResult:
+        """投递命令并等待分发结束
+
         Args:
             user_id: 触发命令的用户 QQ 号，用于需要读取发送者信息的命令
+
+        返回投递结果，不代表插件是否回复。超时只取消本次分发，
+        插件稍后的输出仍会经钩子进入消息缓冲区。
         """
         logger.debug(f"[Invoker] 创建 synthetic event: command={command}, group={group_id}, user={user_id}")
-        self._active = True
-        self._captured = []
-        self._target_group = group_id
+        event = None
 
         try:
             event = self._create_synthetic_event(bot, group_id, command, user_id)
+            self._synthetic[id(event)] = event
             await asyncio.wait_for(handle_event(bot, event), timeout=timeout)
         except asyncio.TimeoutError:
             logger.warning(f"[Invoker] 调用超时: {command}")
+            return "timeout"
         except Exception as e:
             logger.error(f"[Invoker] 调用失败: {e}")
+            return "error"
         finally:
-            self._active = False
+            if event is not None:
+                self._synthetic.pop(id(event), None)
 
-        return self._captured
-
-    def capture_if_active(self, group_id: int, data: dict):
-        """由 api_hooks 的 on_calling_api 调用"""
-        if self._active and group_id == self._target_group:
-            self._captured.append(data)
+        return "ok"
 
     @staticmethod
     def _create_synthetic_event(bot, group_id: int, command: str, user_id: int = 0) -> GroupMessageEvent:
@@ -83,4 +94,5 @@ class PluginInvoker:
             raw_message=command,
             font=0,
             sender={"user_id": user_id, "nickname": "aigf_user", "role": "member"},
+            **{SYNTHETIC_FLAG: True},
         )
