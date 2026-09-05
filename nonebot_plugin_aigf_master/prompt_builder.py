@@ -86,10 +86,12 @@ def build_prompt(
             friends_dict[uid] = {"nickname": "", "aliases": [], "past_nicknames": [], "info": []}
     friends_str = json.dumps(friends_dict, ensure_ascii=False, indent=2) if friends_dict else "{}"
 
-    # 最近消息（合并 ContextBus 消息）
-    recent = recent_messages[-config.aigfm_recent_messages:]
+    # 最近消息（合并 ContextBus 消息）；本批消息只在「新消息」段呈现，不重复计入历史
+    batch_ids = {id(m) for m in new_messages}
+    history = [m for m in recent_messages if id(m) not in batch_ids]
+    recent = history[-config.aigfm_recent_messages:]
     recent = _merge_consecutive(recent, window)
-    recent_str = _build_recent_str(recent, context_bus_messages, bot_name, window)
+    recent_str = _build_recent_str(recent, context_bus_messages, bot_name, window, new_messages)
 
     # 新消息
     new_msgs_str = "\n".join(f"{m.user_name}: '{m.content}'" for m in merged_chunk)
@@ -312,22 +314,38 @@ fields: info(一般信息), aliases(称呼), nickname(QQ昵称), past_nicknames(
     return prompt
 
 
+def _bus_entry_text(msg: PluginMessage) -> str:
+    """ContextBus 条目在聊天记录里的正文（与缓冲区侧的插件消息内容保持同形）"""
+    return f"[图片] {msg.content}" if msg.message_type == "image" else msg.content
+
+
 def _build_recent_str(
     recent: list[ChatMessage],
     bus_messages: list[PluginMessage],
     bot_name: str,
     window: float,
+    new_messages: list[ChatMessage] | None = None,
 ) -> str:
-    """合并最近消息和 ContextBus 消息，按时间排序"""
+    """合并最近消息和 ContextBus 消息，按时间排序（同一条插件响应只保留一份）
+
+    插件输出会同时进入消息缓冲区与 ContextBus：仍在 bus 窗口内的以带来源标注的那份为准；
+    已由本批「新消息」呈现过的，不再从 ContextBus 重复注入。
+    """
+    batch_keys = {(m.user_name, m.content) for m in (new_messages or [])}
+
     entries: list[tuple[datetime, str]] = []
-    for msg in recent:
-        entries.append((msg.time, f"{msg.user_name}: {msg.content}"))
+    bus_keys: set[tuple[str, str]] = set()
     for msg in bus_messages:
         source = msg.source_plugin or "其它插件"
-        if msg.message_type == "image":
-            entries.append((msg.timestamp, f"[{source}] {bot_name}: [图片] {msg.content}"))
-        else:
-            entries.append((msg.timestamp, f"[{source}] {bot_name}: {msg.content}"))
+        text = _bus_entry_text(msg)
+        if (source, text) not in batch_keys:
+            entries.append((msg.timestamp, f"[{source}] {bot_name}: {text}"))
+        bus_keys.add((source, text))
+
+    for msg in recent:
+        if (msg.user_name, msg.content) in bus_keys:
+            continue
+        entries.append((msg.time, f"{msg.user_name}: {msg.content}"))
 
     entries.sort(key=lambda x: x[0])
     return "\n".join(text for _, text in entries) or "无"
