@@ -258,7 +258,7 @@ def build_prompt(
 ```json
 {short_term_str}
 ```
-管理原则：优先修改，能改就不加；积极删除。
+请积极管理，管理原则：优先修改，能改就不加；积极删除过时信息。
 - modify：对话有新进展时直接更新
 - delete：已结束的话题
 - add：仅当列表中没有相关内容时才添加
@@ -267,13 +267,14 @@ def build_prompt(
 ```json
 {long_term_str}
 ```
-管理原则：优先修改，积极删除过时信息。
+请积极管理，管理原则：优先修改，及时删除过时信息。
 
 ### 相关群友信息
 ```json
 {friends_str}
 ```
 fields: info(一般信息), aliases(称呼), nickname(QQ昵称), past_nicknames(曾用昵称)
+请积极管理。
 
 ## 理解群聊对话
 - [回复 xxx 的消息: "yyy"] 表示回复
