@@ -376,10 +376,7 @@ async def _batch_processor(group_id: int):
             reached_count = len(chunk) >= plugin_config.aigfm_batch_count
             last_msg = chunk[-1]
             effective_timeout = plugin_config.aigfm_batch_timeout
-            if _pending_images.get(group_id, 0) > 0:
-                # 有图片正在 VLM 处理，用更长的等待时长
-                effective_timeout = plugin_config.aigfm_incomplete_timeout
-            elif last_msg.is_at_only:
+            if last_msg.is_at_only:
                 effective_timeout = plugin_config.aigfm_incomplete_timeout
             elif len(chunk) >= 2:
                 prev = chunk[-2]

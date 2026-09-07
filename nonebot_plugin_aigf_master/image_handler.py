@@ -9,6 +9,7 @@ from pathlib import Path
 import anyio
 from nonebot import logger
 import numpy as np
+from openai import APITimeoutError
 from PIL import Image
 
 from .config import plugin_config
@@ -74,12 +75,19 @@ class ImageHandler:
         if is_sticker:
             requests.append(self._vlm.request(
                 "用3个词概括这个表情包的情感，用顿号分隔，如：开心、得意、搞笑", payload, "jpeg"))
+        # 不做外层 wait_for 掐断：让 VLM 请求跑到自身超时（VLMClient 写死 60s）为止，
+        # 超时按识图失败处理；其它异常照旧抛出（由调用方落 [图片加载失败]）
         try:
-            results = await asyncio.wait_for(
-                asyncio.gather(*requests), timeout=plugin_config.aigfm_incomplete_timeout)
-        except asyncio.TimeoutError:
-            logger.error(f"[VLM] 识图超时: hash={image_hash[:8]}, 上限 {int(plugin_config.aigfm_incomplete_timeout)}s")
-            return None
+            results = await asyncio.gather(*requests, return_exceptions=True)
+        except Exception:
+            raise
+
+        for r in results:
+            if isinstance(r, APITimeoutError):
+                logger.error(f"[VLM] 识图超时: hash={image_hash[:8]}, 上限 60s（VLM 请求自身超时）")
+                return None
+            if isinstance(r, Exception):
+                raise r
 
         desc, emo = results[0], (results[1] if len(results) > 1 else "")
         if not desc or (is_sticker and not emo):
