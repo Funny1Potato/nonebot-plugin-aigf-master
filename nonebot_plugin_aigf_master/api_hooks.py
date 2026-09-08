@@ -138,7 +138,7 @@ def _file_uri_to_path(uri: str) -> str:
 
 
 def _extract_image_data(data: dict) -> dict:
-    """从图片段落的 data 中提取图片数据，处理 base64:// 与 file:// 前缀"""
+    """从图片段落的 data 中提取图片数据，处理 base64://、file:// 与 http(s) url 前缀"""
     file_value = data.get("file", "")
     url = data.get("url", "")
     b64 = data.get("base64", "")
@@ -149,6 +149,10 @@ def _extract_image_data(data: dict) -> dict:
         file_value = ""
     elif file_value.startswith("file://"):
         file_value = _file_uri_to_path(file_value)
+    elif file_value.startswith(("http://", "https://")) and not url:
+        # MessageSegment.image(url) 时 url 会被 OneBot 适配器放在 file 字段
+        url = file_value
+        file_value = ""
 
     return {
         "type": "image",
