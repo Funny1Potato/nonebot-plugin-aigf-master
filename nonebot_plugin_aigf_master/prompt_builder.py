@@ -161,12 +161,14 @@ def build_prompt(
         plugin_section += f"""
 ## 其它 bot 的命令
 以下命令由其它 bot 提供。当用户要求使用这些功能时，应调用 **invoke_peer_plugin** 工具，并在 bot 参数指定目标 bot 名。**只能用 invoke_peer_plugin 调用这些命令，绝不要用 invoke_plugin**（它们不在本机，用 invoke_plugin 调用会无人处理）：
+{peer_cmd_list}
+
 例如调用 botB 的"今日小猪"：invoke_peer_plugin(bot="botB", command="今日小猪")
+
 **优先使用带有"用法/参数/示例"说明的命令**（这些是从聊天记录中学习到的，调用方式明确）；仅有名和简略描述的命令具体用法不明确，请谨慎调用，必要时先向用户确认。
 当用户发送这些命令时：
 - 如果有插件/bot 对消息做出了响应，你应该**不要回复**
 - 如果没有插件/bot 响应，你可以视情况回复
-{peer_cmd_list}
 """
 
     # 工具调用边界：清单为空时 plugin_section 整段不注入，所以这段必须独立注入
@@ -200,7 +202,7 @@ def build_prompt(
 通过观察聊天记录，你可以学习、编辑和删除命令：
 
 1. **学习新命令**：如果聊天记录中出现了你未见过的命令模式（用户发送消息后，有插件/bot 做出了响应），请添加 command_learning 字段：
-   "command_learning": [{"name": "命令名", "parameters": "可选参数说明(无则空字符串)", "usage": "完整使用方法，如 今日小猪 [猪类型]", "hook_type": "current或peer", "source": "current填插件名，peer填bot名", "examples": ["用户发送的原文"]}]
+   "command_learning": [{"name": "命令名", "parameters": "可选参数说明(无则空字符串)", "usage": "完整使用方法，如 决斗 [@群友]", "hook_type": "current或peer", "source": "current填插件名，peer填bot名", "examples": ["用户发送的原文"]}]
 
 2. **编辑命令**：如果你发现已有命令的用法或参数不准确，请添加 command_edit 字段：
    "command_edit": [{"name": "命令名", "parameters": "更新后的参数说明", "usage": "更新后的用法", "examples": ["更新后的示例"]}]
