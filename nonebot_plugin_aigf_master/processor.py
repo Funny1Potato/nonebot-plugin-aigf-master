@@ -198,6 +198,7 @@ class MessageProcessor:
             meme_prompt_list=meme_prompt_list,
             cached_stickers=cached_stickers or [],
             matched_culture=matched_culture,
+            culture=culture,
             plugin_commands=plugin_commands, peer_commands=peer_commands,
             context_bus_messages=bus_messages,
             preset=preset, image_mode=self.config.aigfm_image_mode, config=self.config,

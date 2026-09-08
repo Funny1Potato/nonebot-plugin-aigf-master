@@ -50,6 +50,7 @@ def build_prompt(
     meme_prompt_list: str,
     cached_stickers: list[dict],
     matched_culture: list[dict],
+    culture: list[dict],
     plugin_commands: list[PluginCommand],
     peer_commands: list[dict],
     context_bus_messages: list[PluginMessage],
@@ -70,6 +71,7 @@ def build_prompt(
     # 记忆（JSON 格式）
     short_term_str = json.dumps(short_term, ensure_ascii=False, indent=2) if short_term else "[]"
     long_term_str = json.dumps(long_term, ensure_ascii=False, indent=2) if long_term else "[]"
+    culture_str = json.dumps(culture, ensure_ascii=False, indent=2) if culture else "[]"
 
     # 群友信息
     friends_dict = {}
@@ -263,6 +265,7 @@ def build_prompt(
 - delete：已结束的话题、已解决的问题、不再相关的内容（积极使用）
 - add：仅当列表中没有相关内容时才添加
 index 对应上面数组的下标（从 0 开始）。
+值得记：本群近期的话题、群友的临时约定（如"明天一起开黑"）、本次对话中值得留存的要点。
 
 ### 长期记忆
 ```json
@@ -273,6 +276,7 @@ index 对应上面数组的下标（从 0 开始）。
 - delete：被证伪、过时、不再适用的信息（积极使用）
 - add：仅当完全没有相关内容时才添加
 不要记：临时性的对话内容、无关紧要的闲聊。
+值得记：群规、群内重大事件、长期有效的事实。
 
 ### 相关群友信息
 ```json
@@ -284,6 +288,8 @@ index 对应上面数组的下标（从 0 开始）。
 - nickname：QQ 全局昵称（系统自动更新，无需手动管理）
 - past_nicknames：曾用昵称（系统自动记录，无需手动管理）
 
+值得记入 info：群友主动告知或聊天中透露的个人信息——职业、生日、居住地、爱好、偏好、口头禅等。
+
 你应该积极管理：
 - add：群友透露的新信息（追加到 info 数组）
 - modify：发现记错了，用 index 指定 info 数组中要改的元素
@@ -292,10 +298,13 @@ index 对应上面数组的下标（从 0 开始）。
 - remove_alias：称呼不再使用时移除
 
 ### 文化记忆
-当你遇到新的梗、网络用语、流行语时，可以将其添加到文化记忆中：
+```json
+{culture_str}
+```
+当前已记住的文化词汇如上。当你遇到新的梗、网络用语、流行语时，可以将其添加到文化记忆中：
 - add：添加新学到的文化词汇，包含 term（词汇）、meaning（含义）、context（使用场景）
-- modify：更新已有词汇的含义或用法
-- delete：删除不再使用或错误的词汇
+- modify：更新已有词汇的含义或用法（index 对应上面数组的下标，从 0 开始）
+- delete：删除不再使用或错误的词汇（index 对应上面数组的下标，从 0 开始）
 - 当你通过搜索理解了某个梗的含义后，应该将其添加到文化记忆中
 - 当群友解释了某个梗的含义后，也应该添加到文化记忆中
 
