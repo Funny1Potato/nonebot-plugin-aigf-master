@@ -146,7 +146,7 @@ def build_prompt(
         cmd_list = "\n".join(f"- {cmd.name} - {cmd.description}" for cmd in plugin_commands)
         plugin_section = f"""
 ## 可用的群功能
-当用户要求使用以下**本机**功能，且聊天记录中**还没有**该命令的调用记录时，调用 invoke_plugin 工具来执行命令，不要自己编造回复：
+当用户要求使用以下**本机**功能，且聊天记录中**还没有**该命令的调用记录时，调用 invoke_plugin 工具来执行命令，不要自己编造回复。**只能用 invoke_plugin 调用这些本机命令，绝不要用 invoke_peer_plugin**（它们不在其它 bot 上，用错工具会调用失败）：
 {cmd_list}
 
 调用示例：用户说"帮我查一下今日小猪"，且你此前未调用过，可调用 invoke_plugin(command="今日小猪")
@@ -158,7 +158,7 @@ def build_prompt(
         peer_cmd_list = "\n".join(f"- {cmd['name']}（来自 {cmd['bot']}）- {cmd.get('description', '')}" for cmd in peer_commands)
         plugin_section += f"""
 ## 其它 bot 的命令
-以下命令由其它 bot 提供。当用户要求使用这些功能时，应调用 **invoke_peer_plugin** 工具，并在 bot 参数指定目标 bot 名：
+以下命令由其它 bot 提供。当用户要求使用这些功能时，应调用 **invoke_peer_plugin** 工具，并在 bot 参数指定目标 bot 名。**只能用 invoke_peer_plugin 调用这些命令，绝不要用 invoke_plugin**（它们不在本机，用 invoke_plugin 调用会无人处理）：
 例如调用 botB 的"今日小猪"：invoke_peer_plugin(bot="botB", command="今日小猪")
 **优先使用带有"用法/参数/示例"说明的命令**（这些是从聊天记录中学习到的，调用方式明确）；仅有名和简略描述的命令具体用法不明确，请谨慎调用，必要时先向用户确认。
 当用户发送这些命令时：
