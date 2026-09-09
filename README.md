@@ -104,7 +104,8 @@ AIGFM_RECENT_MESSAGES=20                # prompt 中包含的最近历史消息�
 AIGFM_MERGE_WINDOW=5.0                  # 消息合并时间窗口/秒（默认 5.0）
 
 # --- LLM ---
-AIGFM_JSON_MODE=true                    # 是否强制 LLM 输出 JSON（默认 true）
+AIGFM_LLM_JSON_MODE=true                # 是否强制 LLM 输出 JSON（默认 true）
+AIGFM_LLM_TOOLS_JSON_STRICT=false       # 工具调用路径首次请求也强制 JSON 输出（默认 false；开启后"未调用工具直接回复"的那一轮同样输出 JSON。部分 OpenAI 兼容服务不支持 tools+json_object 组合，开启前请确认服务商支持）
 AIGFM_ENERGY_BASELINE=0.7               # 社交能量基线（默认 0.7，范围 0.0~1.0）
 
 # --- 联网搜索 ---
