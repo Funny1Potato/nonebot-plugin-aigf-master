@@ -307,7 +307,7 @@ class MessageProcessor:
                     "name": "invoke_plugin",
                     "description": "调用本机群内的其它功能插件（仅限「可用的群功能」清单中列出的本机命令）",
                     "parameters": {"type": "object", "properties": {
-                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」清单（本机插件提供的命令）。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
+                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」清单（本机插件提供的命令）。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
                     }, "required": ["command"]},
                 },
@@ -320,7 +320,7 @@ class MessageProcessor:
                     "description": f"调用其它 bot（{peer_names}）上的功能插件（仅限「其它 bot 的命令」清单中列出的命令）",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
-                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「其它 bot 的命令」清单（其它 bot 提供的命令）。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
+                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「其它 bot 的命令」清单（其它 bot 提供的命令）。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
                     }, "required": ["bot", "command"]},
                 },

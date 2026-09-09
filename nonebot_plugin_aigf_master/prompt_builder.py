@@ -148,7 +148,7 @@ def build_prompt(
         cmd_list = "\n".join(f"- {cmd.name} - {cmd.description}" for cmd in plugin_commands)
         plugin_section = f"""
 ## 可用的群功能
-当用户要求使用以下**本机**功能，且聊天记录中**还没有**该命令的调用记录时，调用 invoke_plugin 工具来执行命令，不要自己编造回复。**只能用 invoke_plugin 调用这些本机命令，绝不要用 invoke_peer_plugin**（它们不在其它 bot 上，用错工具会调用失败）：
+当且仅当用户**明确要求**执行以下**本机**功能（如"帮我查一下""给我来一个"），且聊天记录中**还没有**该命令的调用记录时，才调用 invoke_plugin 工具来执行命令，不要自己编造回复。**不要因为话题相关就主动调用**——用户只是提到天气、抽奖、小猪等话题词时不调用任何工具。**只能用 invoke_plugin 调用这些本机命令，绝不要用 invoke_peer_plugin**（它们不在其它 bot 上，用错工具会调用失败）：
 {cmd_list}
 
 调用示例：用户说"帮我查一下今日小猪"，且你此前未调用过，可调用 invoke_plugin(command="今日小猪")
@@ -160,7 +160,7 @@ def build_prompt(
         peer_cmd_list = "\n".join(f"- {cmd['name']}（来自 {cmd['bot']}）- {cmd.get('description', '')}" for cmd in peer_commands)
         plugin_section += f"""
 ## 其它 bot 的命令
-以下命令由其它 bot 提供。当用户要求使用这些功能时，应调用 **invoke_peer_plugin** 工具，并在 bot 参数指定目标 bot 名。**只能用 invoke_peer_plugin 调用这些命令，绝不要用 invoke_plugin**（它们不在本机，用 invoke_plugin 调用会无人处理）：
+以下命令由其它 bot 提供。当且仅当用户**明确要求**使用这些功能时（如"帮我查一下""来一个"），才应调用 **invoke_peer_plugin** 工具，并在 bot 参数指定目标 bot 名。**不要因为话题相关就主动调用**——用户只是提到相关话题词时不调用任何工具。**只能用 invoke_peer_plugin 调用这些命令，绝不要用 invoke_plugin**（它们不在本机，用 invoke_plugin 调用会无人处理）：
 {peer_cmd_list}
 
 例如调用 botB 的"今日小猪"：invoke_peer_plugin(bot="botB", command="今日小猪")
@@ -222,6 +222,7 @@ def build_prompt(
 如果没有需要学习/编辑/删除的命令，不需要添加这些字段。
 
 ## 功能调用的边界
+- **不要主动调用任何工具**：只有用户**明确要求**执行某个命令或功能时才调用（如"帮我查一下""给我来一个""用xxx查"）。用户只是闲聊、提问、分享、讨论话题时，即使话题与某个命令相关（提到天气、抽奖、小猪等话题词），**也不要**调用工具——关键词相关不等于要求执行
 - 只能调用「可用的群功能」「其它 bot 的命令」清单里出现的命令；清单里没有的命令一律不要调用
 - 上面没有列出任何清单时，不要使用 invoke_plugin / invoke_peer_plugin 工具，按普通聊天处理
 - 下方 JSON 里的 reply / memory / short_term / long_term / friends / save_meme / culture / command_learning 等都是**输出字段名，不是命令**；群里不存在 save_meme、help、send、status 这类命令
