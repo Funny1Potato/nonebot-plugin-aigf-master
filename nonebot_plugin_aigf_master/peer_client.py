@@ -18,7 +18,7 @@ class PeerClient:
         return list(self._peers.keys())
 
     async def invoke(self, peer_name: str, command: str, group_id: int, user_id: int = 0,
-                     timeout: float = 30.0) -> str:
+                     at_qq: int = 0, timeout: float = 30.0) -> str:
         """远程调用其它 bot 的插件命令，返回确认信息
 
         插件执行结果由对方 on_calling_api 钩子推送到本 bot 的 /peer/capture，
@@ -29,7 +29,7 @@ class PeerClient:
             return f"未知 bot: {peer_name}"
         url = f"http://127.0.0.1:{cfg['port']}/peer/invoke"
         headers = {"Authorization": f"Bearer {cfg.get('token', '')}"}
-        payload = {"command": command, "group_id": group_id, "user_id": user_id}
+        payload = {"command": command, "group_id": group_id, "user_id": user_id, "at_user_id": at_qq}
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)

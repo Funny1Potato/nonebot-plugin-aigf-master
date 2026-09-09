@@ -45,20 +45,21 @@ class PluginInvoker:
         return id(event) in self._synthetic or bool(getattr(event, SYNTHETIC_FLAG, False))
 
     async def invoke(self, bot, group_id: int, command: str, timeout: float = 30.0,
-                     user_id: int = 0) -> InvokeResult:
+                     user_id: int = 0, at_qq: int = 0) -> InvokeResult:
         """投递命令并等待分发结束
 
         Args:
             user_id: 触发命令的用户 QQ 号，用于需要读取发送者信息的命令
+            at_qq: 命令要 @ 的群友 QQ 号（0 表示不 @），如"决斗 @张三"这类命令的目标
 
         返回投递结果，不代表插件是否回复。超时只取消本次分发，
         插件稍后的输出仍会经钩子进入消息缓冲区。
         """
-        logger.debug(f"[Invoker] 创建 synthetic event: command={command}, group={group_id}, user={user_id}")
+        logger.debug(f"[Invoker] 创建 synthetic event: command={command}, group={group_id}, user={user_id}, at={at_qq}")
         event = None
 
         try:
-            event = self._create_synthetic_event(bot, group_id, command, user_id)
+            event = self._create_synthetic_event(bot, group_id, command, user_id, at_qq)
             self._synthetic[id(event)] = event
             await asyncio.wait_for(handle_event(bot, event), timeout=timeout)
         except asyncio.TimeoutError:
@@ -74,12 +75,18 @@ class PluginInvoker:
         return "ok"
 
     @staticmethod
-    def _create_synthetic_event(bot, group_id: int, command: str, user_id: int = 0) -> GroupMessageEvent:
+    def _create_synthetic_event(bot, group_id: int, command: str, user_id: int = 0,
+                                at_qq: int = 0) -> GroupMessageEvent:
         """创建模拟的群消息事件"""
         # LLM 传无前缀命令，这里按本 bot 配置的命令前缀补充
         command = _apply_command_prefix(command)
 
-        message = Message(MessageSegment.text(command))
+        # 需要 @ 群友时，at 段放在命令文本之后（on_command 匹配命令头不受影响，
+        # 依赖 at 段的插件 get_message() 可见，get_plaintext() 得到"命令 @qq"）
+        if at_qq:
+            message = Message([MessageSegment.text(command), MessageSegment.at(at_qq)])
+        else:
+            message = Message(MessageSegment.text(command))
         now = datetime.now()
         return GroupMessageEvent(
             time=int(now.timestamp()),

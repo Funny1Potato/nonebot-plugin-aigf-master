@@ -308,7 +308,8 @@ class MessageProcessor:
                     "description": "调用本机群内的其它功能插件（仅限「可用的群功能」清单中列出的本机命令）",
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」清单（本机插件提供的命令）。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
-                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
+                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
+                        "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
                     }, "required": ["command"]},
                 },
             })
@@ -321,7 +322,8 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「其它 bot 的命令」清单（其它 bot 提供的命令）。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
-                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"}
+                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
+                        "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
                     }, "required": ["bot", "command"]},
                 },
             })
@@ -346,9 +348,10 @@ class MessageProcessor:
                         logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
                         return "该插件不在允许调用的白名单内，已拒绝调用"
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
+                at_qq = args.get("at_user_id", 0) or 0
                 outcome = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
-                    user_id=uid,
+                    user_id=uid, at_qq=at_qq,
                 )
                 # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
                 # 投递成功/超时/出错都要记，否则 LLM 会重复调用同一条命令
@@ -372,9 +375,10 @@ class MessageProcessor:
                 command = args.get("command", "")
                 uid = args.get("user_id", self._current_user_id)
                 logger.info(f"[调用] invoke_peer_plugin: bot={peer_name}, command={command}, user_id={uid}")
+                at_qq = args.get("at_user_id", 0) or 0
                 result = await self.peer_client.invoke(
                     peer_name, command, int(self.group_id), uid,
-                    timeout=self.config.aigfm_invoke_timeout,
+                    at_qq=at_qq, timeout=self.config.aigfm_invoke_timeout,
                 )
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(),
