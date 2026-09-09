@@ -12,6 +12,7 @@ class PluginConfig(BaseModel):
     aigfm_llm_model: str = Field("gpt-3.5-turbo", description="LLM 模型名称")
     aigfm_llm_base_url: str = Field(..., description="LLM API 地址")
     aigfm_llm_json_mode: bool = Field(True, description="是否强制 LLM 输出 JSON")
+    aigfm_llm_tools_json_strict: bool = Field(False, description="工具调用路径首次请求也强制 JSON 输出（部分 OpenAI 兼容服务不支持 tools+json_object 组合，开启前请确认服务商支持）")
     aigfm_llm_temperature: float = Field(0.5, description="LLM 温度参数")
 
     # VLM 配置

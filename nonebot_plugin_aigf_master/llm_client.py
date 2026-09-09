@@ -53,14 +53,21 @@ class LLMClient:
         self, prompt: str, model: str,
         tools: list[dict], tool_handler,
         json_mode: bool = False,
+        first_call_json: bool = False,
     ) -> tuple[str | None, bool]:
-        """支持 function calling 的响应生成"""
+        """支持 function calling 的响应生成
+
+        first_call_json: 首次带 tools 的请求是否也强制 JSON 输出。
+        默认 False（避免与 function calling 冲突，部分兼容服务不支持两者组合）；
+        工具回填后的最终答复始终按 json_mode 强制 JSON。
+        """
         messages = [{"role": "user", "content": prompt}]
         used_tool = False
 
-        response = await self._client.chat.completions.create(
-            messages=messages, model=model, tools=tools, temperature=0.5, timeout=300,
-        )
+        kwargs: dict = {"messages": messages, "model": model, "tools": tools, "temperature": 0.5, "timeout": 300}
+        if json_mode and first_call_json:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = await self._client.chat.completions.create(**kwargs)
         message = response.choices[0].message
 
         if message.tool_calls:

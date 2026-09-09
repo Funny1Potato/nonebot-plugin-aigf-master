@@ -391,6 +391,7 @@ class MessageProcessor:
         return await self.llm.chat_with_tools(
             prompt, self.config.aigfm_llm_model, tools, handler,
             json_mode=self.config.aigfm_llm_json_mode,
+            first_call_json=self.config.aigfm_llm_tools_json_strict,
         )
 
     async def _save_memes(self, save_meme: list, cached_stickers: list[dict]):
