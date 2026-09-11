@@ -136,41 +136,87 @@ class MemoryStore:
     # ========== 操作执行 ==========
 
     async def apply_ops(self, ops: MemoryOps):
-        """执行记忆操作"""
+        """执行记忆操作」
+
+        每个字段独立执行：单字段格式异常只影响该字段（记录日志），
+        不中断其它字段的操作，避免 LLM 一次格式偏差吞掉整批记忆操作。
+        """
         if not ops:
             return
 
         if ops.short_term:
-            await self._apply_list_ops(
-                self.load_short_term, self.save_short_term, ops.short_term
-            )
-
+            try:
+                await self._apply_list_ops(
+                    self.load_short_term, self.save_short_term, ops.short_term
+                )
+            except Exception as e:
+                logger.error(f"[记忆] 短期记忆操作失败: {e}")
         if ops.long_term:
-            await self._apply_list_ops(
-                self.load_long_term, self.save_long_term, ops.long_term
-            )
-
+            try:
+                await self._apply_list_ops(
+                    self.load_long_term, self.save_long_term, ops.long_term
+                )
+            except Exception as e:
+                logger.error(f"[记忆] 长期记忆操作失败: {e}")
         if ops.friends:
-            await self._apply_friends_ops(ops.friends)
-
+            try:
+                await self._apply_friends_ops(ops.friends)
+            except Exception as e:
+                logger.error(f"[记忆] 群友信息操作失败: {e}")
         if ops.culture:
-            await self._apply_culture_ops(ops.culture)
+            try:
+                await self._apply_culture_ops(ops.culture)
+            except Exception as e:
+                logger.error(f"[记忆] 文化记忆操作失败: {e}")
 
-    async def _apply_list_ops(self, loader, saver, ops: dict):
+    @staticmethod
+    def _ops_entry_list(ops, key: str, default: list = None) -> list:
+        """取操作字段并保证返回 list：字符串转单元素，其它非 list 忽略
+
+        LLM 输出的 memory 结构偶有偏差（add/delete/modify 为字符串或缺失），
+        这里统一归一化，避免 `for x in "字符串"` 逐字符 / AttributeError。
+        """
+        if isinstance(ops, dict):
+            val = ops.get(key, default if default is not None else [])
+        else:
+            val = default if default is not None else []
+        if isinstance(val, list):
+            return val
+        if isinstance(val, str) and val:
+            return [val]
+        return []
+
+    async def _apply_list_ops(self, loader, saver, ops):
         items = await loader()
-        for idx in sorted([int(i) for i in ops.get("delete", [])], reverse=True):
+        # LLM 可能输出裸数组（把展示结构当输出结构）→ 视为 add
+        if not isinstance(ops, dict):
+            if isinstance(ops, list):
+                ops = {"add": ops}
+            else:
+                logger.warning(f"[记忆] 忽略非法的列表记忆操作: {ops!r}")
+                return
+        for idx in sorted((int(i) for i in self._ops_entry_list(ops, "delete")
+                           if isinstance(i, (int, str)) and str(i).lstrip("-").isdigit()), reverse=True):
             if 0 <= idx < len(items):
                 items.pop(idx)
-        for mod in ops.get("modify", []):
-            idx, content = int(mod.get("index", -1)), mod.get("content", "")
+        for mod in self._ops_entry_list(ops, "modify"):
+            if not isinstance(mod, dict):
+                continue
+            try:
+                idx, content = int(mod.get("index", -1)), mod.get("content", "")
+            except (TypeError, ValueError):
+                continue
             if 0 <= idx < len(items) and content:
                 items[idx] = content
-        for item in ops.get("add", []):
-            if item and item not in items:
+        for item in self._ops_entry_list(ops, "add"):
+            if isinstance(item, str) and item and item not in items:
                 items.append(item)
         await saver(items)
 
-    async def _apply_friends_ops(self, friends_ops: dict):
+    async def _apply_friends_ops(self, friends_ops):
+        if not isinstance(friends_ops, dict):
+            logger.warning(f"[记忆] 忽略非法的群友操作: {friends_ops!r}")
+            return
         nickname_to_id: dict[str, str] = {}
         for f in self._friends_dir.iterdir():
             if f.suffix == ".json":
@@ -183,6 +229,14 @@ class MemoryStore:
                     pass
 
         for key, ops in friends_ops.items():
+            if not isinstance(key, str):
+                continue
+            # 单个群友的操作也允许裸数组（视为 add）
+            if not isinstance(ops, dict):
+                if isinstance(ops, list):
+                    ops = {"add": ops}
+                else:
+                    continue
             user_id = key if key.isdigit() else nickname_to_id.get(key, key)
             friend = await self.load_friend(user_id) or {
                 "id": user_id, "nickname": key if not key.isdigit() else "",
@@ -192,42 +246,61 @@ class MemoryStore:
                 friend.setdefault("groups", []).append(self.group_id)
 
             info = friend.get("info", [])
-            for idx in sorted([int(i) for i in ops.get("delete", [])], reverse=True):
+            for idx in sorted((int(i) for i in self._ops_entry_list(ops, "delete")
+                               if isinstance(i, (int, str)) and str(i).lstrip("-").isdigit()), reverse=True):
                 if 0 <= idx < len(info):
                     info.pop(idx)
-            for mod in ops.get("modify", []):
-                idx, content = int(mod.get("index", -1)), mod.get("content", "")
+            for mod in self._ops_entry_list(ops, "modify"):
+                if not isinstance(mod, dict):
+                    continue
+                try:
+                    idx, content = int(mod.get("index", -1)), mod.get("content", "")
+                except (TypeError, ValueError):
+                    continue
                 if 0 <= idx < len(info) and content:
                     info[idx] = content
-            for item in ops.get("add", []):
-                if item and item not in info:
+            for item in self._ops_entry_list(ops, "add"):
+                if isinstance(item, str) and item and item not in info:
                     info.append(item)
             friend["info"] = info
 
             aliases = friend.get("aliases", [])
-            for item in ops.get("add_alias", []):
-                if item and item not in aliases:
+            for item in self._ops_entry_list(ops, "add_alias"):
+                if isinstance(item, str) and item and item not in aliases:
                     aliases.append(item)
-            for item in ops.get("remove_alias", []):
+            for item in self._ops_entry_list(ops, "remove_alias"):
                 if item in aliases:
                     aliases.remove(item)
             friend["aliases"] = aliases
 
             await self.save_friend(user_id, friend)
 
-    async def _apply_culture_ops(self, ops: dict):
+    async def _apply_culture_ops(self, ops):
+        # LLM 可能输出裸数组（视为 add）
+        if not isinstance(ops, dict):
+            if isinstance(ops, list):
+                ops = {"add": ops}
+            else:
+                logger.warning(f"[记忆] 忽略非法的文化记忆操作: {ops!r}")
+                return
         terms = await self.load_culture()
-        for idx in sorted([int(i) for i in ops.get("delete", [])], reverse=True):
+        for idx in sorted((int(i) for i in self._ops_entry_list(ops, "delete")
+                           if isinstance(i, (int, str)) and str(i).lstrip("-").isdigit()), reverse=True):
             if 0 <= idx < len(terms):
                 terms.pop(idx)
-        for mod in ops.get("modify", []):
-            idx = int(mod.get("index", -1))
+        for mod in self._ops_entry_list(ops, "modify"):
+            if not isinstance(mod, dict):
+                continue
+            try:
+                idx = int(mod.get("index", -1))
+            except (TypeError, ValueError):
+                continue
             if 0 <= idx < len(terms):
                 for key in ["term", "meaning", "context", "usage_examples"]:
                     if key in mod and mod[key]:
                         terms[idx][key] = mod[key]
-        for item in ops.get("add", []):
-            if item and item.get("term"):
+        for item in self._ops_entry_list(ops, "add"):
+            if isinstance(item, dict) and item.get("term"):
                 existing = next((t for t in terms if t.get("term") == item["term"]), None)
                 if existing:
                     existing["usage_count"] = existing.get("usage_count", 0) + 1
