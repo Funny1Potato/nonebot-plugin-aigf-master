@@ -1,6 +1,7 @@
 """Bot API 钩子：拦截当前实例插件发出的消息"""
 
 import base64
+import json
 import ssl
 from datetime import datetime
 
@@ -111,6 +112,13 @@ def _parse_segments(message) -> list[dict]:
                 elif seg_type == "image":
                     data = seg_data if isinstance(seg_data, dict) else {}
                     result.append(_extract_image_data(data))
+                elif seg_type == "forward":
+                    result.append({"type": "text", "text": "[收到一条合并聊天记录]"})
+                elif seg_type == "json":
+                    data = seg_data if isinstance(seg_data, dict) else {}
+                    result.append({"type": "text", "text": _extract_json_desc(data.get("data", ""))})
+                elif seg_type == "xml":
+                    result.append({"type": "text", "text": "[收到一条XML消息]"})
         except Exception as e:
             logger.error(f"[ContextBus] Message 迭代失败: {e}")
         return result
@@ -124,6 +132,12 @@ def _parse_segments(message) -> list[dict]:
                     result.append({"type": "text", "text": seg.get("data", {}).get("text", "")})
                 elif seg.get("type") == "image":
                     result.append(_extract_image_data(seg.get("data", {})))
+                elif seg.get("type") == "forward":
+                    result.append({"type": "text", "text": "[收到一条合并聊天记录]"})
+                elif seg.get("type") == "json":
+                    result.append({"type": "text", "text": _extract_json_desc(seg.get("data", {}).get("data", ""))})
+                elif seg.get("type") == "xml":
+                    result.append({"type": "text", "text": "[收到一条XML消息]"})
         return result
 
     return []
@@ -135,6 +149,34 @@ def _file_uri_to_path(uri: str) -> str:
     if path.startswith("/") and len(path) > 3 and path[2] == ":":
         path = path[1:]          # Windows 的 /D:/... 形式
     return path
+
+
+def _extract_json_desc(json_str: str) -> str:
+    """从 JSON 消息中提取小程序/卡片的 title 和 desc"""
+    try:
+        data = json.loads(json_str) if isinstance(json_str, str) else json_str
+        if isinstance(data, dict):
+            # 递归查找 title 和 desc 字段
+            title = data.get("title", "")
+            desc = data.get("desc", "")
+            # 有些小程序在 meta 中
+            if not title and "meta" in data:
+                meta = data["meta"]
+                if isinstance(meta, dict):
+                    for v in meta.values():
+                        if isinstance(v, dict):
+                            title = v.get("title", title) or title
+                            desc = v.get("desc", desc) or desc
+            if title or desc:
+                parts = []
+                if title:
+                    parts.append(title)
+                if desc:
+                    parts.append(desc)
+                return f"[小程序/卡片: {', '.join(parts)}] "
+        return "[收到一条JSON消息] "
+    except (json.JSONDecodeError, TypeError):
+        return "[收到一条JSON消息] "
 
 
 def _extract_image_data(data: dict) -> dict:

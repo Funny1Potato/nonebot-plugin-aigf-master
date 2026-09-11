@@ -2,7 +2,6 @@
 
 import asyncio
 import base64
-import json
 import re
 import ssl
 from datetime import datetime
@@ -21,7 +20,7 @@ from nonebot.plugin import PluginMetadata
 require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 
-from .api_hooks import register_hooks, _extract_image_data
+from .api_hooks import register_hooks, _extract_image_data, _extract_json_desc
 from .config import PluginConfig, plugin_config
 from .context_bus import ContextBus
 from .command_learner import CommandLearner
@@ -224,34 +223,6 @@ def _extract_reply_text(message_content) -> str:
         return text[:50] if text else "（非文字消息）"
     except Exception:
         return "（无法获取）"
-
-
-def _extract_json_desc(json_str: str) -> str:
-    """从 JSON 消息中提取小程序/卡片的 title 和 desc"""
-    try:
-        data = json.loads(json_str) if isinstance(json_str, str) else json_str
-        if isinstance(data, dict):
-            # 递归查找 title 和 desc 字段
-            title = data.get("title", "")
-            desc = data.get("desc", "")
-            # 有些小程序在 meta 中
-            if not title and "meta" in data:
-                meta = data["meta"]
-                if isinstance(meta, dict):
-                    for v in meta.values():
-                        if isinstance(v, dict):
-                            title = v.get("title", title) or title
-                            desc = v.get("desc", desc) or desc
-            if title or desc:
-                parts = []
-                if title:
-                    parts.append(title)
-                if desc:
-                    parts.append(desc)
-                return f"[小程序/卡片: {', '.join(parts)}] "
-        return "[收到一条JSON消息] "
-    except (json.JSONDecodeError, TypeError):
-        return "[收到一条JSON消息] "
 
 
 # ========== 批量消息处理 ==========
