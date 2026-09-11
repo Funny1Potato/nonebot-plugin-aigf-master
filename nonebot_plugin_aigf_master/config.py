@@ -32,6 +32,7 @@ class PluginConfig(BaseModel):
     aigfm_incomplete_timeout: float = Field(40.0, description="消息可能不完整时的等待时间")
     aigfm_merge_window: float = Field(5.0, description="同一用户连续消息合并窗口（秒）")
     aigfm_recent_messages: int = Field(20, description="prompt 中包含的最近历史消息条数")
+    aigfm_show_message_time: bool = Field(False, description="是否在 LLM 看到的消息前显示时间（新消息与最近聊天记录，格式 [MM-DD HH:MM]）")
 
     # 社交能量
     aigfm_energy_baseline: float = Field(0.7, description="社交能量基线（0.0~1.0）")

@@ -38,6 +38,11 @@ def _energy_description(energy: float) -> str:
         return "完全不想说话"
 
 
+def _fmt_time(dt: datetime) -> str:
+    """消息时间前缀（如 [09-11 14:30]），用于开启时标注消息时间"""
+    return f"[{dt.strftime('%m-%d %H:%M')}] "
+
+
 def build_prompt(
     bot_name: str,
     bot_role: str,
@@ -93,11 +98,13 @@ def build_prompt(
     history = [m for m in recent_messages if id(m) not in batch_ids]
     recent = history[-config.aigfm_recent_messages:]
     recent = _merge_consecutive(recent, window)
-    recent_str = _build_recent_str(recent, context_bus_messages, bot_name, window, new_messages)
+    recent_str = _build_recent_str(recent, context_bus_messages, bot_name, window, new_messages,
+                                   show_time=config.aigfm_show_message_time)
 
     # 新消息（插件/bot 来源的条目前加 [来源] 标注；user_id 为空即来自 _on_plugin_message / _add_peer_message）
     new_msgs_str = "\n".join(
-        (f"[{m.user_name}]: '{m.content}'" if not m.user_id else f"{m.user_name}: '{m.content}'")
+        ((_fmt_time(m.time) if config.aigfm_show_message_time else "")
+         + (f"[{m.user_name}]: '{m.content}'" if not m.user_id else f"{m.user_name}: '{m.content}'"))
         for m in merged_chunk
     )
 
@@ -427,6 +434,7 @@ def _build_recent_str(
     bot_name: str,
     window: float,
     new_messages: list[ChatMessage] | None = None,
+    show_time: bool = False,
 ) -> str:
     """合并最近消息和 ContextBus 消息，按时间排序（同一条插件响应只保留一份）
 
@@ -441,13 +449,13 @@ def _build_recent_str(
         source = msg.source_plugin or "其它插件"
         text = _bus_entry_text(msg)
         if (source, text) not in batch_keys:
-            entries.append((msg.timestamp, f"[{source}] {bot_name}: {text}"))
+            entries.append((msg.timestamp, f"{_fmt_time(msg.timestamp) if show_time else ''}[{source}] {bot_name}: {text}"))
         bus_keys.add((source, text))
 
     for msg in recent:
         if (msg.user_name, msg.content) in bus_keys:
             continue
-        entries.append((msg.time, f"{msg.user_name}: {msg.content}"))
+        entries.append((msg.time, f"{_fmt_time(msg.time) if show_time else ''}{msg.user_name}: {msg.content}"))
 
     entries.sort(key=lambda x: x[0])
     return "\n".join(text for _, text in entries) or "无"
