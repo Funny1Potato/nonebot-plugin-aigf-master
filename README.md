@@ -97,6 +97,7 @@ AIGFM_IMAGE_GEN_MODEL="..."            # 生图模型名称（豆包/Ark 示例:
 AIGFM_IMAGE_GEN_BASE_URL="https://..." # 生图 API 地址（OpenAI 兼容 images API；豆包示例 https://ark.cn-beijing.volces.com/api/v3）
 AIGFM_IMAGE_GEN_API_KEY=""             # 生图 API Key（为空时使用 chat 的 key）
 AIGFM_IMAGE_GEN_MAX_SIZE="1024x1024"   # 生成最大尺寸限制（宽x高，LLM 可指定比例/尺寸，程序自动缩放到不超过该上限）
+AIGFM_IMAGE_GEN_MIN_SIZE=""            # 生成最小尺寸（宽x高，为空不限制；用于满足服务最低像素要求，如豆包 Seedream 需 "1920x1920" 即 3686400 像素，非空时按比例放大到不小于该面积）
 AIGFM_IMAGE_GEN_WATERMARK=false        # 生图水印（参考豆包类服务，仅参考图时传入，默认 false）
 ```
 
