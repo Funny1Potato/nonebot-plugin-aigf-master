@@ -90,8 +90,12 @@ AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效
 AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
 AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的 key）
+```
 
-# --- AI 生图 ---
+### 可选
+
+```env
+# --- AI 生图（可选功能，AIGFM_IMAGE_GEN_ENABLED=false 时无需任何生图配置） ---
 AIGFM_IMAGE_GEN_ENABLED=false          # 是否启用 AI 生图（默认 false）
 AIGFM_IMAGE_GEN_MODEL="..."            # 生图模型名称（豆包/Ark 示例: doubao-seedream-5-0-lite-260128）
 AIGFM_IMAGE_GEN_BASE_URL="https://..." # 生图 API 地址（OpenAI 兼容 images API；豆包示例 https://ark.cn-beijing.volces.com/api/v3）
@@ -99,11 +103,7 @@ AIGFM_IMAGE_GEN_API_KEY=""             # 生图 API Key（为空时使用 chat �
 AIGFM_IMAGE_GEN_MAX_SIZE="1024x1024"   # 生成最大尺寸限制（宽x高，LLM 可指定比例/尺寸，程序自动缩放到不超过该上限）
 AIGFM_IMAGE_GEN_MIN_SIZE=""            # 生成最小尺寸（宽x高，为空不限制；用于满足服务最低像素要求，如豆包 Seedream 需 "1920x1920" 即 3686400 像素，非空时按比例放大到不小于该面积）
 AIGFM_IMAGE_GEN_WATERMARK=false        # 生图水印（参考豆包类服务，仅参考图时传入，默认 false）
-```
 
-### 可选
-
-```env
 # --- 基础 ---
 AIGFM_MEME_ENABLED=true                 # 是否启用表情包功能（默认 true）
 AIGFM_MEME_MAX_COUNT=200                # 自动收集的表情包最大数量（默认 200）
