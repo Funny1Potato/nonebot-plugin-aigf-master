@@ -290,7 +290,7 @@ class MessageProcessor:
 
         used_tool = False
         if (self.config.aigfm_search_enabled and self.search):
-            response_str, used_tool = await self._call_llm_with_tools(prompt, sticker_images)
+            response_str, used_tool = await self._call_llm_with_tools(prompt, sticker_images, plugin_commands, peer_commands)
         else:
             response_str = await self.llm.chat(
                 prompt, self.config.aigfm_llm_model,
@@ -370,7 +370,13 @@ class MessageProcessor:
 
         return reply_segments
 
-    async def _call_llm_with_tools(self, prompt: str, sticker_images: list[str]) -> tuple[str | None, bool]:
+    async def _call_llm_with_tools(self, prompt: str, sticker_images: list[str],
+                                   plugin_commands: list | None = None,
+                                   peer_commands: list | None = None) -> tuple[str | None, bool]:
+        # 命令清单为空时不注入命令调用工具：模型看不到工具就不会填「无/none」占位值，
+        # 命令学习走 JSON 输出字段，不受影响；学到第一条命令后清单非空，工具自动出现
+        plugin_commands = plugin_commands or []
+        peer_commands = peer_commands or []
         tools = []
         if self.config.aigfm_search_enabled:
             tools.append({
@@ -380,7 +386,7 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
                 },
             })
-        if self.config.aigfm_invoke_enabled:
+        if self.config.aigfm_invoke_enabled and plugin_commands:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_plugin",
@@ -392,7 +398,7 @@ class MessageProcessor:
                     }, "required": ["command"]},
                 },
             })
-        if self.config.aigfm_invoke_enabled and self.peer_client:
+        if self.config.aigfm_invoke_enabled and self.peer_client and peer_commands:
             peer_names = "、".join(self.peer_client.names())
             tools.append({
                 "type": "function", "function": {
