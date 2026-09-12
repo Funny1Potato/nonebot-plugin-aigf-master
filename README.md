@@ -34,6 +34,7 @@
 - ⏱️ **不完整消息检测**：纯 @ 消息或连续发送时自动延长等待时间
 - 🕐 **消息时间标注**：可选为 LLM 看到的消息加上 `[MM-DD HH:MM]` 时间前缀（`AIGFM_SHOW_MESSAGE_TIME`）
 - 📄 **完整消息类型**：合并聊天记录、小程序/卡片、XML 消息均可解析与捕获
+- 🎨 **AI 生图**：LLM 生成图片自动发到群里，尺寸由 LLM 决定（程序限最大尺寸），支持参考图改绘（回复图片消息或从聊天记录选图）
 - 🔒 **强制 JSON 输出**：确保 LLM 始终返回正确格式
 - ⚡ **轻量高效**：单次 LLM 调用完成对话 + 记忆管理 + 命令学习
 
@@ -88,6 +89,14 @@ AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效
 AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
 AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的 key）
+
+# --- AI 生图 ---
+AIGFM_IMAGE_GEN_ENABLED=false          # 是否启用 AI 生图（默认 false）
+AIGFM_IMAGE_GEN_MODEL="..."            # 生图模型名称（豆包/Ark 示例: doubao-seedream-5-0-lite-260128）
+AIGFM_IMAGE_GEN_BASE_URL="https://..." # 生图 API 地址（OpenAI 兼容 images API；豆包示例 https://ark.cn-beijing.volces.com/api/v3）
+AIGFM_IMAGE_GEN_API_KEY=""             # 生图 API Key（为空时使用 chat 的 key）
+AIGFM_IMAGE_GEN_MAX_SIZE="1024x1024"   # 生成最大尺寸限制（宽x高，LLM 可指定比例/尺寸，程序自动缩放到不超过该上限）
+AIGFM_IMAGE_GEN_WATERMARK=false        # 生图水印（参考豆包类服务，仅参考图时传入，默认 false）
 ```
 
 ### 可选
