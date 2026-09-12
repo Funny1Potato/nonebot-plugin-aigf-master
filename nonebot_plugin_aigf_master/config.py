@@ -74,6 +74,7 @@ class PluginConfig(BaseModel):
     aigfm_context_max_messages: int = Field(50, description="每群最大上下文缓冲条数")
     aigfm_context_in_prompt: int = Field(10, description="注入到 prompt 中的其它插件消息条数")
     aigfm_capture_images: bool = Field(True, description="是否捕获并解析其它插件输出的图片")
+    aigfm_sticker_cache_max_files: int = Field(300, description="图片缓存(sticker_cache)最大文件数，超限按 mtime 最旧删除（索引常驻后防磁盘无限增长）")
 
     # 插件调用
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")

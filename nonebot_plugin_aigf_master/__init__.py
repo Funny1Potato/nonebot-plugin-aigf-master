@@ -337,7 +337,16 @@ async def _describe_peer_image(group_id: int, source: str, image_url: str = "", 
             return
         image_b64 = base64.b64encode(image_bytes).decode()
         desc = await _image_handler.describe(image_b64, False)
-        content = f"[图片] {desc.description if desc else '（识图失败）'}"
+        cache_id = ""
+        try:
+            cache_id = await _memes.save_to_cache(
+                group_id, image_bytes,
+                desc.description if desc else "", desc.emotion if desc else "",
+            )
+        except Exception as e:
+            logger.warning(f"[Peer] 图片入库失败: {e}")
+        content = f"[图片, id: {cache_id}] {desc.description if desc else '（识图失败）'}" if cache_id \
+            else f"[图片] {desc.description if desc else '（识图失败）'}"
         _add_peer_message(group_id, source, content, reset_timer=False)
         logger.info(f"[Peer] 捕获图片: [{source}] {content[:80]}")
     except Exception as e:
@@ -422,8 +431,6 @@ async def _batch_processor(group_id: int):
 
         try:
             responses = await processor.process(messages, cached_stickers=stickers)
-            if stickers:
-                _memes.clear_cache(group_id)
         except Exception as e:
             logger.error(f"[处理失败] 群{group_id}: {e}")
             import traceback
@@ -643,7 +650,7 @@ async def _on_startup():
         if reset_timer:
             _group_last_time[group_id] = asyncio.get_event_loop().time()
 
-    register_hooks(_bus, _image_handler, _on_plugin_message, _on_image_start, _on_image_done)
+    register_hooks(_bus, _image_handler, _on_plugin_message, _on_image_start, _on_image_done, _memes)
 
     # 注册跨 bot 接收端点（其它 bot 推送消息到此）
     if _peer_client:

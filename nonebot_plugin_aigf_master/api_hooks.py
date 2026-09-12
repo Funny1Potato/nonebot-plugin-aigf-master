@@ -19,12 +19,14 @@ from .models import PluginMessage
 
 
 def register_hooks(bus: ContextBus, image_handler: ImageHandler,
-                   on_plugin_message=None, on_image_start=None, on_image_done=None):
+                   on_plugin_message=None, on_image_start=None, on_image_done=None,
+                   memes=None):
     """注册钩子
 
     Args:
         on_plugin_message: 回调函数，用于将插件消息加入消息缓冲区
                           签名: (group_id: int, user_name: str, content: str) -> None
+        memes: MemeStore，插件输出图片入库用（提供 cache_id 供 LLM 收藏/参考）
     """
 
     @Bot.on_calling_api
@@ -76,11 +78,11 @@ def register_hooks(bus: ContextBus, image_handler: ImageHandler,
                     on_image_start(group_id)
                 try:
                     if seg.get("url"):
-                        await _handle_image_url(bus, image_handler, seg["url"], source, group_id, on_plugin_message)
+                        await _handle_image_url(bus, image_handler, seg["url"], source, group_id, on_plugin_message, memes)
                     elif seg.get("base64"):
-                        await _handle_image_base64(bus, image_handler, seg["base64"], source, group_id, on_plugin_message)
+                        await _handle_image_base64(bus, image_handler, seg["base64"], source, group_id, on_plugin_message, memes)
                     elif seg.get("file"):
-                        await _handle_image_file(bus, image_handler, seg["file"], source, group_id, on_plugin_message)
+                        await _handle_image_file(bus, image_handler, seg["file"], source, group_id, on_plugin_message, memes)
                 finally:
                     # 下载/解码在 _process_image_bytes 之前就会失败，计数必须在这里闭合，
                     # 否则 _pending_images 常驻会让该群每次批处理都等到上限才放行
@@ -205,11 +207,20 @@ def _extract_image_data(data: dict) -> dict:
 
 
 async def _process_image_bytes(bus: ContextBus, image_handler: ImageHandler, image_bytes: bytes,
-                               source: str, group_id: int, on_plugin_message=None):
-    """公共图片处理逻辑"""
+                               source: str, group_id: int, on_plugin_message=None, memes=None):
+    """公共图片处理逻辑：VLM 描述 + 入库（提供 cache_id 供 LLM 收藏/参考）"""
     image_base64 = base64.b64encode(image_bytes).decode()
     desc = await image_handler.describe(image_base64, False)
     content = desc.description if desc else "（识图失败）"
+    cache_id = ""
+    if memes:
+        try:
+            cache_id = await memes.save_to_cache(
+                group_id, image_bytes,
+                desc.description if desc else "", desc.emotion if desc else "",
+            )
+        except Exception as e:
+            logger.warning(f"[ContextBus] 插件图片入库失败: {e}")
 
     bus.push(PluginMessage(
         content=content, source_plugin=source,
@@ -218,11 +229,14 @@ async def _process_image_bytes(bus: ContextBus, image_handler: ImageHandler, ima
 
     if on_plugin_message and content:
         logger.info(f"[ContextBus] 捕获图片: [{source}] {content[:80]}")
-        on_plugin_message(group_id, source, f"[图片] {content}", reset_timer=False)
+        if cache_id:
+            on_plugin_message(group_id, source, f"[图片, id: {cache_id}] {content}", reset_timer=False)
+        else:
+            on_plugin_message(group_id, source, f"[图片] {content}", reset_timer=False)
 
 
 async def _handle_image_url(bus: ContextBus, image_handler: ImageHandler, url: str,
-                            source: str, group_id: int, on_plugin_message=None):
+                            source: str, group_id: int, on_plugin_message=None, memes=None):
     """处理 URL 格式的图片"""
     try:
         ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -231,27 +245,27 @@ async def _handle_image_url(bus: ContextBus, image_handler: ImageHandler, url: s
             resp = await client.get(url)
             resp.raise_for_status()
             image_bytes = resp.content
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, memes)
     except Exception as e:
         logger.error(f"[ContextBus] URL图片处理失败: {e}")
 
 
 async def _handle_image_base64(bus: ContextBus, image_handler: ImageHandler, b64: str,
-                               source: str, group_id: int, on_plugin_message=None):
+                               source: str, group_id: int, on_plugin_message=None, memes=None):
     """处理 base64 格式的图片"""
     try:
         image_bytes = base64.b64decode(b64)
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, memes)
     except Exception as e:
         logger.error(f"[ContextBus] base64图片处理失败: {e}")
 
 
 async def _handle_image_file(bus: ContextBus, image_handler: ImageHandler, file_path: str,
-                             source: str, group_id: int, on_plugin_message=None):
+                             source: str, group_id: int, on_plugin_message=None, memes=None):
     """处理本地文件格式的图片"""
     try:
         async with await anyio.open_file(file_path, "rb") as f:
             image_bytes = await f.read()
-        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message)
+        await _process_image_bytes(bus, image_handler, image_bytes, source, group_id, on_plugin_message, memes)
     except Exception as e:
         logger.error(f"[ContextBus] 本地图片处理失败: {e}")

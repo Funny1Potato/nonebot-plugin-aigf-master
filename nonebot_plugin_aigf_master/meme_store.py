@@ -156,7 +156,25 @@ class MemeStore:
         if len(bucket) > max_count:
             for stale in list(bucket)[: len(bucket) - max_count]:
                 bucket.pop(stale, None)
+        # 磁盘文件级清理：索引常驻后文件不再随批处理清理，超上限按 mtime 最旧删除
+        self._cleanup_cache_files()
         return cache_id
+
+    def _cleanup_cache_files(self):
+        """sticker_cache 文件数超过上限时删除 mtime 最旧的（同步从各群索引移除）"""
+        from .config import plugin_config
+        limit = plugin_config.aigfm_sticker_cache_max_files
+        files = sorted(self._cache_dir.glob("*"), key=lambda p: p.stat().st_mtime)
+        if len(files) <= limit:
+            return
+        for old in files[: len(files) - limit]:
+            try:
+                old.unlink()
+            except OSError:
+                continue
+            cid = old.stem
+            for bucket in self._cache_index.values():
+                bucket.pop(cid, None)
 
     def get_cached(self, group_id: int) -> list[dict]:
         return [

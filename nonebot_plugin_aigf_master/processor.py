@@ -322,7 +322,6 @@ class MessageProcessor:
             short_term=short_term, long_term=long_term, friends=friends,
             recent_messages=self.recent_messages, new_messages=messages,
             meme_prompt_list=meme_prompt_list,
-            cached_stickers=cached_stickers or [],
             matched_culture=matched_culture,
             culture=culture,
             plugin_commands=plugin_commands, peer_commands=peer_commands,
