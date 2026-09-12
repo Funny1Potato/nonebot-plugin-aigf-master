@@ -27,6 +27,7 @@ from .command_learner import CommandLearner
 from .llm_client import LLMClient
 from .image_handler import ImageHandler
 from .image_gen_client import ImageGenClient
+from .image_library_store import ImageLibraryStore
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
 from .models import ChatMessage
@@ -67,6 +68,8 @@ _image_gen = ImageGenClient(
     plugin_config.aigfm_image_gen_base_url,
     _proxy,
 ) if plugin_config.aigfm_image_gen_enabled else None
+_image_library = ImageLibraryStore(_data_dir, _cache_dir,
+                                   plugin_config.aigfm_image_library_max_count)
 _search = create_search_client(
     plugin_config.aigfm_search_api, plugin_config.aigfm_search_api_key,
     plugin_config.aigfm_openwebsearch_url,
@@ -86,6 +89,7 @@ def _get_processor(group_id: int) -> MessageProcessor:
             search=_search, config=plugin_config, peer_client=_peer_client,
             peer_scanned_commands=_peer_scanned_commands,
             image_gen=_image_gen, image_handler=_image_handler,
+            image_library=_image_library,
         )
     return _processors[group_id]
 

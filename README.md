@@ -104,6 +104,11 @@ AIGFM_IMAGE_GEN_MAX_SIZE="1024x1024"   # 生成最大尺寸限制（宽x高，LL
 AIGFM_IMAGE_GEN_MIN_SIZE=""            # 生成最小尺寸（宽x高，为空不限制；用于满足服务最低像素要求，如豆包 Seedream 需 "1920x1920" 即 3686400 像素，非空时按比例放大到不小于该面积）
 AIGFM_IMAGE_GEN_WATERMARK=false        # 生图水印（参考豆包类服务，仅参考图时传入，默认 false）
 
+# --- 群成员信息查询与 LLM 图片库（可选功能） ---
+AIGFM_MEMBER_INFO_ENABLED=true          # 群成员信息查询工具（query_member_info，含头像识别入图片库；默认开启）
+AIGFM_IMAGE_LIBRARY_ENABLED=true        # LLM 图片库（save_image 收藏 + query_image_library 按需查询 + send_library_image 发送 + 群友评价联动修改描述；默认开启）
+AIGFM_IMAGE_LIBRARY_MAX_COUNT=100       # 图片库最大数量，超限按权重自动清理（默认 100）
+
 # --- 基础 ---
 AIGFM_MEME_ENABLED=true                 # 是否启用表情包功能（默认 true）
 AIGFM_MEME_MAX_COUNT=200                # 自动收集的表情包最大数量（默认 200）
@@ -120,6 +125,7 @@ AIGFM_SHOW_MESSAGE_TIME=false           # LLM 看到的消息是否带 [MM-DD HH
 # --- LLM ---
 AIGFM_LLM_JSON_MODE=true                # 是否强制 LLM 输出 JSON（默认 true）
 AIGFM_LLM_TOOLS_JSON_STRICT=false       # 工具调用路径首次请求也强制 JSON 输出（默认 false；开启后"未调用工具直接回复"的那一轮同样输出 JSON。部分 OpenAI 兼容服务不支持 tools+json_object 组合，开启前请确认服务商支持）
+AIGFM_LLM_MAX_TOOL_TURNS=6              # 工具调用最大轮数（默认 6；LLM 可连续多轮调用工具，超出后强制收尾）
 AIGFM_ENERGY_BASELINE=0.7               # 社交能量基线（默认 0.7，范围 0.0~1.0）
 
 # --- 联网搜索 ---

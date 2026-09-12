@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import random
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from .config import PluginConfig
 from .context_bus import ContextBus
 from .image_gen_client import ImageGenClient
 from .image_handler import ImageHandler
+from .image_library_store import ImageLibraryStore
 from .llm_client import LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
@@ -108,6 +110,49 @@ def _normalize_size(size_desc: str, max_size: str, min_size: str = "") -> str:
     return f"{w}x{h}"
 
 
+def _format_member_info(info: dict) -> str:
+    """把 get_group_member_info 返回的群成员资料格式化为给 LLM 的文本"""
+    def ts(v):
+        try:
+            return datetime.fromtimestamp(int(v)).strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OSError):
+            return ""
+
+    uid = info.get("user_id", "")
+    nickname = info.get("nickname", "")
+    parts = [f"群友 {nickname or uid}(QQ:{uid})"]
+    if info.get("card"):
+        parts.append(f"群名片: {info['card']}")
+    role_map = {"owner": "群主", "admin": "管理员", "member": "成员"}
+    role = role_map.get(info.get("role", ""))
+    if role:
+        parts.append(f"角色: {role}")
+    sex_map = {"male": "男", "female": "女", "unknown": "未知"}
+    sex = sex_map.get(info.get("sex", ""))
+    if sex:
+        parts.append(f"性别: {sex}")
+    if info.get("age"):
+        parts.append(f"年龄: {info['age']}")
+    if info.get("area"):
+        parts.append(f"地区: {info['area']}")
+    if info.get("level"):
+        parts.append(f"等级: {info['level']}")
+    if info.get("title"):
+        parts.append(f"专属头衔: {info['title']}")
+    jt = ts(info.get("join_time"))
+    if jt:
+        parts.append(f"加群时间: {jt}")
+    lst = ts(info.get("last_sent_time"))
+    if lst:
+        parts.append(f"最后发言: {lst}")
+    try:
+        st = int(info.get("shut_up_timestamp", 0) or 0)
+        parts.append("禁言状态: 禁言中" if st and st > int(time.time()) else "禁言状态: 正常")
+    except (TypeError, ValueError):
+        parts.append("禁言状态: 正常")
+    return " | ".join(parts)
+
+
 # 本插件自身的管理命令不允许被 LLM 代为执行：synthetic 事件携带真实触发用户的 user_id，
 # 若该用户是 superuser，`/status`、`/reset` 等会被真的执行
 SELF_PLUGIN_NAMES = {"nonebot_plugin_aigf_master", "nonebot-plugin-aigf-master"}
@@ -141,6 +186,7 @@ class MessageProcessor:
         peer_scanned_commands: dict[str, list[dict]] | None = None,
         image_gen: ImageGenClient | None = None,
         image_handler: ImageHandler | None = None,
+        image_library: ImageLibraryStore | None = None,
     ):
         self.group_id = group_id
         self.llm = llm
@@ -156,6 +202,7 @@ class MessageProcessor:
         self.peer_scanned_commands = peer_scanned_commands if peer_scanned_commands is not None else {}
         self.image_gen = image_gen
         self.image_handler = image_handler
+        self.image_library = image_library
         self._image_gen_tasks: set[asyncio.Task] = set()
         self.bot_name = "小助手"
         self.bot_role = "一个友好的群聊助手"
@@ -332,6 +379,13 @@ class MessageProcessor:
         except Exception as e:
             logger.error(f"执行记忆操作失败: {e}")
 
+        # 图片库收藏
+        if memory_ops.save_image and self.image_library:
+            try:
+                await self._save_images(memory_ops.save_image, cached_stickers or [])
+            except Exception as e:
+                logger.error(f"图片库收藏失败: {e}")
+
         # 命令学习
         if self.config.aigfm_learn_commands:
             cmd_ops = extract_command_learning(result)
@@ -414,8 +468,52 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {
                         "prompt": {"type": "string", "description": "详细的图片描述（画面内容、风格、色调、比例等），越具体生成效果越好"},
                         "size": {"type": "string", "description": "可选尺寸/比例：square/方形、portrait/竖版、landscape/横版、16:9/宽幅，或直接写宽x高（如 768x1024）；默认方形，程序会自动限制在配置的最大尺寸内"},
-                        "reference_cache_id": {"type": "string", "description": "可选参考图 id：聊天记录中出现的图片 id（如 [发送了一张图片, id: xxx] 或 [回复 xxx 的消息: \"[发送了一张图片, id: xxx]...\"] 中的 xxx）；用户要求\"参考这张图/照着改/换成某种风格\"时填，不要编造不存在的 id，不需要时省略"}
+                        "reference_cache_id": {"type": "string", "description": "可选参考图 id：聊天记录中出现的图片 id（如 [发送了一张图片, id: xxx] 或 [回复 xxx 的消息: \"[发送了一张图片, id: xxx]...\"] 中的 xxx）或图片库条目 id；用户要求\"参考这张图/照着改/换成某种风格\"时填，不要编造不存在的 id，不需要时省略"}
                     }, "required": ["prompt"]},
+                },
+            })
+        if self.config.aigfm_member_info_enabled:
+            tools.append({
+                "type": "function", "function": {
+                    "name": "query_member_info",
+                    "description": "查询群成员的资料（群名片/角色/性别/年龄/地区/等级/专属头衔/加群时间/最后发言/禁言状态）及头像描述。仅当用户询问某位群友的这些信息时才调用，不要主动查询",
+                    "parameters": {"type": "object", "properties": {
+                        "user_id": {"type": "integer", "description": "群友 QQ 号（从「已知群友昵称」的名字(QQ:号) 中取；与 name 二选一）"},
+                        "name": {"type": "string", "description": "群友昵称或群名片（QQ 号未知时用，模糊匹配；与 user_id 二选一）"},
+                        "refresh": {"type": "boolean", "description": "是否强制重新获取头像（用户要求\"最新头像\"时传 true，默认 false 用缓存不自动刷新）"}
+                    }, "required": []},
+                },
+            })
+        if self.config.aigfm_image_library_enabled and self.image_library:
+            tools.append({
+                "type": "function", "function": {
+                    "name": "query_image_library",
+                    "description": "查询 LLM 图片库中的图片条目（自己收藏的图片 + 头像），按关键词过滤描述。仅当需要回忆/查看图片库内容（用户提到你收藏的图、你想找某张图）时才调用",
+                    "parameters": {"type": "object", "properties": {
+                        "keyword": {"type": "string", "description": "可选关键词（匹配描述/情感；空则返回最近收藏的条目）"}
+                    }, "required": []},
+                },
+            })
+            tools.append({
+                "type": "function", "function": {
+                    "name": "send_library_image",
+                    "description": "把图片库中的一张图片发送到群里（id 来自 query_image_library 返回，或发送记录中标注的 [图片: id]）。仅当用户要求把某张图片发到群里时才调用",
+                    "parameters": {"type": "object", "properties": {
+                        "id": {"type": "string", "description": "图片库条目 id"}
+                    }, "required": ["id"]},
+                },
+            })
+            tools.append({
+                "type": "function", "function": {
+                    "name": "edit_image_meta",
+                    "description": "修改图片库或表情包库中图片/表情包的描述或关键词（群友对刚发送的图/表情包发表评价时，根据评价修改或补充描述）。仅当用户/群友要求修改某张图或表情包的信息时才调用",
+                    "parameters": {"type": "object", "properties": {
+                        "type": {"type": "string", "description": "目标库类型：meme=表情包库，image=图片库（与发送记录中的标注一致）"},
+                        "id": {"type": "string", "description": "条目 id（发送记录中标注的 [表情包: xxx] 或 [图片: xxx] 里的 id）"},
+                        "description": {"type": "string", "description": "新的/补充后的描述（可选）"},
+                        "emotion": {"type": "string", "description": "新的情感标签（可选，仅图片库支持）"},
+                        "keywords": {"type": "array", "items": {"type": "string"}, "description": "适用场景关键词（可选，仅表情包库支持）"}
+                    }, "required": ["type", "id"]},
                 },
             })
 
@@ -494,13 +592,130 @@ class MessageProcessor:
                 self._image_gen_tasks.add(task)
                 task.add_done_callback(self._image_gen_tasks.discard)
                 return "图片生成任务已启动，完成后会自动发到群里；生成需要一点时间，期间请不要重复提交相同的生图请求"
+            elif name == "query_member_info":
+                return await self._handle_query_member(args)
+            elif name == "query_image_library" and self.image_library:
+                keyword = args.get("keyword", "").strip()
+                entries = await self.image_library.find(keyword)
+                if not entries:
+                    return "图片库为空" if not keyword else f"图片库中没有匹配「{keyword}」的条目"
+                lines = [f"- [{e['id']}]（{e.get('category','collect')}）{e.get('description','')}" for e in entries]
+                return "图片库条目：\n" + "\n".join(lines)
+            elif name == "send_library_image" and self.image_library:
+                entry_id = str(args.get("id", "")).strip()
+                entry = await self.image_library.get_entry(entry_id)
+                path = await self.image_library.get_file(entry_id)
+                if not entry or not path:
+                    return f"图片库中没有条目 id={entry_id}（可先用 query_image_library 查看）"
+                async with await anyio.open_file(Path(path), "rb") as f:
+                    b64 = base64.b64encode(await f.read()).decode()
+                if not self._bot:
+                    return "无法发送：bot 未就绪"
+                await self._bot.send_msg(
+                    message_type="group", group_id=int(self.group_id),
+                    message=Message(MessageSegment.image(f"base64://{b64}")),
+                )
+                await self.image_library.touch(entry_id)
+                desc = entry.get("description", "")
+                self.recent_messages.append(ChatMessage(
+                    time=datetime.now(), user_name=self.bot_name,
+                    content=f"已发送[图片: {entry_id}]「{desc}」",
+                ))
+                return f"已发送图片「{desc}」"
+            elif name == "edit_image_meta":
+                target_type = args.get("type", "").strip()
+                entry_id = str(args.get("id", "")).strip()
+                description = args.get("description")
+                emotion = args.get("emotion")
+                keywords = args.get("keywords")
+                if target_type == "meme":
+                    ok = await self.memes.update_meme(entry_id, description=description, keywords=keywords)
+                elif target_type == "image" and self.image_library:
+                    ok = await self.image_library.update_entry(entry_id, description=description, emotion=emotion)
+                else:
+                    return "type 必须是 meme（表情包库）或 image（图片库）"
+                if ok:
+                    logger.info(f"[图片管理] 已更新 {target_type} 条目: {entry_id}")
+                    return f"已更新{ '表情包' if target_type=='meme' else '图片' }「{entry_id}」的信息"
+                return f"未找到{ '表情包' if target_type=='meme' else '图片' }条目 {entry_id}"
             return f"未知工具: {name}"
 
         return await self.llm.chat_with_tools(
             prompt, self.config.aigfm_llm_model, tools, handler,
             json_mode=self.config.aigfm_llm_json_mode,
             first_call_json=self.config.aigfm_llm_tools_json_strict,
+            max_tool_turns=self.config.aigfm_llm_max_tool_turns,
         )
+
+    async def _handle_query_member(self, args: dict) -> str:
+        """query_member_info：群成员文字资料 + 头像下载/VLM 描述入库（图片库 category=avatar）"""
+        if not self._bot:
+            return "查询失败：bot 未就绪"
+        uid = args.get("user_id", 0)
+        qname = args.get("name", "").strip()
+        refresh = bool(args.get("refresh", False))
+        try:
+            target_id = int(uid) if uid else 0
+        except (TypeError, ValueError):
+            target_id = 0
+        if not target_id and qname:
+            try:
+                members = await self._bot.get_group_member_list(group_id=int(self.group_id))
+                for m in members:
+                    nick = m.get("nickname") or ""
+                    card = m.get("card") or ""
+                    if nick == qname or card == qname or (qname and qname in nick):
+                        target_id = int(m.get("user_id", 0))
+                        break
+            except Exception as e:
+                logger.warning(f"[群员] 成员列表获取失败: {e}")
+        if not target_id:
+            if qname:
+                return f"未找到群友「{qname}」"
+            return "缺少查询参数：请提供群友 QQ 号(user_id)或昵称(name)"
+        try:
+            info = await self._bot.get_group_member_info(group_id=int(self.group_id), user_id=target_id)
+        except Exception as e:
+            logger.warning(f"[群员] 查询失败: {e}")
+            return f"查询群成员信息失败：{e}"
+        parts = [_format_member_info(info)]
+        avatar_desc = ""
+        if self.image_library:
+            avatar_id = f"avatar_{target_id}"
+            entry = await self.image_library.get_entry(avatar_id)
+            cached_desc = entry.get("description", "") if entry else ""
+            if refresh or not cached_desc:
+                try:
+                    image_bytes = await self.image_library.fetch_avatar(str(target_id))
+                except Exception as e:
+                    logger.warning(f"[群员] 头像下载失败: {e}")
+                    image_bytes = None
+                if image_bytes:
+                    desc = ""
+                    if self.image_handler:
+                        try:
+                            image_b64 = base64.b64encode(image_bytes).decode()
+                            vlm = await self.image_handler.describe(image_b64, is_sticker=False)
+                            if vlm and vlm.description:
+                                desc = vlm.description
+                        except Exception as e:
+                            logger.warning(f"[群员] 头像识别失败: {e}")
+                    if not desc:
+                        desc = "（未生成描述：VLM未启用或识别失败）"
+                    await self.image_library.save_image(
+                        avatar_id, image_bytes, "png", description=desc,
+                        category="avatar", user_id=str(target_id),
+                    )
+                    avatar_desc = desc
+                else:
+                    avatar_desc = cached_desc
+            else:
+                avatar_desc = cached_desc
+            if avatar_desc:
+                parts.append(f"头像: {avatar_desc}")
+            else:
+                parts.append("头像: （暂无描述）")
+        return "\n".join(parts)
 
     async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = ""):
         """后台生图任务：生成 → 发送到群 → VLM 描述 → 写自述（LLM 下一次感知）"""
@@ -525,6 +740,10 @@ class MessageProcessor:
                     disk_path = self.memes.get_cache_file(reference_id)
                     if disk_path:
                         ref_path = disk_path
+                    elif self.image_library:
+                        lib_path = await self.image_library.get_file(reference_id)
+                        if lib_path:
+                            ref_path = lib_path
                 if ref_path:
                     async with await anyio.open_file(ref_path, "rb") as f:
                         ref_bytes = await f.read()
@@ -596,6 +815,41 @@ class MessageProcessor:
                 except Exception as e:
                     logger.error(f"表情包保存失败: {e}")
 
+    async def _save_images(self, save_image: list, cached_stickers: list[dict]):
+        """保存 LLM 收藏的图片到图片库（category=collect，id 沿用缓存 id）"""
+        if not self.image_library:
+            return
+        current_ids = {s["id"] for s in cached_stickers}
+        for item in save_image if isinstance(save_image, list) else [save_image]:
+            cache_id = item.get("id") or item.get("cache_id", "")
+            description = item.get("description", "")
+            if not cache_id or not description:
+                continue
+            if cache_id not in current_ids:
+                logger.warning(f"[图片库] 收藏图片不可用（id={cache_id}）：不在本批消息缓存中")
+                continue
+            image_bytes = None
+            ext = "png"
+            for cand in (self.memes.get_cache_info(int(self.group_id), cache_id),
+                         {"path": self.memes.get_cache_file(cache_id)}):
+                path = cand and cand.get("path")
+                if path and Path(path).is_file():
+                    async with await anyio.open_file(Path(path), "rb") as f:
+                        image_bytes = await f.read()
+                    ext = Path(path).suffix.lstrip(".").lower() or "png"
+                    break
+            if image_bytes is None:
+                logger.warning(f"[图片库] 收藏图片不可用（id={cache_id}）：缓存文件不存在")
+                continue
+            await self.image_library.save_image(
+                cache_id, image_bytes, ext, description=description, category="collect",
+            )
+            total = await self.image_library.count()
+            self.recent_messages.append(ChatMessage(
+                time=datetime.now(), user_name=self.bot_name,
+                content=f"已收藏图片「{description}」（共 {total} 张）",
+            ))
+
     def _record_bot_reply(self, segments: list[ReplySegment]):
         for seg in segments:
             if seg.type == "text":
@@ -603,6 +857,6 @@ class MessageProcessor:
             elif seg.type == "meme":
                 meme = self.memes.all_memes.get(seg.meme_id)
                 desc = meme.description if meme else seg.meme_id
-                self.recent_messages.append(ChatMessage(time=datetime.now(), user_name=self.bot_name, content=f"[表情包] {desc}"))
+                self.recent_messages.append(ChatMessage(time=datetime.now(), user_name=self.bot_name, content=f"[表情包: {seg.meme_id}] {desc}"))
             elif seg.type == "at":
                 self.recent_messages.append(ChatMessage(time=datetime.now(), user_name=self.bot_name, content=f"@{seg.user_name}"))

@@ -13,6 +13,7 @@ class PluginConfig(BaseModel):
     aigfm_llm_base_url: str = Field(..., description="LLM API 地址")
     aigfm_llm_json_mode: bool = Field(True, description="是否强制 LLM 输出 JSON")
     aigfm_llm_tools_json_strict: bool = Field(False, description="工具调用路径首次请求也强制 JSON 输出（部分 OpenAI 兼容服务不支持 tools+json_object 组合，开启前请确认服务商支持）")
+    aigfm_llm_max_tool_turns: int = Field(6, description="工具调用最大轮数（LLM 可连续多轮调用工具，超出后强制收尾）")
     aigfm_llm_temperature: float = Field(0.5, description="LLM 温度参数")
 
     # VLM 配置
@@ -48,6 +49,13 @@ class PluginConfig(BaseModel):
     # 表情包
     aigfm_meme_enabled: bool = Field(True, description="是否启用表情包功能")
     aigfm_meme_max_count: int = Field(200, description="自动收集表情包最大数量")
+
+    # LLM 图片库（save_image 收藏 + query_image_library / send_library_image / 头像收录）
+    aigfm_image_library_enabled: bool = Field(True, description="是否启用 LLM 图片库")
+    aigfm_image_library_max_count: int = Field(100, description="图片库最大数量，超限按权重自动清理")
+
+    # 群成员信息查询
+    aigfm_member_info_enabled: bool = Field(True, description="是否启用群成员信息查询工具（query_member_info，含头像识别入库）")
 
     # 搜索
     aigfm_search_enabled: bool = Field(False, description="是否启用联网搜索")

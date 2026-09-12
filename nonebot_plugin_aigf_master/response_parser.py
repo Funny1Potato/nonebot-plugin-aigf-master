@@ -99,6 +99,7 @@ def extract_memory_ops(data: dict) -> MemoryOps:
         long_term=raw.get("long_term"),
         friends=raw.get("friends"),
         save_meme=raw.get("save_meme"),
+        save_image=raw.get("save_image"),
         culture=raw.get("culture"),
     )
 

@@ -70,6 +70,7 @@ class MemoryOps:
     long_term: dict | None = None
     friends: dict | None = None
     save_meme: list | None = None
+    save_image: list | None = None
     culture: dict | None = None
 
 

@@ -40,6 +40,46 @@ class MemeStore:
             f"自动收集 {len(self._collected_memes)} 个"
         )
 
+    def get_meme(self, meme_id: str) -> dict | None:
+        """按 id 查表情包（管理员库优先），返回只读信息"""
+        meme = self._admin_memes.get(meme_id) or self._collected_memes.get(meme_id)
+        if not meme:
+            return None
+        return {"id": meme.id, "description": meme.description, "keywords": list(meme.keywords)}
+
+    def _meme_bucket(self, meme_id: str):
+        if meme_id in self._admin_memes:
+            return self._admin_memes, True
+        if meme_id in self._collected_memes:
+            return self._collected_memes, False
+        return None, False
+
+    async def update_meme(self, meme_id: str, description=None, keywords=None) -> bool:
+        """修改表情包描述/关键词（管理员库与自动收集库都支持）"""
+        bucket, is_admin = self._meme_bucket(meme_id)
+        if bucket is None or meme_id not in bucket:
+            return False
+        entry = bucket[meme_id]
+        if description is not None:
+            entry.description = description
+        if keywords is not None:
+            entry.keywords = list(keywords) if isinstance(keywords, list) else [str(keywords)]
+        if is_admin:
+            await self._save_admin()
+        else:
+            await self._save_collected()
+        return True
+
+    async def _save_admin(self):
+        path = self._data_dir / "memes.json"
+        data = [
+            {"id": m.id, "path": m.filename, "keywords": m.keywords,
+             "description": m.description, "usage_count": m.usage_count, "saved_at": m.saved_at}
+            for m in self._admin_memes.values()
+        ]
+        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+
     async def _load_index(self, path: Path) -> dict[str, MemeEntry]:
         if not path.exists():
             return {}

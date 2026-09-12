@@ -54,23 +54,30 @@ class LLMClient:
         tools: list[dict], tool_handler,
         json_mode: bool = False,
         first_call_json: bool = False,
+        max_tool_turns: int = 6,
     ) -> tuple[str | None, bool]:
-        """支持 function calling 的响应生成
+        """支持 function calling 的多轮响应生成
 
-        first_call_json: 首次带 tools 的请求是否也强制 JSON 输出。
-        默认 False（避免与 function calling 冲突，部分兼容服务不支持两者组合）；
-        工具回填后的最终答复始终按 json_mode 强制 JSON。
+        LLM 可连续多轮调用工具（如 查图片库 → 选图 → 生图参考），无 tool_calls 时收敛。
+        first_call_json: 首次带 tools 的请求是否也强制 JSON 输出（默认 False 避免与 function calling 冲突）；
+                        工具回填后的轮次按 json_mode 强制 JSON（需服务商支持 tools+json_object）。
+        max_tool_turns: 工具调用最大轮数，超出后强制收尾。
         """
         messages = [{"role": "user", "content": prompt}]
         used_tool = False
 
-        kwargs: dict = {"messages": messages, "model": model, "tools": tools, "temperature": 0.5, "timeout": 300}
-        if json_mode and first_call_json:
-            kwargs["response_format"] = {"type": "json_object"}
-        response = await self._client.chat.completions.create(**kwargs)
-        message = response.choices[0].message
+        for turn in range(max_tool_turns + 1):  # 最多 N 轮工具 + 1 次兜底答复
+            kwargs: dict = {"messages": messages, "model": model, "tools": tools,
+                            "temperature": 0.5, "timeout": 300}
+            if json_mode and (turn > 0 or first_call_json):
+                kwargs["response_format"] = {"type": "json_object"}
+            response = await self._client.chat.completions.create(**kwargs)
+            message = response.choices[0].message
 
-        if message.tool_calls:
+            if not message.tool_calls:
+                content = message.content
+                return (_strip_think_tags(content) if content else None), used_tool
+
             messages.append(message)
             for tool_call in message.tool_calls:
                 func_name = tool_call.function.name
@@ -88,12 +95,10 @@ class LLMClient:
                     result = f"工具执行失败: {e}"
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
 
-            kwargs: dict = {"messages": messages, "model": model, "temperature": 0.5, "timeout": 300}
-            if json_mode:
-                kwargs["response_format"] = {"type": "json_object"}
-            response = await self._client.chat.completions.create(**kwargs)
-            content = response.choices[0].message.content
-            return (_strip_think_tags(content) if content else None), used_tool
-
-        content = message.content
-        return (_strip_think_tags(content) if content else None), False
+        # 达到轮数上限：不带 tools 的兜底收尾请求（json_mode 时强制 JSON）
+        kwargs = {"messages": messages, "model": model, "temperature": 0.5, "timeout": 300}
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = await self._client.chat.completions.create(**kwargs)
+        content = response.choices[0].message.content
+        return (_strip_think_tags(content) if content else None), used_tool
