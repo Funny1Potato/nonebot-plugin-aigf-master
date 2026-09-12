@@ -42,12 +42,14 @@ def _command_head(command: str) -> str:
     return command.split(None, 1)[0] if command else command
 
 
-def _normalize_size(size_desc: str, max_size: str) -> str:
+def _normalize_size(size_desc: str, max_size: str, min_size: str = "") -> str:
     """把 LLM 的尺寸描述（方向词或 WxH）缩放到不超过 max_size 的偶数尺寸
 
     支持：square/方形/1:1、portrait/竖版/竖屏、landscape/横版/横屏、
     16:9/宽幅/banner、4:3，或直接写 宽x高（如 768x1024）。
     结果按比例缩放到不超过 max_size，并对齐到偶数像素。
+    min_size 非空时：若结果面积小于 min_size 面积（宽x高），按比例放大到不小于该面积（最小优先于最大，
+    服务于有最低像素要求的生图服务，如豆包 Seedream 需 ≥ 1920x1920 即 3686400 像素）。
     """
     max_w, max_h = 1024, 1024
     try:
@@ -57,6 +59,14 @@ def _normalize_size(size_desc: str, max_size: str) -> str:
         pass
     max_w = max(max_w, 64)
     max_h = max(max_h, 64)
+
+    min_pixels = 0
+    if min_size:
+        try:
+            min_w, min_h = min_size.lower().split("x")
+            min_pixels = int(min_w) * int(min_h)
+        except (ValueError, AttributeError):
+            min_pixels = 0
 
     ratio = 1.0  # 宽/高
     if size_desc:
@@ -85,6 +95,16 @@ def _normalize_size(size_desc: str, max_size: str) -> str:
     h -= h % 2
     w = max(w, 64)
     h = max(h, 64)
+    if min_pixels and w * h < min_pixels:
+        scale = (min_pixels / (w * h)) ** 0.5
+        w, h = round(w * scale), round(h * scale)
+        w -= w % 2
+        h -= h % 2
+        while w * h < min_pixels:  # 偶数取整后仍可能略低于下限，循环补边
+            if w >= h:
+                w += 2
+            else:
+                h += 2
     return f"{w}x{h}"
 
 
@@ -491,7 +511,8 @@ class MessageProcessor:
                     content="图片生成失败：生图功能未就绪",
                 ))
                 return
-            size = _normalize_size(size_desc, self.config.aigfm_image_gen_max_size)
+            size = _normalize_size(size_desc, self.config.aigfm_image_gen_max_size,
+                               self.config.aigfm_image_gen_min_size)
             # 参考图：先查本群缓存索引，未命中则按 id 从磁盘兜底（clear_cache 只清索引不清文件）
             reference_images: list[str] | None = None
             reference_note = ""
