@@ -125,6 +125,16 @@ def build_prompt(
 - 标记为"可能是表情包"的图片是较可能的收藏候选；仅标记为"图片"的通常为普通图片，一般不需要收藏
 """
 
+    image_collect_section = ""
+    if config.aigfm_image_library_enabled:
+        image_collect_section = """
+## 图片库收藏引导
+图片库是你私藏的图片集合（平时不显示，需要时用 `query_image_library` 查询、`send_library_image` 发送）。聊天中遇到值得记住的图（有趣的梗图、有纪念意义的画面、你想回味/日后引用的内容，包括插件或其它 bot 输出的图片）时，在 `memory.save_image` 中收藏：
+- 填入图片的 id（消息中的 `[图片, id: xxx]` 或 `[发送了一张图片, id: xxx]`）和**完整描述**（画面内容/风格/用途），方便日后搜索到
+- 收藏标准：这张图日后还想找到/用到 → 值得收；只是一时看过的普通图 → 不收
+- 与表情包的区别：能表达情感、适合反复发送的 → `save_meme`（表情包库）；只是想记住/回味/引用的 → `save_image`（图片库）
+"""
+
     # 群友列表
     user_list_str = ", ".join(f"{data.get('nickname', uid)}(QQ:{uid})" for uid, data in friends.items()) if friends else "无"
 
@@ -331,7 +341,7 @@ index 对应上面数组的下标（从 0 开始）。
 {recent_str}
 
 ## 新消息
-{new_msgs_str}{meme_section}{meme_judge_section}
+{new_msgs_str}{meme_section}{meme_judge_section}{image_collect_section}
 
 ## 已知群友昵称
 {user_list_str}
