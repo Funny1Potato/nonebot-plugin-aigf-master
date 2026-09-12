@@ -112,6 +112,19 @@ def build_prompt(
     if config.aigfm_meme_enabled and meme_prompt_list:
         meme_section = f"\n\n## 可用的表情包（用于发送）\n{meme_prompt_list}\n"
 
+    meme_judge_section = ""
+    if config.aigfm_meme_enabled:
+        meme_judge_section = """
+## 表情包收藏判断
+消息中的图片都带 `[图片, id: xxx]`（含 VLM 描述；标记为"可能是表情包"的图片附带了情感）。结合上下文判断是否值得收藏为表情包：
+- **可以收藏**：图片能表达一定的情感、适合在群聊中反复使用，且表情包库内没有类似图片，且值得保存——在 `memory.save_meme` 中填入 id、简短描述和关键词（这是 JSON 输出字段，不是命令）
+- **不要收藏**：只是群友分享的照片、截图、梗图、普通图片，或表情包库内已有类似图片
+- 若群友**连续发了多张图片**，通常是在分享普通图片
+- 若群友**只发了一张图片**，而前后均没有与这张图片相关的内容，或前后仅有对该图片的介绍或评论，通常是在分享普通图片
+- 若群友发的图片内容**与之前的内容有关联**，或这张图片是在其它群友发言之后发出的，且**包含较为明显的情感**（开心、愤怒、疑惑等），则可能是表情包
+- 标记为"可能是表情包"的图片是较可能的收藏候选；仅标记为"图片"的通常为普通图片，一般不需要收藏
+"""
+
     # 群友列表
     user_list_str = ", ".join(f"{data.get('nickname', uid)}(QQ:{uid})" for uid, data in friends.items()) if friends else "无"
 
@@ -318,7 +331,7 @@ index 对应上面数组的下标（从 0 开始）。
 {recent_str}
 
 ## 新消息
-{new_msgs_str}{meme_section}
+{new_msgs_str}{meme_section}{meme_judge_section}
 
 ## 已知群友昵称
 {user_list_str}
