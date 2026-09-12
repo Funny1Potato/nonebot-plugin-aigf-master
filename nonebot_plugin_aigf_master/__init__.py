@@ -26,6 +26,7 @@ from .context_bus import ContextBus
 from .command_learner import CommandLearner
 from .llm_client import LLMClient
 from .image_handler import ImageHandler
+from .image_gen_client import ImageGenClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
 from .models import ChatMessage
@@ -60,6 +61,12 @@ _learner = CommandLearner(
     min_confidence=plugin_config.aigfm_learn_min_confidence,
 )
 _image_handler = ImageHandler(_cache_dir)
+_image_gen = ImageGenClient(
+    plugin_config.aigfm_image_gen_api_key or plugin_config.aigfm_llm_api_key,
+    plugin_config.aigfm_image_gen_model,
+    plugin_config.aigfm_image_gen_base_url,
+    _proxy,
+) if plugin_config.aigfm_image_gen_enabled else None
 _search = create_search_client(
     plugin_config.aigfm_search_api, plugin_config.aigfm_search_api_key,
     plugin_config.aigfm_openwebsearch_url,
@@ -78,6 +85,7 @@ def _get_processor(group_id: int) -> MessageProcessor:
             context_bus=_bus, invoker=_invoker, learner=_learner,
             search=_search, config=plugin_config, peer_client=_peer_client,
             peer_scanned_commands=_peer_scanned_commands,
+            image_gen=_image_gen, image_handler=_image_handler,
         )
     return _processors[group_id]
 

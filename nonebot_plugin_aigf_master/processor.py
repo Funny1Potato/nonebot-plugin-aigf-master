@@ -1,13 +1,19 @@
 """消息处理编排器"""
 
+import asyncio
+import base64
 import random
 from datetime import datetime
 
+import httpx
 from nonebot import get_driver, logger
+from nonebot.adapters.onebot.v11 import Message, MessageSegment
 
+from .command_learner import CommandLearner
 from .config import PluginConfig
 from .context_bus import ContextBus
-from .command_learner import CommandLearner
+from .image_gen_client import ImageGenClient
+from .image_handler import ImageHandler
 from .llm_client import LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
@@ -32,6 +38,52 @@ def _command_head(command: str) -> str:
             command = command[len(prefix):]
             break
     return command.split(None, 1)[0] if command else command
+
+
+def _normalize_size(size_desc: str, max_size: str) -> str:
+    """把 LLM 的尺寸描述（方向词或 WxH）缩放到不超过 max_size 的偶数尺寸
+
+    支持：square/方形/1:1、portrait/竖版/竖屏、landscape/横版/横屏、
+    16:9/宽幅/banner、4:3，或直接写 宽x高（如 768x1024）。
+    结果按比例缩放到不超过 max_size，并对齐到偶数像素。
+    """
+    max_w, max_h = 1024, 1024
+    try:
+        mw, mh = max_size.lower().split("x")
+        max_w, max_h = int(mw), int(mh)
+    except (ValueError, AttributeError):
+        pass
+    max_w = max(max_w, 64)
+    max_h = max(max_h, 64)
+
+    ratio = 1.0  # 宽/高
+    if size_desc:
+        s = size_desc.strip().lower()
+        if "x" in s:
+            try:
+                w, h = s.split("x")
+                ratio = int(w) / int(h)
+            except (ValueError, ZeroDivisionError):
+                ratio = 1.0
+        elif s in ("portrait", "竖版", "竖屏", "2:3"):
+            ratio = 2 / 3
+        elif s in ("landscape", "横版", "横屏", "3:2"):
+            ratio = 3 / 2
+        elif s in ("16:9", "宽幅", "banner"):
+            ratio = 16 / 9
+        elif s in ("4:3",):
+            ratio = 4 / 3
+        # square/方形/1:1 及其它未知描述 → ratio = 1.0
+
+    if ratio >= 1.0:
+        w, h = max_w, round(max_w / ratio)
+    else:
+        w, h = round(max_h * ratio), max_h
+    w -= w % 2
+    h -= h % 2
+    w = max(w, 64)
+    h = max(h, 64)
+    return f"{w}x{h}"
 
 
 # 本插件自身的管理命令不允许被 LLM 代为执行：synthetic 事件携带真实触发用户的 user_id，
@@ -65,6 +117,8 @@ class MessageProcessor:
         config: PluginConfig,
         peer_client: PeerClient | None = None,
         peer_scanned_commands: dict[str, list[dict]] | None = None,
+        image_gen: ImageGenClient | None = None,
+        image_handler: ImageHandler | None = None,
     ):
         self.group_id = group_id
         self.llm = llm
@@ -78,6 +132,9 @@ class MessageProcessor:
         self.config = config
         self.peer_client = peer_client
         self.peer_scanned_commands = peer_scanned_commands if peer_scanned_commands is not None else {}
+        self.image_gen = image_gen
+        self.image_handler = image_handler
+        self._image_gen_tasks: set[asyncio.Task] = set()
         self.bot_name = "小助手"
         self.bot_role = "一个友好的群聊助手"
         self.current_preset = ""
@@ -327,6 +384,17 @@ class MessageProcessor:
                     }, "required": ["bot", "command"]},
                 },
             })
+        if self.config.aigfm_image_gen_enabled and self.image_gen:
+            tools.append({
+                "type": "function", "function": {
+                    "name": "generate_image",
+                    "description": "使用 AI 生图模型根据描述生成图片并自动发到群里（仅当用户明确要求生成/画图时才调用）",
+                    "parameters": {"type": "object", "properties": {
+                        "prompt": {"type": "string", "description": "详细的图片描述（画面内容、风格、色调、比例等），越具体生成效果越好"},
+                        "size": {"type": "string", "description": "可选尺寸/比例：square/方形、portrait/竖版、landscape/横版、16:9/宽幅，或直接写宽x高（如 768x1024）；默认方形，程序会自动限制在配置的最大尺寸内"}
+                    }, "required": ["prompt"]},
+                },
+            })
 
         async def handler(name: str, args: dict) -> str:
             if name == "search_internet" and self.search:
@@ -386,6 +454,22 @@ class MessageProcessor:
                     content=f"已调用命令「{command}」（{peer_name}，user_id={uid}）",
                 ))
                 return result
+            elif name == "generate_image":
+                prompt = args.get("prompt", "").strip()
+                if not prompt:
+                    return "缺少图片描述，请提供要生成的画面内容"
+                size_desc = args.get("size", "").strip()
+                uid = args.get("user_id", self._current_user_id)
+                logger.info(f"[生图] 开始: prompt={prompt[:60]}, size={size_desc or '默认方形'}, user_id={uid}")
+                # 防重复：立即写自述，后台完成后另写一条结果自述
+                self.recent_messages.append(ChatMessage(
+                    time=datetime.now(), user_name=self.bot_name,
+                    content=f"已开始生成图片「{prompt}」",
+                ))
+                task = asyncio.create_task(self._generate_image_bg(prompt, size_desc, uid))
+                self._image_gen_tasks.add(task)
+                task.add_done_callback(self._image_gen_tasks.discard)
+                return "图片生成任务已启动，完成后会自动发到群里；生成需要一点时间，期间请不要重复提交相同的生图请求"
             return f"未知工具: {name}"
 
         return await self.llm.chat_with_tools(
@@ -393,6 +477,61 @@ class MessageProcessor:
             json_mode=self.config.aigfm_llm_json_mode,
             first_call_json=self.config.aigfm_llm_tools_json_strict,
         )
+
+    async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int):
+        """后台生图任务：生成 → 发送到群 → VLM 描述 → 写自述（LLM 下一次感知）"""
+        try:
+            if not (self._bot and self.image_gen):
+                self.recent_messages.append(ChatMessage(
+                    time=datetime.now(), user_name=self.bot_name,
+                    content="图片生成失败：生图功能未就绪",
+                ))
+                return
+            size = _normalize_size(size_desc, self.config.aigfm_image_gen_max_size)
+            result = await self.image_gen.generate(prompt, size)
+            if not result:
+                self.recent_messages.append(ChatMessage(
+                    time=datetime.now(), user_name=self.bot_name,
+                    content=f"图片生成失败：服务未返回图片（「{prompt}」）",
+                ))
+                return
+            # 取图片数据（仅返回 url 时下载）
+            b64 = result.get("b64")
+            if not b64 and result.get("url"):
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(result["url"], timeout=30)
+                    resp.raise_for_status()
+                    b64 = base64.b64encode(resp.content).decode()
+            if not b64:
+                self.recent_messages.append(ChatMessage(
+                    time=datetime.now(), user_name=self.bot_name,
+                    content="图片生成失败：无法获取图片数据",
+                ))
+                return
+            await self._bot.send_msg(
+                message_type="group", group_id=int(self.group_id),
+                message=Message(MessageSegment.image(f"base64://{b64}")),
+            )
+            # VLM 描述（本插件自己发的图不会被钩子捕获，需主动描述让 LLM 感知结果）
+            desc_text = ""
+            if self.image_handler:
+                try:
+                    info = await self.image_handler.describe(b64, is_sticker=False)
+                    if info and info.description:
+                        desc_text = f"，内容描述: {info.description}"
+                except Exception:
+                    desc_text = ""
+            logger.success(f"[生图] 已生成并发送: {prompt[:60]} ({size})")
+            self.recent_messages.append(ChatMessage(
+                time=datetime.now(), user_name=self.bot_name,
+                content=f"图片已生成：「{prompt}」（{size}）{desc_text}",
+            ))
+        except Exception as e:
+            logger.error(f"[生图] 失败: {e}")
+            self.recent_messages.append(ChatMessage(
+                time=datetime.now(), user_name=self.bot_name,
+                content=f"图片生成失败：{e}",
+            ))
 
     async def _save_memes(self, save_meme: list, cached_stickers: list[dict]):
         current_ids = {s["id"] for s in cached_stickers}

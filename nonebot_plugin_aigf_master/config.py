@@ -21,6 +21,12 @@ class PluginConfig(BaseModel):
     aigfm_vlm_model: str = Field("", description="VLM 模型名称")
     aigfm_vlm_base_url: str = Field("", description="VLM API 地址")
     aigfm_vlm_api_key: str = Field("", description="VLM API Key（为空时使用 llm_api_key）")
+    # AI 生图（OpenAI 兼容 images API）
+    aigfm_image_gen_enabled: bool = Field(False, description="是否启用 AI 生图")
+    aigfm_image_gen_model: str = Field("", description="生图模型名称")
+    aigfm_image_gen_base_url: str = Field("", description="生图 API 地址")
+    aigfm_image_gen_api_key: str = Field("", description="生图 API Key（为空时使用 llm_api_key）")
+    aigfm_image_gen_max_size: str = Field("1024x1024", description="生图最大尺寸限制（宽x高），LLM 可指定比例/尺寸，程序自动缩放到不超过该上限")
 
     # 群聊配置
     aigfm_enabled_groups: list[int] = Field(default_factory=list, description="启用的群号列表")
