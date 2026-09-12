@@ -194,15 +194,19 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
         elif seg.type == "reply":
             has_non_at = True
             try:
-                reply_msg_id = seg.data.get("message_id")
+                # OneBot v11 的 reply 段键名在不同实现/构造方式下可能是 message_id 或 id
+                reply_msg_id = seg.data.get("message_id") or seg.data.get("id")
                 if reply_msg_id:
                     original = await bot.get_msg(message_id=int(reply_msg_id))
                     if original and "message" in original:
                         replied_text = await _extract_reply_content(bot, original["message"], event.group_id)
                         replied_sender = original.get("sender", {}).get("nickname", "未知")
                         content += f"[回复 {replied_sender} 的消息: \"{replied_text}\"] "
-            except Exception:
-                pass
+                    else:
+                        content += "[回复: （无法获取被回复消息）] "
+            except Exception as e:
+                logger.warning(f"回复消息处理失败: {e}")
+                content += "[回复: （被回复内容获取失败）] "
         elif seg.type == "forward":
             has_non_at = True
             content += "[收到一条合并聊天记录] "
@@ -232,7 +236,8 @@ async def _extract_reply_content(bot: Bot, message_content, group_id: int) -> st
                     msg.append(MessageSegment(type=seg["type"], data=seg.get("data", {})))
         else:
             return str(message_content)[:50]  # 非标准结构兜底
-    except Exception:
+    except Exception as e:
+        logger.warning(f"被回复消息解析失败: {e}")
         return "（无法获取）"
 
     parts = []
