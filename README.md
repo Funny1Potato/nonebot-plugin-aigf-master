@@ -1,3 +1,6 @@
+> ## ⚠️ 测试版本提示
+> **当前为 `beta` 测试分支**，包含尚未发布的实验性功能（多轮工具调用、群成员资料查询、LLM 图片库、图片信息管理、群友评价联动等），可能存在不稳定或行为变化，**仅供测试使用**。稳定版请使用 `main` 分支或 PyPI 发布的正式版本。
+
 <div align="center">
     <a href="https://v2.nonebot.dev/store">
     <img src="https://raw.githubusercontent.com/fllesser/nonebot-plugin-template/refs/heads/resource/.docs/NoneBotPlugin.svg" width="310" alt="logo"></a>
