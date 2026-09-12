@@ -8,10 +8,12 @@ from datetime import datetime
 
 import anyio
 import httpx
-from nonebot import get_driver, logger, on_command, on_message, require
+from nonebot import get_driver, logger, on_command, on_message, on_notice, require
 from nonebot.adapters import Event, Message
 from nonebot.adapters.onebot.v11 import (
     Bot, GroupMessageEvent, MessageSegment, Message as OneBotMessage,
+    GroupBanNoticeEvent, GroupDecreaseNoticeEvent, GroupIncreaseNoticeEvent,
+    GroupRecallNoticeEvent, PokeNotifyEvent,
 )
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
@@ -216,6 +218,76 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
         elif seg.type == "xml":
             has_non_at = True
             content += "[收到一条XML消息] "
+        elif seg.type == "face":
+            # 部分客户端会带表情名（text），缺失时用 id 兜底
+            has_non_at = True
+            face_name = seg.data.get("text") or seg.data.get("id")
+            content += f"[QQ表情 {face_name}] " if face_name else "[QQ表情] "
+        elif seg.type == "record":
+            has_non_at = True
+            content += "[收到一条语音消息] "
+        elif seg.type == "video":
+            has_non_at = True
+            content += "[收到一条视频消息] "
+        elif seg.type == "file":
+            has_non_at = True
+            # go-cqhttp/NapCat 字段名略有差异：file_name/name、file_size/size
+            file_name = seg.data.get("file_name") or seg.data.get("name")
+            file_size = seg.data.get("file_size") or seg.data.get("size")
+            size_str = ""
+            if file_size:
+                try:
+                    size_bytes = int(file_size)
+                    if size_bytes >= 1024 * 1024:
+                        size_str = f"（{size_bytes / 1024 / 1024:.1f}MB）"
+                    elif size_bytes >= 1024:
+                        size_str = f"（{size_bytes / 1024:.1f}KB）"
+                    else:
+                        size_str = f"（{size_bytes}B）"
+                except (TypeError, ValueError):
+                    pass
+            content += f"[群文件: {file_name}{size_str}] " if file_name else "[群文件] "
+        elif seg.type == "share":
+            has_non_at = True
+            share_title = seg.data.get("title", "")
+            share_url = seg.data.get("url", "")
+            share_content = seg.data.get("content")
+            parts = []
+            if share_title:
+                parts.append(share_title)
+            if share_url:
+                parts.append(share_url)
+            if share_content:
+                parts.append(share_content)
+            content += f"[分享链接: {' | '.join(parts)}] " if parts else "[分享链接] "
+        elif seg.type == "contact":
+            has_non_at = True
+            contact_type = "群" if seg.data.get("type") == "group" else "好友"
+            contact_id = seg.data.get("id", "")
+            content += f"[推荐{contact_type}: {contact_id}] " if contact_id else f"[推荐{contact_type}] "
+        elif seg.type == "location":
+            has_non_at = True
+            loc_title = seg.data.get("title", "")
+            lat, lon = seg.data.get("lat", ""), seg.data.get("lon", "")
+            parts = [loc_title] if loc_title else []
+            if lat and lon:
+                parts.append(f"{lat},{lon}")
+            if seg.data.get("content"):
+                parts.append(seg.data["content"])
+            content += f"[位置: {' | '.join(parts)}] " if parts else "[位置] "
+        elif seg.type == "music":
+            has_non_at = True
+            music_title = seg.data.get("title")
+            music_id = seg.data.get("id")
+            content += f"[音乐分享: {music_title}] " if music_title else f"[音乐分享 {music_id}] "
+        elif seg.type == "dice":
+            has_non_at = True
+            dice_result = seg.data.get("result")
+            content += f"[骰子 {dice_result}] " if dice_result else "[骰子] "
+        elif seg.type in ("rps", "shake", "anonymous", "node"):
+            has_non_at = True
+            label = {"rps": "猜拳", "shake": "窗口抖动", "anonymous": "匿名消息", "node": "合并聊天记录节点"}[seg.type]
+            content += f"[{label}] "
 
     return content.strip(), not has_non_at
 
@@ -314,6 +386,22 @@ def _add_peer_message(group_id: int, source: str, content: str, reset_timer: boo
     # 文本消息算新的聊天活动，重置批处理安静计时（图片消息由 VLM 前重置负责，入缓冲不再重置）
     if reset_timer:
         _group_last_time[group_id] = asyncio.get_event_loop().time()
+
+
+def _add_notice_message(group_id: int, content: str):
+    """将群系统通知（戳一戳/禁言/进出群/消息撤回）加入消息缓冲区
+
+    user_id 留空 → 渲染为 `[系统]: '内容'`，LLM 可区分系统通知与群友发言
+    """
+    if group_id not in _group_chunks:
+        _group_chunks[group_id] = []
+    _group_chunks[group_id].append(ChatMessage(
+        time=datetime.now(),
+        user_name="系统",
+        content=content,
+        user_id="",
+    ))
+    _group_last_time[group_id] = asyncio.get_event_loop().time()
 
 
 async def _describe_peer_image(group_id: int, source: str, image_url: str = "", image_base64: str = ""):
@@ -460,6 +548,55 @@ def _is_group_msg(event: Event) -> bool:
     return isinstance(event, GroupMessageEvent)
 
 
+_NOTICE_TYPES = (
+    PokeNotifyEvent, GroupBanNoticeEvent, GroupIncreaseNoticeEvent,
+    GroupDecreaseNoticeEvent, GroupRecallNoticeEvent,
+)
+
+
+def _is_group_notice(event: Event) -> bool:
+    """只收群内系统通知；PokeNotifyEvent 的 group_id 可能为空（私聊戳一戳），过滤掉"""
+    if not isinstance(event, _NOTICE_TYPES):
+        return False
+    return bool(getattr(event, "group_id", None))
+
+
+async def _resolve_notice_text(bot: Bot, event: Event) -> str | None:
+    """把群 notice 事件渲染成一行文本；昵称查询失败回落 QQ 号"""
+    group_id = int(getattr(event, "group_id"))
+
+    async def _name(user_id: int) -> str:
+        try:
+            info = await bot.get_group_member_info(group_id=group_id, user_id=user_id)
+            return info.get("nickname") or str(user_id)
+        except Exception:
+            return str(user_id)
+
+    if isinstance(event, PokeNotifyEvent):
+        return f"{await _name(event.user_id)} 戳了戳 {await _name(event.target_id)}"
+    if isinstance(event, GroupBanNoticeEvent):
+        if event.sub_type == "self_ban":
+            return f"我被禁言 {event.duration} 分钟"
+        if event.sub_type == "self_lift_ban":
+            return "我被解除禁言"
+        if event.sub_type == "lift_ban":
+            return f"{await _name(event.operator_id)} 解除了 {await _name(event.user_id)} 的禁言"
+        return f"{await _name(event.operator_id)} 将 {await _name(event.user_id)} 禁言 {event.duration} 分钟"
+    if isinstance(event, GroupIncreaseNoticeEvent):
+        return f"{await _name(event.user_id)} 加入了群聊"
+    if isinstance(event, GroupDecreaseNoticeEvent):
+        if event.sub_type == "kick_me":
+            return "我被移出了群聊"
+        if event.sub_type == "kick":
+            return f"{await _name(event.user_id)} 被 {await _name(event.operator_id)} 移出了群聊"
+        return f"{await _name(event.user_id)} 退出了群聊"
+    if isinstance(event, GroupRecallNoticeEvent):
+        if event.user_id == event.operator_id:
+            return f"{await _name(event.user_id)} 撤回了一条消息"
+        return f"{await _name(event.operator_id)} 撤回了 {await _name(event.user_id)} 的一条消息"
+    return None
+
+
 # 这里新增/改名的管理命令必须同步 processor.SELF_COMMANDS：
 # synthetic 事件携带真实触发用户的 user_id，少了同步会让 LLM 有机会代为执行这些命令
 status_cmd = on_command(rule=_is_group_msg, permission=SUPERUSER,
@@ -475,6 +612,7 @@ set_preset_cmd = on_command(rule=_is_group_msg, permission=SUPERUSER,
 reload_meme_cmd = on_command(rule=_is_group_msg, permission=SUPERUSER,
                              cmd="reload_meme", aliases={"重载表情包"}, priority=0, block=True)
 auto_chat = on_message(rule=_is_group_msg, priority=1, block=False)
+group_notice = on_notice(rule=_is_group_notice, priority=1, block=False)
 
 
 @status_cmd.handle()
@@ -602,6 +740,27 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
             await processor.memory.update_nickname(event.get_user_id(), user_info["nickname"])
     except Exception:
         pass
+
+
+@group_notice.handle()
+async def handle_group_notice(bot: Bot, event: Event):
+    """群系统通知（戳一戳/禁言/进出群/消息撤回）→ 渲染后入缓冲区
+
+    notice 事件没有用户消息上下文：不更新 processor._current_user_id（避免污染工具调用身份），
+    批处理触发依赖该群最近一次真实用户消息（与 peer 推送的等待行为一致）
+    """
+    group_id = int(getattr(event, "group_id"))
+    if group_id not in plugin_config.aigfm_enabled_groups:
+        return
+    try:
+        text = await _resolve_notice_text(bot, event)
+    except Exception as e:
+        logger.error(f"[通知] 事件渲染失败: {e}")
+        return
+    if not text:
+        return
+    logger.info(f"[通知] 群{group_id}: {text}")
+    _add_notice_message(group_id, text)
 
 
 # ========== 启动 ==========
