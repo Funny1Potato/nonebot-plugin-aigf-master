@@ -95,7 +95,7 @@ AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 chat 的
 ### 可选
 
 ```env
-# --- AI 生图（可选功能，AIGFM_IMAGE_GEN_ENABLED=false 时无需任何生图配置） ---
+# --- AI 生图 ---
 AIGFM_IMAGE_GEN_ENABLED=false          # 是否启用 AI 生图（默认 false）
 AIGFM_IMAGE_GEN_MODEL="..."            # 生图模型名称（豆包/Ark 示例: doubao-seedream-5-0-lite-260128）
 AIGFM_IMAGE_GEN_BASE_URL="https://..." # 生图 API 地址（OpenAI 兼容 images API；豆包示例 https://ark.cn-beijing.volces.com/api/v3）
