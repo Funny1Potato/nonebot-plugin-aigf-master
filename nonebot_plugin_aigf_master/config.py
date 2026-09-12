@@ -27,6 +27,7 @@ class PluginConfig(BaseModel):
     aigfm_image_gen_base_url: str = Field("", description="生图 API 地址")
     aigfm_image_gen_api_key: str = Field("", description="生图 API Key（为空时使用 llm_api_key）")
     aigfm_image_gen_max_size: str = Field("1024x1024", description="生图最大尺寸限制（宽x高），LLM 可指定比例/尺寸，程序自动缩放到不超过该上限")
+    aigfm_image_gen_watermark: bool = Field(False, description="生图水印（参考豆包类服务，仅参考图路径传入 watermark 参数）")
 
     # 群聊配置
     aigfm_enabled_groups: list[int] = Field(default_factory=list, description="启用的群号列表")

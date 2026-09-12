@@ -198,7 +198,7 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                 if reply_msg_id:
                     original = await bot.get_msg(message_id=int(reply_msg_id))
                     if original and "message" in original:
-                        replied_text = _extract_reply_text(original["message"])
+                        replied_text = await _extract_reply_content(bot, original["message"], event.group_id)
                         replied_sender = original.get("sender", {}).get("nickname", "未知")
                         content += f"[回复 {replied_sender} 的消息: \"{replied_text}\"] "
             except Exception:
@@ -216,7 +216,12 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
     return content.strip(), not has_non_at
 
 
-def _extract_reply_text(message_content) -> str:
+async def _extract_reply_content(bot: Bot, message_content, group_id: int) -> str:
+    """把被回复消息渲染为「原文 + 图片 id + VLM 描述」（完整输出，不截断）
+
+    图片段与普通图片消息同链路：下载 → 缓存（save_to_cache，保证 cache_id 进入本群缓存）→ VLM 描述。
+    这样 LLM 从回复段能看到图片 id 与内容，可作为生图参考图（reference_cache_id）。
+    """
     try:
         if isinstance(message_content, str):
             msg = OneBotMessage(message_content)
@@ -226,11 +231,43 @@ def _extract_reply_text(message_content) -> str:
                 if isinstance(seg, dict) and "type" in seg:
                     msg.append(MessageSegment(type=seg["type"], data=seg.get("data", {})))
         else:
-            return str(message_content)[:50]
-        text = msg.extract_plain_text().strip()
-        return text[:50] if text else "（非文字消息）"
+            return str(message_content)[:50]  # 非标准结构兜底
     except Exception:
         return "（无法获取）"
+
+    parts = []
+    for seg in msg:
+        if seg.type == "text":
+            text = seg.data.get("text", "")
+            if text.strip():
+                parts.append(text.strip())
+        elif seg.type in ("image", "emoji"):
+            _on_image_start(group_id)
+            try:
+                img = _extract_image_data(seg.data)
+                is_sticker = seg.data.get("sub_type") == 1
+                image_bytes = await _load_image_bytes(img)
+                image_base64 = base64.b64encode(image_bytes).decode()
+                if plugin_config.aigfm_image_mode == "llm":
+                    cache_id = await _memes.save_to_cache(group_id, image_bytes, "", "")
+                    parts.append(f"[发送了一张图片, id: {cache_id}]")
+                else:
+                    desc = await _image_handler.describe(image_base64, is_sticker)
+                    if desc:
+                        cache_id = await _memes.save_to_cache(group_id, image_bytes, desc.description, desc.emotion)
+                        if is_sticker:
+                            parts.append(f"[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]")
+                        else:
+                            parts.append(f"[发送了一张图片, id: {cache_id}] [内容:{desc.description}]")
+                    else:
+                        parts.append("[发送了一张图片]（识图失败）")
+            except Exception as e:
+                logger.error(f"被回复图片处理错误: {e}")
+                parts.append("[图片加载失败]")
+            finally:
+                _on_image_done(group_id)
+    text = " ".join(parts)
+    return text if text else "（非文字消息）"
 
 
 # ========== 批量消息处理 ==========

@@ -4,7 +4,9 @@ import asyncio
 import base64
 import random
 from datetime import datetime
+from pathlib import Path
 
+import anyio
 import httpx
 from nonebot import get_driver, logger
 from nonebot.adapters.onebot.v11 import Message, MessageSegment
@@ -391,7 +393,8 @@ class MessageProcessor:
                     "description": "使用 AI 生图模型根据描述生成图片并自动发到群里（仅当用户明确要求生成/画图时才调用）",
                     "parameters": {"type": "object", "properties": {
                         "prompt": {"type": "string", "description": "详细的图片描述（画面内容、风格、色调、比例等），越具体生成效果越好"},
-                        "size": {"type": "string", "description": "可选尺寸/比例：square/方形、portrait/竖版、landscape/横版、16:9/宽幅，或直接写宽x高（如 768x1024）；默认方形，程序会自动限制在配置的最大尺寸内"}
+                        "size": {"type": "string", "description": "可选尺寸/比例：square/方形、portrait/竖版、landscape/横版、16:9/宽幅，或直接写宽x高（如 768x1024）；默认方形，程序会自动限制在配置的最大尺寸内"},
+                        "reference_cache_id": {"type": "string", "description": "可选参考图 id：聊天记录中出现的图片 id（如 [发送了一张图片, id: xxx] 或 [回复 xxx 的消息: \"[发送了一张图片, id: xxx]...\"] 中的 xxx）；用户要求\"参考这张图/照着改/换成某种风格\"时填，不要编造不存在的 id，不需要时省略"}
                     }, "required": ["prompt"]},
                 },
             })
@@ -459,14 +462,15 @@ class MessageProcessor:
                 if not prompt:
                     return "缺少图片描述，请提供要生成的画面内容"
                 size_desc = args.get("size", "").strip()
+                reference_id = args.get("reference_cache_id", "").strip()
                 uid = args.get("user_id", self._current_user_id)
-                logger.info(f"[生图] 开始: prompt={prompt[:60]}, size={size_desc or '默认方形'}, user_id={uid}")
+                logger.info(f"[生图] 开始: prompt={prompt[:60]}, size={size_desc or '默认方形'}, reference={reference_id or '无'}, user_id={uid}")
                 # 防重复：立即写自述，后台完成后另写一条结果自述
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(), user_name=self.bot_name,
                     content=f"已开始生成图片「{prompt}」",
                 ))
-                task = asyncio.create_task(self._generate_image_bg(prompt, size_desc, uid))
+                task = asyncio.create_task(self._generate_image_bg(prompt, size_desc, uid, reference_id))
                 self._image_gen_tasks.add(task)
                 task.add_done_callback(self._image_gen_tasks.discard)
                 return "图片生成任务已启动，完成后会自动发到群里；生成需要一点时间，期间请不要重复提交相同的生图请求"
@@ -478,7 +482,7 @@ class MessageProcessor:
             first_call_json=self.config.aigfm_llm_tools_json_strict,
         )
 
-    async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int):
+    async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = ""):
         """后台生图任务：生成 → 发送到群 → VLM 描述 → 写自述（LLM 下一次感知）"""
         try:
             if not (self._bot and self.image_gen):
@@ -488,7 +492,31 @@ class MessageProcessor:
                 ))
                 return
             size = _normalize_size(size_desc, self.config.aigfm_image_gen_max_size)
-            result = await self.image_gen.generate(prompt, size)
+            # 参考图：先查本群缓存索引，未命中则按 id 从磁盘兜底（clear_cache 只清索引不清文件）
+            reference_images: list[str] | None = None
+            reference_note = ""
+            if reference_id:
+                ref_path = None
+                info = self.memes.get_cache_info(int(self.group_id), reference_id)
+                if info and info.get("path") and Path(info["path"]).is_file():
+                    ref_path = info["path"]
+                else:
+                    disk_path = self.memes.get_cache_file(reference_id)
+                    if disk_path:
+                        ref_path = disk_path
+                if ref_path:
+                    async with await anyio.open_file(ref_path, "rb") as f:
+                        ref_bytes = await f.read()
+                    ext = Path(ref_path).suffix.lstrip(".").lower() or "png"
+                    reference_images = [f"data:image/{ext};base64,{base64.b64encode(ref_bytes).decode()}"]
+                else:
+                    logger.warning(f"[生图] 参考图不可用: {reference_id}，改为普通生成")
+                    reference_note = "（参考图不可用，已改为普通生成）"
+            result = await self.image_gen.generate(
+                prompt, size,
+                reference_images=reference_images,
+                watermark=self.config.aigfm_image_gen_watermark,
+            )
             if not result:
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(), user_name=self.bot_name,
@@ -524,7 +552,7 @@ class MessageProcessor:
             logger.success(f"[生图] 已生成并发送: {prompt[:60]} ({size})")
             self.recent_messages.append(ChatMessage(
                 time=datetime.now(), user_name=self.bot_name,
-                content=f"图片已生成：「{prompt}」（{size}）{desc_text}",
+                content=f"图片已生成：「{prompt}」（{size}）{desc_text}{reference_note}",
             ))
         except Exception as e:
             logger.error(f"[生图] 失败: {e}")

@@ -127,6 +127,18 @@ class MemeStore:
     def get_cache_info(self, group_id: int, cache_id: str) -> dict | None:
         return self._cache_index.get(group_id, {}).get(cache_id)
 
+    def get_cache_file(self, cache_id: str) -> str | None:
+        """按 cache_id 从磁盘兜底查找缓存图片文件路径（clear_cache 只清索引不清文件）
+
+        返回首个存在的文件路径：sticker_cache/{cache_id}.{ext}；找不到返回 None。
+        """
+        if not cache_id:
+            return None
+        for p in self._cache_dir.glob(f"{cache_id}.*"):
+            if p.is_file():
+                return str(p)
+        return None
+
     def clear_cache(self, group_id: int):
         self._cache_index.pop(group_id, None)
 
