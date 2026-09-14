@@ -47,8 +47,9 @@ async def compose_messages(bot: Bot, group_id: int, parts: list[dict]) -> Compos
       {"type": "at",    "target": 昵称或 QQ 号（int 视为已解析，跳过查询）}
       {"type": "image", "path": 本地图片路径}
 
-    条目之间以单个空格分隔；图片各自独立成条（它前后的文本各成一条）。
-    at 解析不出时跳过该段，并把目标记入 skipped_ats。
+    条目之间由本函数固定插入**一个**空格；文本段的**首尾空白会被去掉**，
+    这样即使 LLM 自己多写了空格也不会出现双空格（双空格会让命令参数解析失败）。
+    图片各自独立成条（它前后的文本各成一条）。at 解析不出时跳过该段，并把目标记入 skipped_ats。
     """
     messages: list[Message] = []
     skipped_ats: list[str] = []
@@ -69,7 +70,7 @@ async def compose_messages(bot: Bot, group_id: int, parts: list[dict]) -> Compos
     for part in parts:
         ptype = part.get("type")
         if ptype == "text":
-            content = part.get("content") or ""
+            content = (part.get("content") or "").strip()
             if content:
                 add(MessageSegment.text(content))
         elif ptype == "at":

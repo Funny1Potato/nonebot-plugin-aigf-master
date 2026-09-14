@@ -444,7 +444,7 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；这里**只放参数，不要再把命令名写进来**；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["command"]},
                 },
             })
@@ -458,7 +458,7 @@ class MessageProcessor:
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；这里**只放参数，不要再把命令名写进来**；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["bot", "command"]},
                 },
             })
