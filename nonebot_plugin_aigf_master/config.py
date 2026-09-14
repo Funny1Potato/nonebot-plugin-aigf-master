@@ -72,8 +72,8 @@ class PluginConfig(BaseModel):
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")
     aigfm_invoke_timeout: float = Field(30.0, description="插件调用超时时间（秒）")
     aigfm_invoke_dedup_enabled: bool = Field(True, description="拒绝调用最近调用过的相同命令（命令+参数+调用身份完全相同）")
-    aigfm_invoke_dedup_window: float = Field(1800.0, description="去重时间窗口（秒，默认 1800=30 分钟；0=不限时间，只看最近 N 条台账）")
-    aigfm_invoke_dedup_records: int = Field(50, description="去重比对保留的调用台账条数（默认 50；prompt 里只展示其中最近 10 条）")
+    aigfm_invoke_dedup_window: float = Field(1200.0, description="去重时间窗口（秒，默认 1200=20 分钟；0=不限时间，只看最近 N 条台账）")
+    aigfm_invoke_dedup_records: int = Field(15, description="去重比对保留的调用台账条数（默认 15；prompt 里只展示其中最近 10 条）")
     aigfm_invoke_energy_cost: float = Field(0.1, description="每次调用插件消耗的社交能量（0 表示不消耗）")
     aigfm_invoke_energy_min: float = Field(0.4, description="社交能量低于此值时拒绝调用插件（0 表示不限制）")
 

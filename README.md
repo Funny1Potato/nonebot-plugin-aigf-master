@@ -145,8 +145,8 @@ AIGFM_STICKER_CACHE_MAX_FILES=300       # 图片缓存文件（sticker_cache）�
 AIGFM_INVOKE_ENABLED=true               # 是否允许 LLM 调用其它插件（默认 true）
 AIGFM_INVOKE_TIMEOUT=30.0               # 插件调用超时时间（秒，默认 30.0）
 AIGFM_INVOKE_DEDUP_ENABLED=true         # 拒绝调用最近调用过的相同命令（默认 true；命令+参数+调用身份完全相同）
-AIGFM_INVOKE_DEDUP_WINDOW=1800.0        # 去重时间窗口（秒，默认 1800 = 30 分钟；0 = 不限时间，只看最近 N 条台账）
-AIGFM_INVOKE_DEDUP_RECORDS=50           # 去重比对保留的调用台账条数（默认 50；prompt 里只展示其中最近 10 条）
+AIGFM_INVOKE_DEDUP_WINDOW=1200.0        # 去重时间窗口（秒，默认 1200 = 20 分钟；0 = 不限时间，只看最近 N 条台账）
+AIGFM_INVOKE_DEDUP_RECORDS=15           # 去重比对保留的调用台账条数（默认 15；prompt 里只展示其中最近 10 条）
 AIGFM_INVOKE_ENERGY_COST=0.1            # 每次调用插件消耗的社交能量（默认 0.1；0 表示不消耗）
 AIGFM_INVOKE_ENERGY_MIN=0.4             # 社交能量低于此值时拒绝调用插件（默认 0.4；0 表示不限制）
 
@@ -287,8 +287,8 @@ LLM 调用：invoke_plugin(command="决斗", parts=[
 | 限制 | 默认 | 配置项 |
 |---|---|---|
 | **重复调用去重** | 开启 | `AIGFM_INVOKE_DEDUP_ENABLED` |
-| **去重时间窗口** | 30 分钟 | `AIGFM_INVOKE_DEDUP_WINDOW`（秒；0 = 不限时间） |
-| **去重比对条数** | 50 | `AIGFM_INVOKE_DEDUP_RECORDS` |
+| **去重时间窗口** | 20 分钟 | `AIGFM_INVOKE_DEDUP_WINDOW`（秒；0 = 不限时间） |
+| **去重比对条数** | 15 | `AIGFM_INVOKE_DEDUP_RECORDS` |
 | **每次调用消耗能量** | 0.1 | `AIGFM_INVOKE_ENERGY_COST`（0 = 不消耗） |
 | **能量门槛** | 低于 0.4 拒绝 | `AIGFM_INVOKE_ENERGY_MIN`（0 = 不限制） |
 
