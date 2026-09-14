@@ -502,12 +502,12 @@ async def _batch_processor(group_id: int):
         # 处理
         processor = _get_processor(group_id)
         processor._bot = bot
+        # 缓存索引常驻（不随批处理清空），历史图片的 cache_id 才能跨批收藏/作生图参考；
+        # 条目数由 save_to_cache 的每群上限与 sticker_cache 文件上限共同兜底
         stickers = _memes.get_cached(group_id)
 
         try:
             responses = await processor.process(messages, cached_stickers=stickers)
-            if stickers:
-                _memes.clear_cache(group_id)
         except Exception as e:
             logger.error(f"[处理失败] 群{group_id}: {e}")
             import traceback
@@ -639,6 +639,8 @@ async def _(event: GroupMessageEvent):
     processor.recent_messages.clear()
     # 插件响应另有一份存在 ContextBus 里，不清会跨 reset 残留进后续 prompt
     processor.context_bus.clear(int(event.group_id))
+    # 图片缓存索引随聊天记录一起清（历史 id 已不在 prompt 中，留着也无可收藏的上下文）
+    _memes.clear_cache(int(event.group_id))
     processor.social_energy = 0.75
     await processor.load_preset(plugin_config.aigfm_default_preset)
     await reset_cmd.finish("已重置会话")

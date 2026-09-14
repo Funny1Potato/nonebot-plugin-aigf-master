@@ -138,6 +138,7 @@ AIGFM_HTTPS_PROXY="http://127.0.0.1:7890"  # HTTPS 代理地址
 AIGFM_CAPTURE_PLUGINS=[]                # 插件白名单（捕获+命令扫描+调用核对 共用）：非空=只捕获/扫描这些插件且只允许调用它们；空=捕获所有但不扫描静态命令、不核对插件归属（自家管理命令仍被拒；LLM 只应调用清单内命令）
 AIGFM_CAPTURE_IMAGES=true               # 是否捕获并解析图片（默认 true；同时作用于本机插件输出与 peer 推送）
 AIGFM_CONTEXT_IN_PROMPT=10              # 注入到 prompt 中的其它插件消息条数（默认 10）
+AIGFM_STICKER_CACHE_MAX_FILES=300       # 图片缓存文件（sticker_cache）最大数量，超出按最旧删除（默认 300）
 
 # --- 插件调用 ---
 AIGFM_INVOKE_ENABLED=true               # 是否允许 LLM 调用其它插件（默认 true）
@@ -475,6 +476,8 @@ memes/
 机器人收到图片时，VLM 分析后保存到缓存。LLM 在回复时看到缓存的表情包，决定是否收藏。
 
 - 图片按 MD5 hash 去重
+- 群聊图片的缓存 id 会跨批次保留，所以**历史消息里的图片也能补收藏**（照抄聊天记录中的 `[发送了一张图片, id: xxx]` 即可）；执行 `/reset` 会清空这批缓存索引
+- 缓存条目数受 `AIGFM_CONTEXT_MAX_MESSAGES`（每群）与 `AIGFM_STICKER_CACHE_MAX_FILES`（磁盘文件总数，按最旧删除）双重限制，不会无限增长
 - 每个表情包记录**使用次数**和**保存时间**
 - 超过 `AIGFM_MEME_MAX_COUNT` 上限时，按**归一化加权**清理：`保存时间旧 + 使用次数少 → 优先删除`，最近发过的表情包不会删除
 

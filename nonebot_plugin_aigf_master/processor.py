@@ -275,7 +275,6 @@ class MessageProcessor:
             short_term=short_term, long_term=long_term, friends=friends,
             recent_messages=self.recent_messages, new_messages=messages,
             meme_prompt_list=meme_prompt_list,
-            cached_stickers=cached_stickers or [],
             matched_culture=matched_culture,
             culture=culture,
             plugin_commands=plugin_commands, peer_commands=peer_commands,
@@ -598,9 +597,14 @@ class MessageProcessor:
                 keywords = ["表情包"]
             if cache_id and description and cache_id in current_ids:
                 try:
-                    await self.memes.save_from_cache(int(self.group_id), cache_id, description, keywords)
+                    ok = await self.memes.save_from_cache(int(self.group_id), cache_id, description, keywords)
+                    if not ok:
+                        logger.info(f"[表情包收藏] 未收藏: id={cache_id}（缓存文件缺失，或库内已有同图）")
                 except Exception as e:
                     logger.error(f"表情包保存失败: {e}")
+            elif cache_id:
+                # 索引常驻后 LLM 会引用历史 id，被上限淘汰或不存在时在此暴露，避免静默失败无从排查
+                logger.warning(f"[表情包收藏] 跳过: id={cache_id} 不在缓存索引中（已淘汰或不存在）")
 
     def _record_bot_reply(self, segments: list[ReplySegment]):
         for seg in segments:

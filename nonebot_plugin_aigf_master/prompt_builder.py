@@ -53,7 +53,6 @@ def build_prompt(
     recent_messages: list[ChatMessage],
     new_messages: list[ChatMessage],
     meme_prompt_list: str,
-    cached_stickers: list[dict],
     matched_culture: list[dict],
     culture: list[dict],
     plugin_commands: list[PluginCommand],
@@ -113,14 +112,13 @@ def build_prompt(
     if config.aigfm_meme_enabled and meme_prompt_list:
         meme_section = f"\n\n## 可用的表情包（用于发送）\n{meme_prompt_list}\n"
 
-    # 缓存中的表情包
-    sticker_section = ""
-    if cached_stickers and config.aigfm_meme_enabled:
-        sticker_ids = [s['id'] for s in cached_stickers]
+    # 表情包收藏判断（id 就地渲染在消息里，故不再单列「可用 id」清单；历史批次的图同样可收藏）
+    meme_judge_section = ""
+    if config.aigfm_meme_enabled:
         if image_mode == "llm":
-            sticker_section = """
-## 当前消息中出现的图片（可收藏）
-以下图片已通过视觉输入提供。请结合上下文判断是否值得收藏。
+            meme_judge_section = """
+## 表情包收藏判断
+图片的 id 见消息里的 `[发送了一张图片, id: xxx]` 标注，图片本体已随本次请求提供。请结合上下文判断是否值得收藏。
 - 标记为"可能是表情包"的图片已附带情感和内容描述，是较可能的收藏候选
 - 仅标记为"图片"的通常为普通图片，一般不需要收藏
 请结合上下文进一步判断：
@@ -130,11 +128,12 @@ def build_prompt(
 - 若群友只发了一张图片，而前后均没有与这张图片相关的内容，或是在图片前后仅有对该图片的介绍或评论，通常是在分享普通图片
 - 若群友发的图片内容与之前的内容有关联，或这张图片是在其它群友发言之后发出的，且**包含较为明显的情感**（开心、愤怒、疑惑等），则可能是表情包
 如果值得收藏，在 memory.save_meme 中填入 id、简短描述和关键词（这是 JSON 输出字段，不是命令）。
-可用 id：""" + ", ".join(sticker_ids)
+「最近的聊天记录」里出现过的图片同样可以收藏（照抄那条记录里的 id 即可），不必等它出现在新消息里；已经收藏过的再提交会被自动忽略。
+"""
         else:
-            sticker_section = """
-## 当前消息中出现的图片（可收藏）
-消息中已标注初步判断结果。请结合上下文进一步判断是否值得收藏。
+            meme_judge_section = """
+## 表情包收藏判断
+图片的 id 见消息里的 `[发送了一张图片, id: xxx]` 标注，消息中已标注初步判断结果。请结合上下文进一步判断是否值得收藏。
 - 标记为"可能是表情包"的图片已附带情感和内容描述，是较可能的收藏候选
 - 仅标记为"图片"的通常为普通图片，一般不需要收藏
 请结合上下文进一步判断：
@@ -144,7 +143,8 @@ def build_prompt(
 - 若群友只发了一张图片，而前后均没有与这张图片相关的内容，或是在图片前后仅有对该图片的介绍或评论，通常是在分享普通图片
 - 若群友发的图片内容与之前的内容有关联，或这张图片是在其它群友发言之后发出的，且**包含较为明显的情感**（开心、愤怒、疑惑等），则可能是表情包
 如果值得收藏，在 memory.save_meme 中填入 id 和你写的简短描述（这是 JSON 输出字段，不是命令）。
-可用 id：""" + ", ".join(sticker_ids)
+「最近的聊天记录」里出现过的图片同样可以收藏（照抄那条记录里的 id 即可），不必等它出现在新消息里；已经收藏过的再提交会被自动忽略。
+"""
 
     # 群友列表
     user_list_str = ", ".join(f"{data.get('nickname', uid)}(QQ:{uid})" for uid, data in friends.items()) if friends else "无"
@@ -343,7 +343,7 @@ index 对应上面数组的下标（从 0 开始）。
 {recent_str}
 
 ## 新消息
-{new_msgs_str}{meme_section}{sticker_section}
+{new_msgs_str}{meme_section}{meme_judge_section}
 
 ## 已知群友昵称
 {user_list_str}
