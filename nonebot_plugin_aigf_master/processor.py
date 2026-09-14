@@ -486,7 +486,9 @@ class MessageProcessor:
 
         async def handler(name: str, args: dict) -> str:
             if name == "search_internet" and self.search:
-                results = await self.search.search(args.get("query", ""), self.config.aigfm_search_max_results)
+                query = args.get("query", "")
+                results = await self.search.search(query, self.config.aigfm_search_max_results)
+                logger.info(f"[搜索] {self.config.aigfm_search_api} 「{query}」 → {len(results)} 条")
                 return self.search.format_results(results)
             elif name == "invoke_plugin":
                 command = args.get("command", "")

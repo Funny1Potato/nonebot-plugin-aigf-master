@@ -101,6 +101,8 @@ class OpenWebSearchClient(SearchClient):
                 resp.raise_for_status()
                 data = resp.json()
             if data.get("status") != "ok":
+                logger.warning(f"[搜索] openwebsearch 返回异常: status={data.get('status')}, "
+                               f"error={data.get('error')}, hint={data.get('hint')}")
                 return []
             results = [{"title": r.get("title", ""), "content": r.get("description", ""), "url": r.get("url", "")}
                        for r in data.get("data", {}).get("results", [])]
