@@ -142,6 +142,10 @@ def _parts_key(parts: list[dict] | None) -> str:
         return str(parts)
 
 
+# 调用台账注入 prompt 时最多展示的条数（比对的台账条数由 aigfm_invoke_dedup_records 控制）
+_LEDGER_DISPLAY = 10
+
+
 class MessageProcessor:
     """消息处理编排器，协调所有组件"""
 
@@ -207,33 +211,43 @@ class MessageProcessor:
             time=datetime.now(), command=command,
             parts_key=_parts_key(parts), user_id=str(user_id), label=label,
         ))
-        if len(self._invoke_log) > 10:
-            self._invoke_log = self._invoke_log[-10:]
+        keep = max(1, self.config.aigfm_invoke_dedup_records)
+        if len(self._invoke_log) > keep:
+            self._invoke_log = self._invoke_log[-keep:]
+
+    def _dedup_window(self) -> float:
+        """去重时间窗口（秒）；0 表示不限时间（只看最近 N 条台账）"""
+        return max(0.0, self.config.aigfm_invoke_dedup_window)
 
     def _recent_invocations(self) -> list[str]:
-        """最近 5 分钟内的调用台账，渲染成 prompt 行（带相对时间，便于模型判断"之后有没有新要求"）
+        """渲染台账段：参与拦截的条目里取最近 _LEDGER_DISPLAY 条
 
-        无记录返回空列表。
+        - 只展示时间窗口内的记录（窗口为 0 时不按时间过滤），与拦截口径一致，避免"段里看不到却仍被拦"
+        - 展示条数固定，prompt 不随 aigfm_invoke_dedup_records 膨胀
+        - 带相对时间，便于模型判断"之后有没有新要求"
         """
         now = datetime.now()
+        window = self._dedup_window()
+        visible = [rec for rec in self._invoke_log
+                   if window == 0 or (now - rec.time).total_seconds() <= window]
         lines: list[str] = []
-        for rec in self._invoke_log:
+        for rec in visible[-_LEDGER_DISPLAY:]:
             delta = (now - rec.time).total_seconds()
-            if delta > 300:
-                continue
             rel = "刚刚" if delta < 60 else f"{int(delta // 60)} 分钟前"
             lines.append(f"- {rec.time.strftime('%H:%M:%S')}（{rel}）{rec.label}")
         return lines
 
     def _find_recent_same(self, command: str, parts: list[dict], user_id) -> bool:
-        """窗口内是否已执行过完全相同的调用（命令 + 参数 + 调用身份；不区分本机/peer）
+        """台账中是否已有完全相同的调用（命令 + 参数 + 调用身份；不区分本机/peer）
 
-        窗口与台账一致：最近 10 条且 5 分钟内。
+        命中条件：身份全等，且记录在时间窗口内（窗口为 0 时不限时间）。
+        拦截范围 = 「时间窗口内」∩「台账保留的最近 N 条」（N 由 aigfm_invoke_dedup_records 控制）。
         """
         now = datetime.now()
+        window = self._dedup_window()
         key, uid = _parts_key(parts), str(user_id)
         return any(
-            (now - rec.time).total_seconds() <= 300
+            (window == 0 or (now - rec.time).total_seconds() <= window)
             and rec.command == command and rec.parts_key == key and rec.user_id == uid
             for rec in self._invoke_log
         )

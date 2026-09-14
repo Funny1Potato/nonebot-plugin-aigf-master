@@ -144,7 +144,9 @@ AIGFM_STICKER_CACHE_MAX_FILES=300       # 图片缓存文件（sticker_cache）�
 # --- 插件调用 ---
 AIGFM_INVOKE_ENABLED=true               # 是否允许 LLM 调用其它插件（默认 true）
 AIGFM_INVOKE_TIMEOUT=30.0               # 插件调用超时时间（秒，默认 30.0）
-AIGFM_INVOKE_DEDUP_ENABLED=true         # 拒绝调用最近调用过的相同命令（默认 true；命令+参数+调用身份完全相同，窗口同调用台账：5 分钟/最近 10 条）
+AIGFM_INVOKE_DEDUP_ENABLED=true         # 拒绝调用最近调用过的相同命令（默认 true；命令+参数+调用身份完全相同）
+AIGFM_INVOKE_DEDUP_WINDOW=1800.0        # 去重时间窗口（秒，默认 1800 = 30 分钟；0 = 不限时间，只看最近 N 条台账）
+AIGFM_INVOKE_DEDUP_RECORDS=50           # 去重比对保留的调用台账条数（默认 50；prompt 里只展示其中最近 10 条）
 AIGFM_INVOKE_ENERGY_COST=0.1            # 每次调用插件消耗的社交能量（默认 0.1；0 表示不消耗）
 AIGFM_INVOKE_ENERGY_MIN=0.4             # 社交能量低于此值时拒绝调用插件（默认 0.4；0 表示不限制）
 
@@ -285,10 +287,16 @@ LLM 调用：invoke_plugin(command="决斗", parts=[
 | 限制 | 默认 | 配置项 |
 |---|---|---|
 | **重复调用去重** | 开启 | `AIGFM_INVOKE_DEDUP_ENABLED` |
+| **去重时间窗口** | 30 分钟 | `AIGFM_INVOKE_DEDUP_WINDOW`（秒；0 = 不限时间） |
+| **去重比对条数** | 50 | `AIGFM_INVOKE_DEDUP_RECORDS` |
 | **每次调用消耗能量** | 0.1 | `AIGFM_INVOKE_ENERGY_COST`（0 = 不消耗） |
 | **能量门槛** | 低于 0.4 拒绝 | `AIGFM_INVOKE_ENERGY_MIN`（0 = 不限制） |
 
-- 去重判定为**命令 + 参数 + 调用身份（QQ 号）三者完全相同**，窗口与调用台账一致（**最近 10 条且 5 分钟内**）；**不区分本机与其它 bot**——同一命令、同一身份在窗口内只执行一次
+- 去重判定为**命令 + 参数 + 调用身份（QQ 号）三者完全相同**；拦截范围 = **时间窗口内**（`AIGFM_INVOKE_DEDUP_WINDOW`）∩ **调用台账保留的最近 N 条**（`AIGFM_INVOKE_DEDUP_RECORDS`）
+- **不区分本机与其它 bot**：同一命令、同一身份在范围内只执行一次
+- 换个参数（`决斗 @张三` → `决斗 @李四`）或换个身份（不同 QQ 号）视为不同调用，正常放行
+- prompt 里的「你最近代为执行过的命令」段只展示**其中最近 10 条**（防止 prompt 随条数膨胀）
+- 执行 `/reset` 会一并清空调用台账（重置后不再被"刚调用过"挡住）
 - 每次**实际投递**扣 `AIGFM_INVOKE_ENERGY_COST` 点社交能量（被拒绝时不扣）；能量会按社交能量机制自然回充，所以能量不足只是暂时无法代为执行命令
 - 被拒绝时：工具结果**当场**告知 LLM 原因，同时在聊天记录里留下 `已拒绝调用命令「xxx」（原因）`，**下一轮** LLM 能看到；拒绝**不写入调用台账**（不会阻止之后真正的再调用）
 

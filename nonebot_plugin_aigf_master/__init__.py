@@ -642,6 +642,8 @@ async def _(event: GroupMessageEvent):
     processor.context_bus.clear(int(event.group_id))
     # 图片缓存索引随聊天记录一起清（历史 id 已不在 prompt 中，留着也无可收藏的上下文）
     _memes.clear_cache(int(event.group_id))
+    # 调用台账一起清：重置后不应再被「刚调用过同一条命令」挡住
+    processor._invoke_log.clear()
     processor.social_energy = 0.75
     await processor.load_preset(plugin_config.aigfm_default_preset)
     await reset_cmd.finish("已重置会话")
