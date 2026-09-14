@@ -71,6 +71,9 @@ class PluginConfig(BaseModel):
     # 插件调用
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")
     aigfm_invoke_timeout: float = Field(30.0, description="插件调用超时时间（秒）")
+    aigfm_invoke_dedup_enabled: bool = Field(True, description="拒绝调用最近调用过的相同命令（命令+参数+调用身份完全相同，窗口同调用台账：5 分钟/最近 10 条）")
+    aigfm_invoke_energy_cost: float = Field(0.1, description="每次调用插件消耗的社交能量（0 表示不消耗）")
+    aigfm_invoke_energy_min: float = Field(0.4, description="社交能量低于此值时拒绝调用插件（0 表示不限制）")
 
     # 命令学习
     aigfm_learn_commands: bool = Field(True, description="是否通过群聊学习未注册的命令")

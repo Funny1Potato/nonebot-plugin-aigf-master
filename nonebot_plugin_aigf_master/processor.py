@@ -2,9 +2,11 @@
 
 import asyncio
 import base64
+import json
 import random
 from datetime import datetime
 from pathlib import Path
+from typing import NamedTuple
 
 import anyio
 import httpx
@@ -123,6 +125,23 @@ SELF_COMMANDS = {
 }
 
 
+class _Invocation(NamedTuple):
+    """一次代为执行过的命令记录（台账条目；label 供 prompt 展示，其余字段供去重比对）"""
+    time: datetime
+    command: str        # 命令名（不含前缀）
+    parts_key: str      # 参数指纹（已解析后的 parts 序列化）
+    user_id: str        # 调用身份（QQ 号）
+    label: str          # prompt 展示用，如 "`今日小猪`（本机，以 111 身份）"
+
+
+def _parts_key(parts: list[dict] | None) -> str:
+    """命令参数的稳定指纹，用于判断两次调用的参数是否完全相同"""
+    try:
+        return json.dumps(parts or [], sort_keys=True, ensure_ascii=False)
+    except Exception:
+        return str(parts)
+
+
 class MessageProcessor:
     """消息处理编排器，协调所有组件"""
 
@@ -162,8 +181,9 @@ class MessageProcessor:
         self.bot_role = "一个友好的群聊助手"
         self.current_preset = ""
         self.recent_messages: list[ChatMessage] = []
-        # 代为执行过的命令台账：仅用于注入 prompt 让模型「看得见自己刚调过什么」，不做任何拦截
-        self._invoke_log: list[tuple[datetime, str]] = []
+        # 代为执行过的命令台账：既注入 prompt 让模型「看得见自己刚调过什么」，
+        # 也作为「最近调用过相同命令」去重的比对依据（见 _find_recent_same）
+        self._invoke_log: list[_Invocation] = []
         self.social_energy = 0.75
         self._bot = None
         self._current_user_id: int = 0
@@ -181,9 +201,12 @@ class MessageProcessor:
         recent = "\n".join(f"{m.user_name}: {m.content}" for m in self.recent_messages[-15:]) or "没有消息"
         return f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n\n最近消息：\n{recent}"
 
-    def _log_invocation(self, text: str) -> None:
-        """记一笔代为执行的命令（只记账，供 prompt 展示；不做冷却或拒绝）"""
-        self._invoke_log.append((datetime.now(), text))
+    def _log_invocation(self, command: str, parts: list[dict], user_id, label: str) -> None:
+        """记一笔代为执行的命令（供 prompt 展示 + 供「最近调用过相同命令」去重比对）"""
+        self._invoke_log.append(_Invocation(
+            time=datetime.now(), command=command,
+            parts_key=_parts_key(parts), user_id=str(user_id), label=label,
+        ))
         if len(self._invoke_log) > 10:
             self._invoke_log = self._invoke_log[-10:]
 
@@ -194,13 +217,53 @@ class MessageProcessor:
         """
         now = datetime.now()
         lines: list[str] = []
-        for ts, text in self._invoke_log:
-            delta = (now - ts).total_seconds()
+        for rec in self._invoke_log:
+            delta = (now - rec.time).total_seconds()
             if delta > 300:
                 continue
             rel = "刚刚" if delta < 60 else f"{int(delta // 60)} 分钟前"
-            lines.append(f"- {ts.strftime('%H:%M:%S')}（{rel}）{text}")
+            lines.append(f"- {rec.time.strftime('%H:%M:%S')}（{rel}）{rec.label}")
         return lines
+
+    def _find_recent_same(self, command: str, parts: list[dict], user_id) -> bool:
+        """窗口内是否已执行过完全相同的调用（命令 + 参数 + 调用身份；不区分本机/peer）
+
+        窗口与台账一致：最近 10 条且 5 分钟内。
+        """
+        now = datetime.now()
+        key, uid = _parts_key(parts), str(user_id)
+        return any(
+            (now - rec.time).total_seconds() <= 300
+            and rec.command == command and rec.parts_key == key and rec.user_id == uid
+            for rec in self._invoke_log
+        )
+
+    def _reject_invoke(self, command: str, reason: str) -> str:
+        """拒绝调用：记进最近消息（下一轮 LLM 能看见）并返回给本次调用方"""
+        logger.info(f"[调用] 拒绝: command={command}（{reason}）")
+        self.recent_messages.append(ChatMessage(
+            time=datetime.now(), user_name=self.bot_name,
+            content=f"已拒绝调用命令「{command}」（{reason}）",
+        ))
+        return f"本次调用被拒绝：{reason}。不要重试这条命令；可以改用其它方式，或先和群友说明情况。"
+
+    async def _invoke_gate(self, command: str, parts: list[dict], user_id) -> str | None:
+        """调用前置限制（社交能量 + 重复调用去重）；返回拒绝文案则不要投递"""
+        energy_min = self.config.aigfm_invoke_energy_min
+        if energy_min > 0 and self.social_energy < energy_min:
+            return self._reject_invoke(
+                command, f"社交能量不足（现在 {self.social_energy:.2f}，低于 {energy_min:.2f}）")
+        if self.config.aigfm_invoke_dedup_enabled and self._find_recent_same(command, parts, user_id):
+            return self._reject_invoke(command, "刚刚已经执行过完全相同的命令（同样的命令、参数和身份）")
+        return None
+
+    def _consume_invoke_energy(self) -> None:
+        """调用插件消耗社交能量（只在实际投递时扣，被拒绝时不扣）"""
+        cost = self.config.aigfm_invoke_energy_cost
+        if cost <= 0:
+            return
+        self.social_energy = max(0.0, self.social_energy - cost)
+        logger.info(f"[能量] 消耗: {cost:.3f}（调用插件）, 剩余: {self.social_energy:.3f}")
 
     async def _resolve_parts(self, raw_parts) -> tuple[list[dict], list[str]]:
         """规范化 LLM 给的命令参数段：at 的目标解析成 QQ 号
@@ -449,7 +512,7 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_plugin",
-                    "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。",
+                    "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
@@ -462,7 +525,7 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_peer_plugin",
-                    "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。",
+                    "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
@@ -508,10 +571,15 @@ class MessageProcessor:
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
                 parts, skipped_ats = await self._resolve_parts(args.get("parts"))
                 at_hint = self._at_hint(skipped_ats)
+                # 调用前置限制：社交能量不足 / 最近调过完全相同的命令 → 拒绝且不投递
+                gate = await self._invoke_gate(command, parts, uid)
+                if gate:
+                    return gate
                 outcome = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
                     user_id=uid, parts=parts,
                 )
+                self._consume_invoke_energy()
                 # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
                 # 投递成功/超时/出错都要记，否则 LLM 会重复调用同一条命令
                 self.recent_messages.append(ChatMessage(
@@ -519,7 +587,7 @@ class MessageProcessor:
                     user_name=self.bot_name,
                     content=f"已调用命令「{command}」（user_id={uid}）",
                 ))
-                self._log_invocation(f"`{command}`（本机，以 {uid} 身份）")
+                self._log_invocation(command, parts, uid, f"`{command}`（本机，以 {uid} 身份）")
                 if outcome == "timeout":
                     logger.warning(f"[调用] invoke_plugin 超时: {command}")
                     return (f"命令已投递，但插件未在 {int(self.config.aigfm_invoke_timeout)} 秒内完成执行，"
@@ -538,17 +606,22 @@ class MessageProcessor:
                 # @ 目标在 Bot A 侧解析（同群、成员列表一致）→ 传给 peer 的永远是纯数字
                 parts, skipped_ats = await self._resolve_parts(args.get("parts"))
                 at_hint = self._at_hint(skipped_ats)
+                # 调用前置限制：社交能量不足 / 最近调过完全相同的命令（不区分本机/peer）→ 拒绝
+                gate = await self._invoke_gate(command, parts, uid)
+                if gate:
+                    return gate
                 first_at = next((p["target"] for p in parts if p.get("type") == "at"), 0)
                 result = await self.peer_client.invoke(
                     peer_name, command, int(self.group_id), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
                 )
+                self._consume_invoke_energy()
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(),
                     user_name=self.bot_name,
                     content=f"已调用命令「{command}」（{peer_name}，user_id={uid}）",
                 ))
-                self._log_invocation(f"`{command}`（{peer_name}）")
+                self._log_invocation(command, parts, uid, f"`{command}`（{peer_name}）")
                 if at_hint:
                     result = f"{result}\n{at_hint}"
                 return result
