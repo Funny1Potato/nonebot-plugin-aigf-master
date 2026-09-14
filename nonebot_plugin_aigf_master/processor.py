@@ -442,9 +442,9 @@ class MessageProcessor:
                     "name": "invoke_plugin",
                     "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里。",
                     "parameters": {"type": "object", "properties": {
-                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
+                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；这里**只放参数，不要再把命令名写进来**；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["command"]},
                 },
             })
@@ -456,9 +456,9 @@ class MessageProcessor:
                     "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里。",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
-                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
+                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；这里**只放参数，不要再把命令名写进来**；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["bot", "command"]},
                 },
             })
