@@ -161,6 +161,8 @@ class MessageProcessor:
         self.bot_role = "一个友好的群聊助手"
         self.current_preset = ""
         self.recent_messages: list[ChatMessage] = []
+        # 代为执行过的命令台账：仅用于注入 prompt 让模型「看得见自己刚调过什么」，不做任何拦截
+        self._invoke_log: list[tuple[datetime, str]] = []
         self.social_energy = 0.75
         self._bot = None
         self._current_user_id: int = 0
@@ -177,6 +179,18 @@ class MessageProcessor:
     def status(self) -> str:
         recent = "\n".join(f"{m.user_name}: {m.content}" for m in self.recent_messages[-15:]) or "没有消息"
         return f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n\n最近消息：\n{recent}"
+
+    def _log_invocation(self, text: str) -> None:
+        """记一笔代为执行的命令（只记账，供 prompt 展示；不做冷却或拒绝）"""
+        self._invoke_log.append((datetime.now(), text))
+        if len(self._invoke_log) > 10:
+            self._invoke_log = self._invoke_log[-10:]
+
+    def _recent_invocations(self) -> list[str]:
+        """最近 5 分钟内的调用台账，渲染成 prompt 行；无记录返回空列表"""
+        now = datetime.now()
+        return [f"- {ts.strftime('%H:%M:%S')} {text}"
+                for ts, text in self._invoke_log if (now - ts).total_seconds() <= 300]
 
     async def process(
         self, messages: list[ChatMessage], cached_stickers: list[dict] | None = None,
@@ -278,6 +292,7 @@ class MessageProcessor:
             matched_culture=matched_culture,
             culture=culture,
             plugin_commands=plugin_commands, peer_commands=peer_commands,
+            invoked_recent=self._recent_invocations(),
             context_bus_messages=bus_messages,
             preset=preset, image_mode=self.config.aigfm_image_mode, config=self.config,
         )
@@ -389,9 +404,9 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_plugin",
-                    "description": "调用本机群内的其它功能插件（仅限「可用的群功能」清单中列出的本机命令）",
+                    "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里。",
                     "parameters": {"type": "object", "properties": {
-                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「可用的群功能」清单（本机插件提供的命令）。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
+                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
                         "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
                     }, "required": ["command"]},
@@ -402,10 +417,10 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_peer_plugin",
-                    "description": f"调用其它 bot（{peer_names}）上的功能插件（仅限「其它 bot 的命令」清单中列出的命令）",
+                    "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里。",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
-                        "command": {"type": "string", "description": "命令（不带前缀），必须逐字来自 prompt 中「其它 bot 的命令」清单（其它 bot 提供的命令）。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。**用户没有明确要求时绝对不要调用本工具，话题相关不等于要求执行**；只有用户明确要求执行某个功能时才调用；没有要执行的命令就不要使用本工具，禁止填写 无/没有/none/null 之类占位值，也不要自行编造命令名"},
+                        "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
                         "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
                     }, "required": ["bot", "command"]},
@@ -456,6 +471,7 @@ class MessageProcessor:
                     user_name=self.bot_name,
                     content=f"已调用命令「{command}」（user_id={uid}）",
                 ))
+                self._log_invocation(f"`{command}`（本机，以 {uid} 身份）")
                 if outcome == "timeout":
                     logger.warning(f"[调用] invoke_plugin 超时: {command}")
                     return (f"命令已投递，但插件未在 {int(self.config.aigfm_invoke_timeout)} 秒内完成执行，"
@@ -481,6 +497,7 @@ class MessageProcessor:
                     user_name=self.bot_name,
                     content=f"已调用命令「{command}」（{peer_name}，user_id={uid}）",
                 ))
+                self._log_invocation(f"`{command}`（{peer_name}）")
                 return result
             elif name == "generate_image":
                 prompt = args.get("prompt", "").strip()

@@ -57,6 +57,7 @@ def build_prompt(
     culture: list[dict],
     plugin_commands: list[PluginCommand],
     peer_commands: list[dict],
+    invoked_recent: list[str],
     context_bus_messages: list[PluginMessage],
     preset: RolePreset | None,
     image_mode: str,
@@ -178,6 +179,18 @@ def build_prompt(
 - 如果没有插件/bot 响应，你可以视情况回复
 """
 
+    # 代为执行过的命令台账：独立于「最近的聊天记录」的截断窗口，
+    # 避免"我已调用过"的自述滚出视野后模型重复调用（仅展示，不做拦截）
+    invoke_ledger_section = ""
+    if invoked_recent and config.aigfm_invoke_enabled:
+        ledger_str = "\n".join(invoked_recent)
+        invoke_ledger_section = f"""
+## 你最近代为执行过的命令
+{ledger_str}
+上面这些命令你已经替群友执行过了，**不要再调用工具重复执行**——它们的响应会作为新消息出现在聊天记录里，你只需根据响应决定是否说话。只有群友再次明确要求执行同一条命令时才可以重做。
+
+"""
+
     # 工具调用边界：清单为空时 plugin_section 整段不注入，所以这段必须独立注入
     # （只要开放了 invoke 工具就要有边界，否则模型有工具、无清单，只能猜命令名）
     # 上下两半必须是两个字符串：上半要插值 {bot_name} 所以是 f-string，
@@ -197,7 +210,7 @@ def build_prompt(
 - 「最近的聊天记录」段里形如 `插件名: 内容`，仍在插件消息窗口内时形如 `[插件名] {bot_name}: 内容`
 - 调用后，本次回复必须为空（`"reply": []`），**不要说话**，等插件响应出现
 - 看到上述形式的响应后，再根据它决定是否回复、回复什么，**不要编造**插件的内容
-- **不要重复调用**：如果聊天记录里已经出现 `{bot_name}: 已调用命令「xxx」`，说明该命令已调用过，**绝不要再调用**，直接根据已有内容判断是否回复
+- **不要重复调用**：命令只要出现在上面「你最近代为执行过的命令」清单里（或聊天记录里出现 `{bot_name}: 已调用命令「xxx」`），就说明已经执行过了，**绝不要再调用**，直接根据插件的响应判断是否回复
 - 工具返回"插件未在 N 秒内完成执行"只是**投递超时**，插件稍后仍可能回复 → 等下一批看结果，不要立刻断定失败
 - 工具返回"命令已投递"只代表事件已发出；若后续一直没有对应的 `[插件名]` 响应，说明该命令不存在或无人处理，不要当作已完成
 """ + """
@@ -231,6 +244,9 @@ def build_prompt(
 
 ## 功能调用的边界
 - **不要主动调用任何工具**：只有用户**明确要求**执行某个命令或功能时才调用（如"帮我查一下""给我来一个""用xxx查"）。用户只是闲聊、提问、分享、讨论话题时，即使话题与某个命令相关（提到天气、抽奖、小猪等话题词），**也不要**调用工具——关键词相关不等于要求执行
+- **群友自己发了命令 ≠ 要你去执行**：清单里的命令群友可以直接发给插件（那条消息本身就会被 NoneBot 投给对应插件处理）。看到某条**用户消息本身就是命令原文**（如 `今日小猪`、`/roll`）时不要调用工具，否则该命令会被**执行两遍**；只有群友用自然语言请你代做（"帮我查下我的猪"）才调用
+- **一次回复最多调用 1 个命令工具**：确实需要执行多个功能时，只调用最急需的那一个，其余用一句话问群友要不要继续，不要连着发多个工具调用
+- 下列三种情形一律**不调用任何工具**（按普通聊天处理，没什么可说就 `"reply": []`）：① 只是有人提到相关话题词；② 有人自己打了命令原文、且已有插件/bot 响应；③ 命令已出现在「你最近代为执行过的命令」清单里
 - 只能调用「可用的群功能」「其它 bot 的命令」清单里出现的命令；清单里没有的命令一律不要调用
 - 上面没有列出任何清单时，不要使用 invoke_plugin / invoke_peer_plugin 工具，按普通聊天处理
 - 下方 JSON 里的 reply / memory / short_term / long_term / friends / save_meme / culture / command_learning 等都是**输出字段名，不是命令**；群里不存在 save_meme、help、send、status 这类命令
@@ -259,7 +275,7 @@ def build_prompt(
 
 ## 当前状态
 社交能量：{_energy_description(social_energy)}
-（这会影响你是否想说话、回复的热情程度）
+（这会影响你是否想说话、回复的热情程度，也影响你是否想折腾群里的功能——能量偏低时不要代为执行命令）
 
 """
     if preset_knowledge:
@@ -347,7 +363,7 @@ index 对应上面数组的下标（从 0 开始）。
 
 ## 已知群友昵称
 {user_list_str}
-{plugin_section}{tool_boundary_section}
+{plugin_section}{invoke_ledger_section}{tool_boundary_section}
 ---
 
 你可以在回复的同时管理你的记忆并记忆命令。请输出 JSON：
