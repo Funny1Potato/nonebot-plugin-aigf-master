@@ -31,6 +31,7 @@ from .image_handler import ImageHandler
 from .image_gen_client import ImageGenClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
+from .message_builder import compose_messages
 from .models import ChatMessage
 from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
@@ -93,17 +94,6 @@ def _get_processor(group_id: int) -> MessageProcessor:
 
 
 # ========== 消息解析 ==========
-
-async def _resolve_user_id(bot: Bot, event: GroupMessageEvent, nickname: str) -> int | None:
-    try:
-        members = await bot.get_group_member_list(group_id=event.group_id)
-        for m in members:
-            if m.get("nickname", "").strip() == nickname:
-                return m["user_id"]
-    except Exception as e:
-        logger.error(f"获取群成员列表失败: {e}")
-    return None
-
 
 async def _load_image_bytes(img: dict) -> bytes:
     """按 url → http 形式的 file → base64 → 本地文件 依次取回图片字节
@@ -318,6 +308,17 @@ async def _extract_reply_content(bot: Bot, message_content, group_id: int) -> st
             text = seg.data.get("text", "")
             if text.strip():
                 parts.append(text.strip())
+        elif seg.type == "at":
+            # 与 _parse_message 的 at 渲染一致（只给昵称，不带 QQ），被回复消息里的 @ 目标才不丢
+            at_uid = str(seg.data.get("qq", "")).strip()
+            if at_uid:
+                at_name = at_uid
+                try:
+                    info = await bot.get_group_member_info(group_id=group_id, user_id=int(at_uid))
+                    at_name = info.get("nickname") or at_uid
+                except Exception:
+                    pass
+                parts.append(f"@{at_name}")
         elif seg.type in ("image", "emoji"):
             _on_image_start(group_id)
             try:
@@ -517,27 +518,27 @@ async def _batch_processor(group_id: int):
         if not responses:
             continue
 
-        # 发送回复
+        # 发送回复（段落拼装与插件调用共用 message_builder.compose_messages）
         try:
-            pending = OneBotMessage()
+            parts = []
             for resp in responses:
                 if resp.type == "text":
-                    pending.append(MessageSegment.text(resp.content))
+                    parts.append({"type": "text", "content": resp.content})
                 elif resp.type == "at":
-                    uid = await _resolve_user_id(bot, event, resp.user_name)
-                    if uid:
-                        pending.append(MessageSegment.at(uid))
+                    parts.append({"type": "at", "target": resp.user_name})
                 elif resp.type == "meme":
-                    if pending:
-                        await bot.send(message=pending, event=event)
-                        pending = OneBotMessage()
                     path = _memes.resolve(resp.meme_id)
                     if path:
-                        await bot.send(message=MessageSegment.image(path), event=event)
-                        await _memes.persist()
-            if pending:
-                await bot.send(message=pending, event=event)
+                        parts.append({"type": "image", "path": path})
+            composed = await compose_messages(bot, event.group_id, parts)
+            messages = composed.messages
+            for msg in messages:
+                await bot.send(message=msg, event=event)
+            # 与旧实现一致的日志语义：仅当结尾还有文本消息要发时才记成功
+            if messages and messages[-1] and messages[-1][0].type != "image":
                 logger.success("[发送] 消息已发送")
+            if any(p["type"] == "image" for p in parts):
+                await _memes.persist()
         except Exception as e:
             logger.error(f"发送消息失败: {e}")
 

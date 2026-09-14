@@ -19,6 +19,7 @@ from .image_handler import ImageHandler
 from .llm_client import LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
+from .message_builder import resolve_at_target
 from .models import ChatMessage, PluginCommand, ReplySegment
 from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
@@ -191,6 +192,41 @@ class MessageProcessor:
         now = datetime.now()
         return [f"- {ts.strftime('%H:%M:%S')} {text}"
                 for ts, text in self._invoke_log if (now - ts).total_seconds() <= 300]
+
+    async def _resolve_parts(self, raw_parts) -> tuple[list[dict], list[str]]:
+        """规范化 LLM 给的命令参数段：at 的目标解析成 QQ 号
+
+        与回复的 reply 字段同结构。返回 (可直接拼装的 parts, 解析失败的 @ 目标名列表)；
+        解析失败的目标会被跳过（不阻断调用），是否提示由调用方决定。
+        """
+        resolved: list[dict] = []
+        skipped: list[str] = []
+        if not isinstance(raw_parts, list):
+            return resolved, skipped
+        for part in raw_parts:
+            if not isinstance(part, dict):
+                continue
+            ptype = part.get("type")
+            if ptype == "at":
+                target = part.get("name") or part.get("target")
+                uid = await resolve_at_target(self._bot, int(self.group_id), target)
+                if uid:
+                    resolved.append({"type": "at", "target": uid})
+                else:
+                    skipped.append(str(target or ""))
+            elif ptype == "text":
+                content = part.get("content")
+                if content:
+                    resolved.append({"type": "text", "content": str(content)})
+        return resolved, skipped
+
+    @staticmethod
+    def _at_hint(skipped_ats: list[str]) -> str:
+        """@ 解析失败时的回执提示（跳过该 @、不阻断调用，但让模型能自纠）"""
+        if not skipped_ats:
+            return ""
+        logger.warning(f"[调用] @ 目标解析失败: {skipped_ats}")
+        return f"（没能识别 @ 目标：{'、'.join(skipped_ats)} —— parts 里的 at 请填群友昵称；本次已跳过该 @）"
 
     async def process(
         self, messages: list[ChatMessage], cached_stickers: list[dict] | None = None,
@@ -408,7 +444,7 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["command"]},
                 },
             })
@@ -422,7 +458,7 @@ class MessageProcessor:
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "at_user_id": {"type": "integer", "description": "命令要 @ 的群友 QQ 号（可选，如\"决斗 @张三\"这类命令的目标；从「已知群友昵称」的名字(QQ:号) 中取，不需要 @ 时省略）"}
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构，按顺序以空格拼在命令之后）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}；不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
                     }, "required": ["bot", "command"]},
                 },
             })
@@ -459,10 +495,11 @@ class MessageProcessor:
                         logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
                         return "该插件不在允许调用的白名单内，已拒绝调用"
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
-                at_qq = args.get("at_user_id", 0) or 0
+                parts, skipped_ats = await self._resolve_parts(args.get("parts"))
+                at_hint = self._at_hint(skipped_ats)
                 outcome = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
-                    user_id=uid, at_qq=at_qq,
+                    user_id=uid, parts=parts,
                 )
                 # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
                 # 投递成功/超时/出错都要记，否则 LLM 会重复调用同一条命令
@@ -475,22 +512,25 @@ class MessageProcessor:
                 if outcome == "timeout":
                     logger.warning(f"[调用] invoke_plugin 超时: {command}")
                     return (f"命令已投递，但插件未在 {int(self.config.aigfm_invoke_timeout)} 秒内完成执行，"
-                            "响应稍后仍可能作为新消息出现，先不要断言失败")
+                            "响应稍后仍可能作为新消息出现，先不要断言失败" + at_hint)
                 if outcome == "error":
                     logger.error(f"[调用] invoke_plugin 投递失败: {command}")
                     return "命令投递失败（详见日志），插件不会响应"
                 logger.success(f"[调用] invoke_plugin 已投递: {command}")
                 return ("命令已投递。只有后续聊天记录里真的出现 [插件名]/[bot名] 的响应才算执行成功；"
-                        "一直没有响应说明该命令不存在或无人处理，不要当作已完成")
+                        "一直没有响应说明该命令不存在或无人处理，不要当作已完成" + at_hint)
             elif name == "invoke_peer_plugin":
                 peer_name = args.get("bot", "")
                 command = args.get("command", "")
                 uid = args.get("user_id", self._current_user_id)
                 logger.info(f"[调用] invoke_peer_plugin: bot={peer_name}, command={command}, user_id={uid}")
-                at_qq = args.get("at_user_id", 0) or 0
+                # @ 目标在 Bot A 侧解析（同群、成员列表一致）→ 传给 peer 的永远是纯数字
+                parts, skipped_ats = await self._resolve_parts(args.get("parts"))
+                at_hint = self._at_hint(skipped_ats)
+                first_at = next((p["target"] for p in parts if p.get("type") == "at"), 0)
                 result = await self.peer_client.invoke(
                     peer_name, command, int(self.group_id), uid,
-                    at_qq=at_qq, timeout=self.config.aigfm_invoke_timeout,
+                    parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
                 )
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(),
@@ -498,6 +538,8 @@ class MessageProcessor:
                     content=f"已调用命令「{command}」（{peer_name}，user_id={uid}）",
                 ))
                 self._log_invocation(f"`{command}`（{peer_name}）")
+                if at_hint:
+                    result = f"{result}\n{at_hint}"
                 return result
             elif name == "generate_image":
                 prompt = args.get("prompt", "").strip()
