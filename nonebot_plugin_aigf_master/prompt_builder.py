@@ -27,15 +27,15 @@ def _merge_consecutive(messages: list[ChatMessage], window: float) -> list[ChatM
 
 def _energy_description(energy: float) -> str:
     if energy >= 0.8:
-        return "精力充沛，看到什么都想插嘴"
+        return "精力充沛，看到什么都想插嘴，想说的话可以多说几句"
     elif energy >= 0.6:
-        return "状态不错，有兴趣的话题会主动参与"
+        return "状态不错，有兴趣的话题会主动参与，回复可以稍长一点"
     elif energy >= 0.4:
-        return "一般般，有人找就回，不太主动"
+        return "一般般，有人找就回，不太主动，回一两句就行"
     elif energy >= 0.2:
-        return "有点懒，倾向于潜水"
+        return "有点懒，倾向于潜水，要回也就几个字"
     else:
-        return "完全不想说话"
+        return "完全不想说话，能不说就不说"
 
 
 def _fmt_time(dt: datetime) -> str:
@@ -277,7 +277,7 @@ def build_prompt(
 若上述风格要求与你的知识有冲突，以你的知识为优先。
 
 ## 当前状态
-社交能量：{_energy_description(social_energy)}
+社交能量：{social_energy:.0%}（{_energy_description(social_energy)}）
 （这会影响你是否想说话、回复的热情程度，也影响你是否想折腾群里的功能——能量偏低时不要代为执行命令）
 
 """
