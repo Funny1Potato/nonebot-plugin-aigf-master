@@ -591,7 +591,7 @@ class MessageProcessor:
                     return gate
                 outcome = await self.invoker.invoke(
                     self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
-                    user_id=uid, parts=parts,
+                    user_id=uid, parts=parts, sender_name=self.bot_name,
                 )
                 self._consume_invoke_energy()
                 # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
@@ -628,6 +628,7 @@ class MessageProcessor:
                 result = await self.peer_client.invoke(
                     peer_name, command, int(self.group_id), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
+                    sender_name=self.bot_name,
                 )
                 self._consume_invoke_energy()
                 self.recent_messages.append(ChatMessage(

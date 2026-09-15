@@ -19,10 +19,11 @@ class PeerClient:
 
     async def invoke(self, peer_name: str, command: str, group_id: int, user_id: int = 0,
                      parts: list[dict] | None = None, at_user_id: int = 0,
-                     timeout: float = 30.0) -> str:
+                     timeout: float = 30.0, sender_name: str = "") -> str:
         """远程调用其它 bot 的插件命令，返回确认信息
 
         parts 为命令参数段（at 已在本侧解析成数字），at_user_id 取首个 at 供未升级的 peer 兼容。
+        sender_name 是对方合成事件的发送者昵称（当前群预设名），未升级的 peer 会忽略该字段。
         插件执行结果由对方 on_calling_api 钩子推送到本 bot 的 /peer/capture，
         因此这里只负责发出调用请求并返回执行确认。
         """
@@ -32,7 +33,7 @@ class PeerClient:
         url = f"http://127.0.0.1:{cfg['port']}/peer/invoke"
         headers = {"Authorization": f"Bearer {cfg.get('token', '')}"}
         payload = {"command": command, "group_id": group_id, "user_id": user_id,
-                   "parts": parts or [], "at_user_id": at_user_id}
+                   "parts": parts or [], "at_user_id": at_user_id, "name": sender_name}
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)

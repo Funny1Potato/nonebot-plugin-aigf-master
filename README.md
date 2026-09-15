@@ -338,7 +338,7 @@ LLM 只能调用 prompt 里「可用的群功能」/「其它 bot 的命令」�
 | 需要管理员 / 群主 / 超级用户权限 | `sender.role` 固定为 `"member"`，且传入的 `user_id` 一般不在 `SUPERUSERS` 内，权限检查直接拒绝 |
 | 私聊命令 | 合成事件固定 `message_type="group"`，不会命中只监听私聊的 Matcher |
 | 必须先回复/引用某条消息才能执行 | 合成事件的 `reply` 恒为 `None`，且真实消息里的 `reply` 段会被适配器展开，这里没有 |
-| 依赖群名片 / 头衔 / 等级 / 地区判断身份 | `sender` 只填 `user_id`、`nickname`（固定 `"aigf_user"`）、`role`，其余字段为空 |
+| 依赖群名片 / 头衔 / 等级 / 地区判断身份 | `sender` 只填 `user_id`、`nickname`（当前群预设名，默认「小助手」；peer 侧由 Bot A 传入同一名字）、`role`，其余字段为空 |
 | 依赖真实 `message_id` 的后续操作 | `message_id` 是占位值 `0`，插件拿它去 `get_msg` / 撤回 / 引用回复会失败 |
 
 两点补充：

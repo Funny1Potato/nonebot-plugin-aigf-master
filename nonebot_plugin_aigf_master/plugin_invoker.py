@@ -47,13 +47,15 @@ class PluginInvoker:
         return id(event) in self._synthetic or bool(getattr(event, SYNTHETIC_FLAG, False))
 
     async def invoke(self, bot, group_id: int, command: str, timeout: float = 30.0,
-                     user_id: int = 0, parts: list[dict] | None = None) -> InvokeResult:
+                     user_id: int = 0, parts: list[dict] | None = None,
+                     sender_name: str = "aigf_user") -> InvokeResult:
         """投递命令并等待分发结束
 
         Args:
             user_id: 触发命令的用户 QQ 号，用于需要读取发送者信息的命令
             parts: 命令参数段（与回复的 reply 字段同结构），如 [{"type":"at","target":12345}]；
                    条目之间会以空格拼在命令之后
+            sender_name: 合成事件的发送者昵称，调用方传当前群预设名；空值回落 aigf_user
 
         返回投递结果，不代表插件是否回复。超时只取消本次分发，
         插件稍后的输出仍会经钩子进入消息缓冲区。
@@ -62,7 +64,7 @@ class PluginInvoker:
         event = None
 
         try:
-            event = await self._create_synthetic_event(bot, group_id, command, user_id, parts)
+            event = await self._create_synthetic_event(bot, group_id, command, user_id, parts, sender_name)
             self._synthetic[id(event)] = event
             await asyncio.wait_for(handle_event(bot, event), timeout=timeout)
         except asyncio.TimeoutError:
@@ -79,7 +81,8 @@ class PluginInvoker:
 
     @staticmethod
     async def _create_synthetic_event(bot, group_id: int, command: str, user_id: int = 0,
-                                      parts: list[dict] | None = None) -> GroupMessageEvent:
+                                      parts: list[dict] | None = None,
+                                      sender_name: str = "aigf_user") -> GroupMessageEvent:
         """创建模拟的群消息事件（消息拼装与回复发送共用 message_builder.compose_messages）"""
         # LLM 传无前缀命令，这里按本 bot 配置的命令前缀补充
         command = _apply_command_prefix(command)
@@ -101,6 +104,8 @@ class PluginInvoker:
             message=message,
             raw_message=command,
             font=0,
-            sender={"user_id": user_id, "nickname": "aigf_user", "role": "member"},
+            sender={"user_id": user_id,
+                    "nickname": (sender_name or "").strip() or "aigf_user",
+                    "role": "member"},
             **{SYNTHETIC_FLAG: True},
         )
