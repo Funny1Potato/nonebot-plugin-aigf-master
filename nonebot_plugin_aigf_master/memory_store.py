@@ -87,6 +87,8 @@ class MemoryStore:
                 async with await anyio.open_file(path, encoding="utf-8") as f:
                     data = json.loads(await f.read())
                 if data.get("id") and self.group_id in data.get("groups", []):
+                    # card 只带当前群的群名片（cards 按群保存，避免跨群串名片）
+                    data["card"] = data.get("cards", {}).get(self.group_id, "")
                     result[data["id"]] = data
             except Exception:
                 continue
@@ -113,6 +115,26 @@ class MemoryStore:
             friend["nickname"] = nickname
             if self.group_id not in friend.get("groups", []):
                 friend.setdefault("groups", []).append(self.group_id)
+        await self.save_friend(user_id, friend)
+
+    async def update_card(self, user_id: str, card: str):
+        """自动更新群友在本群的群名片（按群保存，名片为空则清除该群记录）"""
+        if not user_id:
+            return
+        friend = await self.load_friend(user_id)
+        if friend is None:
+            friend = {
+                "id": user_id, "nickname": "",
+                "aliases": [], "past_nicknames": [],
+                "info": [], "groups": [self.group_id], "cards": {},
+            }
+        cards = friend.setdefault("cards", {})
+        if card and card.strip():
+            cards[self.group_id] = card.strip()
+        else:
+            cards.pop(self.group_id, None)
+        if self.group_id not in friend.get("groups", []):
+            friend.setdefault("groups", []).append(self.group_id)
         await self.save_friend(user_id, friend)
 
     # ========== 文化记忆 ==========

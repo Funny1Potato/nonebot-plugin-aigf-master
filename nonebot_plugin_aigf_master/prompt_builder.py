@@ -81,12 +81,16 @@ def build_prompt(
     # 群友信息
     friends_dict = {}
     for uid, data in friends.items():
-        friends_dict[uid] = {
+        entry = {
             "nickname": data.get("nickname", ""),
             "aliases": data.get("aliases", []),
             "past_nicknames": data.get("past_nicknames", []),
             "info": data.get("info", []),
         }
+        card = data.get("card", "")
+        if card:
+            entry["card"] = card
+        friends_dict[uid] = entry
     active_users = _get_active_user_ids(new_messages)
     for uid in active_users:
         if uid not in friends_dict:
@@ -320,6 +324,7 @@ index 对应上面数组的下标（从 0 开始）。
 - info：一般信息数组，用 add/modify/delete 操作
 - aliases：称呼数组，用 add_alias/remove_alias 操作
 - nickname：QQ 全局昵称（系统自动更新，无需手动管理）
+- card：本群的群名片（系统按群自动记录，无需手动管理）
 - past_nicknames：曾用昵称（系统自动记录，无需手动管理）
 
 值得记入 info：群友主动告知或聊天中透露的个人信息——职业、生日、居住地、爱好、偏好、口头禅等。

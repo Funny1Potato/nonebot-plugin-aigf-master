@@ -746,6 +746,12 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
     except Exception:
         pass
 
+    # 自动记录群名片（按群保存，名片为空则清除该群记录）
+    try:
+        await processor.memory.update_card(event.get_user_id(), user_info.get("card") or "")
+    except Exception:
+        pass
+
 
 @group_notice.handle()
 async def handle_group_notice(bot: Bot, event: Event):
