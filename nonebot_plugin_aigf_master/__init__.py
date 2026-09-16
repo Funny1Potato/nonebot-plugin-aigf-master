@@ -180,9 +180,9 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
             else:
                 try:
                     info = await bot.get_group_member_info(group_id=event.group_id, user_id=int(uid))
-                    content += f" @{info.get('nickname') or uid} "
+                    content += f" @{info.get('nickname') or uid}({uid}) "
                 except Exception:
-                    content += f" @{uid} "
+                    content += f" @{uid}({uid}) "
         elif seg.type == "reply":
             has_non_at = True
             try:
@@ -193,7 +193,9 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                     if original and "message" in original:
                         replied_text = await _extract_reply_content(bot, original["message"], event.group_id)
                         replied_sender = original.get("sender", {}).get("nickname", "未知")
-                        content += f"[回复 {replied_sender} 的消息: \"{replied_text}\"] "
+                        replied_qq = original.get("sender", {}).get("user_id")
+                        replied_label = f"{replied_sender}({replied_qq})" if replied_qq else replied_sender
+                        content += f"[回复 {replied_label} 的消息: \"{replied_text}\"] "
                     else:
                         content += "[回复: （无法获取被回复消息）] "
             except Exception as e:
@@ -315,9 +317,9 @@ async def _extract_reply_content(bot: Bot, message_content, group_id: int) -> st
                 at_name = at_uid
                 try:
                     info = await bot.get_group_member_info(group_id=group_id, user_id=int(at_uid))
-                    at_name = info.get("nickname") or at_uid
+                    at_name = f"{info.get('nickname') or at_uid}({at_uid})"
                 except Exception:
-                    pass
+                    at_name = f"{at_uid}({at_uid})"
                 parts.append(f"@{at_name}")
         elif seg.type in ("image", "emoji"):
             _on_image_start(group_id)
@@ -734,8 +736,8 @@ async def handle_auto_chat(bot: Bot, event: GroupMessageEvent):
     except Exception:
         nickname = event.get_user_id()
 
-    # 更新占位消息内容
-    msg.user_name = nickname
+    # 更新占位消息内容（显示名带 QQ 号：空格昵称/重名群友也能区分）
+    msg.user_name = f"{nickname}({event.get_user_id()})"
     msg.content = content
     msg.is_at_only = is_at_only
 
