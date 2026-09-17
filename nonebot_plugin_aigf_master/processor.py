@@ -435,6 +435,7 @@ class MessageProcessor:
             )
 
         if not response_str:
+            logger.warning(f"[处理] 群{self.group_id} LLM 返回空响应，跳过本批")
             return None
 
         logger.info(f"[LLM] 响应: {response_str[:200]}")
@@ -566,7 +567,9 @@ class MessageProcessor:
                 query = args.get("query", "")
                 results = await self.search.search(query, self.config.aigfm_search_max_results)
                 logger.info(f"[搜索] {self.config.aigfm_search_api} 「{query}」 → {len(results)} 条")
-                return self.search.format_results(results)
+                formatted = self.search.format_results(results)
+                logger.debug(f"[搜索] 结果: {formatted[:200]}")
+                return formatted
             elif name == "invoke_plugin":
                 command = args.get("command", "")
                 uid = args.get("user_id", self._current_user_id)

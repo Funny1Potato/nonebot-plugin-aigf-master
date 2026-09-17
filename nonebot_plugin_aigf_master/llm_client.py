@@ -1,11 +1,15 @@
 """LLM 客户端封装"""
 
+import asyncio
 import json
 import re
 
 import httpx
 from nonebot import logger
 from openai import AsyncOpenAI
+
+# 工具回填后最终回复的墙钟超时（openai 的 timeout 是逐读块语义，慢响应可能无界拖住）
+_FINAL_ROUND_TIMEOUT = 300.0
 
 
 def _strip_think_tags(text: str) -> str:
@@ -88,12 +92,27 @@ class LLMClient:
                     result = f"工具执行失败: {e}"
                 messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
 
-            kwargs: dict = {"messages": messages, "model": model, "temperature": 0.5, "timeout": 300}
+            logger.info(f"[LLM] 工具已回填（{len(message.tool_calls)} 个），请求最终回复")
+            # 提示层兜底：降低模型「工具后还想再调 / 空答」的概率
+            messages.append({"role": "user", "content": "工具结果已在上方。请直接给出最终回复（JSON），不要再请求工具。"})
+            kwargs: dict = {"messages": messages, "model": model, "temperature": 0.5, "timeout": _FINAL_ROUND_TIMEOUT}
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}
-            response = await self._client.chat.completions.create(**kwargs)
-            content = response.choices[0].message.content
-            return (_strip_think_tags(content) if content else None), used_tool
+            try:
+                response = await asyncio.wait_for(
+                    self._client.chat.completions.create(**kwargs), timeout=_FINAL_ROUND_TIMEOUT)
+            except asyncio.TimeoutError:
+                logger.warning(f"[LLM] 最终回复超时（{_FINAL_ROUND_TIMEOUT:.0f}s）")
+                return None, used_tool
+            message = response.choices[0].message
+            if message.tool_calls:
+                logger.warning(f"[LLM] 最终轮仍返回工具请求: {[c.function.name for c in message.tool_calls]}（main 单轮不支持续跑，按空响应处理）")
+                return None, used_tool
+            content = _strip_think_tags(message.content) if message.content else None
+            if not content:
+                logger.warning("[LLM] 最终回复为空（含仅思维标签），按空响应处理")
+                return None, used_tool
+            return content, used_tool
 
         content = message.content
         return (_strip_think_tags(content) if content else None), False
