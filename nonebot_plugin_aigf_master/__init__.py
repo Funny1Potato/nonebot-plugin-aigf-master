@@ -27,6 +27,8 @@ from .config import PluginConfig, plugin_config
 from .context_bus import ContextBus
 from .command_learner import CommandLearner
 from .llm_client import LLMClient
+from .anime_recognizer import effective_backend
+from .cache_cleanup import prune_dir
 from .image_handler import ImageHandler, anime_section_text
 from .image_gen_client import ImageGenClient
 from .meme_store import MemeStore
@@ -120,6 +122,7 @@ async def _load_image_bytes(img: dict) -> bytes:
         if key:
             async with await anyio.open_file(cache_path / key, "wb") as f:
                 await f.write(data)
+            prune_dir(cache_path, plugin_config.aigfm_raw_cache_max_files)
         return data
 
     if img["base64"]:
@@ -786,6 +789,14 @@ async def handle_group_notice(bot: Bot, event: Event):
 @get_driver().on_startup
 async def _on_startup():
     logger.success(f"[启动] 图片理解模式: {plugin_config.aigfm_image_mode}")
+    anime_backend = effective_backend()
+    if anime_backend == "off":
+        logger.info("[启动] 二次元角色识别: 未启用")
+    else:
+        logger.success(f"[启动] 二次元角色识别: {anime_backend}")
+        if anime_backend in ("animetrace", "both"):
+            # 预热 AnimeTrace 模型列表（后台任务，失败静默）
+            asyncio.create_task(_image_handler.warmup_anime())
     if plugin_config.aigfm_search_enabled:
         logger.success(f"[启动] 联网搜索: 已启用 | API: {plugin_config.aigfm_search_api}")
     else:
@@ -794,6 +805,9 @@ async def _on_startup():
     await _presets.load_all()
     await _memes.load_all()
     await _memes.cleanup()
+    # 启动时清一次只增不减的图片缓存：描述/角色识别缓存（JSON）与原始图片缓存（raw）
+    prune_dir(_cache_dir / "image_cache", plugin_config.aigfm_image_cache_max_files, "*.json")
+    prune_dir(_cache_dir / "raw", plugin_config.aigfm_raw_cache_max_files)
 
     # 加载命令学习器
     if plugin_config.aigfm_learn_commands:

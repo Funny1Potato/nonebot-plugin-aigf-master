@@ -13,9 +13,10 @@ from openai import APITimeoutError
 from PIL import Image
 
 from .anime_recognizer import AnimeRecognizer
+from .cache_cleanup import prune_dir
 from .config import plugin_config
 from .llm_client import make_http_client
-from .models import ImageInfo
+from .models import AnimeHit, ImageInfo, anime_hits_from_json, anime_hits_to_json
 from .vlm_client import VLMClient
 
 
@@ -38,6 +39,10 @@ class ImageHandler:
                 http_client=make_http_client(proxy),
             )
 
+    async def warmup_anime(self) -> None:
+        """启动预热角色识别后端（目前仅有 AnimeTrace 的模型列表查询）"""
+        await self._anime.warmup()
+
     async def describe(self, image_base64: str, is_sticker: bool) -> ImageInfo | None:
         if not self._vlm:
             logger.warning("[VLM] VLM 未启用，跳过图片分析")
@@ -55,12 +60,13 @@ class ImageHandler:
                     import json
                     data = json.loads(await f.read())
                 logger.debug(f"[VLM] 命中缓存: hash={image_hash[:8]}")
-                raw_chars = data.get("anime_chars")
+                # 兼容旧缓存字段名（anime_chars：[[标签, 置信度], ...]）
+                raw_hits = data.get("anime_hits", data.get("anime_chars"))
                 return ImageInfo(
                     description=data.get("description", ""),
                     emotion=data.get("emotion", ""),
                     is_sticker=data.get("is_sticker", False),
-                    anime_chars=[tuple(x) for x in raw_chars] if raw_chars is not None else None,
+                    anime_hits=anime_hits_from_json(raw_hits),
                     anime_rating=data.get("anime_rating") or {},
                     anime_people_count=data.get("anime_people_count"),
                 )
@@ -71,11 +77,14 @@ class ImageHandler:
         if not image_format:
             return None
 
+        anime_payload: bytes | None = None
         if image_format.upper() == "GIF":
             gif_b64 = await asyncio.to_thread(_transform_gif, image_base64)
             if not gif_b64:
                 return None
             payload, desc_format = gif_b64, "jpeg"
+            # 动图统一用首帧 JPEG 送角色识别（本地服务内部也是取首帧；AnimeTrace 不支持 GIF）
+            anime_payload = await asyncio.to_thread(_first_frame_jpeg, image_bytes)
             desc_prompt = "用中文简短描述这张动态图的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。"
         else:
             payload, desc_format = image_base64, image_format.lower()
@@ -109,27 +118,39 @@ class ImageHandler:
 
         logger.info(f"[VLM] 描述: {desc[:80]}, 情感: {emo}")
         result = ImageInfo(description=desc, emotion=emo, is_sticker=is_sticker)
-        anime = await self._anime.maybe_recognize(image_bytes, desc)
+        anime = await self._anime.maybe_recognize(image_bytes, desc, anime_payload)
         if anime is not None:
-            result.anime_chars = anime.chars
+            result.anime_hits = anime.hits
             result.anime_rating = anime.rating
             result.anime_people_count = anime.people_count
-            if anime.chars:
-                top = ", ".join(f"{n} {s:.1%}" for n, s in anime.chars[:3])
-                logger.info(f"[角色识别] 命中: {top}")
-            else:
-                logger.info("[角色识别] 未能识别（二次元但无角色命中）")
         import json
         async with await anyio.open_file(cache_file, "w", encoding="utf-8") as f:
             await f.write(json.dumps({
                 "description": desc,
                 "emotion": emo,
                 "is_sticker": is_sticker,
-                "anime_chars": [[n, s] for n, s in anime.chars] if anime is not None else None,
+                "anime_hits": anime_hits_to_json(anime.hits) if anime is not None else None,
                 "anime_rating": anime.rating if anime is not None else None,
                 "anime_people_count": anime.people_count if anime is not None else None,
             }, ensure_ascii=False))
+        # 描述缓存与角色识别缓存都只增不减，写入后按上限清一次（含角色识别客户端刚写的文件）
+        prune_dir(self._cache_dir, plugin_config.aigfm_image_cache_max_files, "*.json")
         return result
+
+
+def _first_frame_jpeg(image_bytes: bytes, max_edge: int = 1280) -> bytes | None:
+    """GIF 首帧转 JPEG（长边不超过 max_edge）供角色识别上传；失败返回 None（调用方退回原图）。"""
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img.seek(0)
+        frame = img.convert("RGB")
+        if max(frame.size) > max_edge:
+            frame.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        frame.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+    except Exception:
+        return None
 
 
 def _transform_gif(gif_base64: str, max_frames: int = 15) -> str | None:
@@ -166,19 +187,28 @@ def _transform_gif(gif_base64: str, max_frames: int = 15) -> str | None:
         return None
 
 
+def _format_anime_hit(hit: AnimeHit) -> str:
+    """AnimeTrace 带作品名 → 「角色（作品）」；本地 WD14 → 「标签 98.7%」"""
+    if hit.work:
+        return f"{hit.name}（{hit.work}）"
+    if hit.score is not None:
+        return f"{hit.name} {hit.score:.1%}"
+    return hit.name
+
+
 def anime_section_text(info: ImageInfo) -> str:
-    """角色识别渲染段；anime_chars 为 None（未触发/服务失败）时返回空串（静默降级）。"""
-    if info.anime_chars is None:
+    """角色识别渲染段；anime_hits 为 None（未触发/全部后端失败）时返回空串（静默降级）。"""
+    if info.anime_hits is None:
         return ""
-    filtered = [(n, s) for n, s in info.anime_chars
-                if s >= plugin_config.aigfm_anime_recognize_min_confidence]
+    filtered = [h for h in info.anime_hits
+                if h.score is None or h.score >= plugin_config.aigfm_anime_recognize_min_confidence]
     shown = filtered[:plugin_config.aigfm_anime_recognize_max_characters]
     pc = info.anime_people_count
     bits = []
     if (info.anime_rating or {}).get("explicit", 0.0) >= plugin_config.aigfm_anime_nsfw_threshold:
         bits.append("[NSFW]")
     if shown:
-        bits.append("[角色识别: " + ", ".join(f"{n} {s:.1%}" for n, s in shown) + "]")
+        bits.append("[角色识别: " + ", ".join(_format_anime_hit(h) for h in shown) + "]")
         if pc and pc >= 2 and len(shown) < pc:
             bits.append(f"（图中检测到 {pc} 个角色，仅识别出部分）")
     else:

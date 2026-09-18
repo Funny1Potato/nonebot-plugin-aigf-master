@@ -21,13 +21,19 @@ class PluginConfig(BaseModel):
     aigfm_vlm_model: str = Field("", description="VLM 模型名称")
     aigfm_vlm_base_url: str = Field("", description="VLM API 地址")
     aigfm_vlm_api_key: str = Field("", description="VLM API Key（为空时使用 llm_api_key）")
-    # 二次元角色识别（外部 WD14 推理服务，需独立部署 aigfm-anime-recognize，默认关闭）
-    aigfm_anime_recognize_enabled: bool = Field(False, description="是否启用二次元角色识别（开启后 VLM 描述带（二次元）标记时调用外部服务）")
-    aigfm_anime_recognize_url: str = Field("", description="角色识别服务地址（如 http://127.0.0.1:8000）")
-    aigfm_anime_recognize_token: str = Field("", description="角色识别服务 Bearer token（服务端未启用鉴权时留空）")
-    aigfm_anime_recognize_min_confidence: float = Field(0.85, description="角色标签展示的最低置信度")
+    # 二次元角色识别（两种后端：本地 WD14 推理服务 aigfm-anime-recognize / AnimeTrace 公共 API，默认关闭）
+    aigfm_anime_backend: Literal["off", "anime-recognize", "animetrace", "both"] = Field(
+        "off",
+        description="角色识别后端：off=关闭；anime-recognize=本地 WD14 服务（需独立部署）；animetrace=AnimeTrace 公共 API（擅长 gal/视觉小说）；both=先本地、置信度不足再用 AnimeTrace",
+    )
+    aigfm_anime_recognize_enabled: bool = Field(False, description="【已由 aigfm_anime_backend 取代，仅兼容保留】为 true 且 backend=off 时按 anime-recognize 处理")
+    aigfm_anime_recognize_url: str = Field("", description="本地角色识别服务地址（如 http://127.0.0.1:8000）")
+    aigfm_anime_recognize_token: str = Field("", description="本地角色识别服务 Bearer token（服务端未启用鉴权时留空）")
+    aigfm_anime_recognize_min_confidence: float = Field(0.85, description="角色标签展示的最低置信度；both 模式下也用它判断本地是否有结果")
     aigfm_anime_recognize_max_characters: int = Field(3, description="展示的角色标签数量上限")
-    aigfm_anime_nsfw_threshold: float = Field(0.5, description="explicit 概率超过该值时在渲染中标注 [NSFW]")
+    aigfm_anime_nsfw_threshold: float = Field(0.5, description="explicit 概率超过该值时在渲染中标注 [NSFW]（仅本地后端提供分级）")
+    aigfm_animetrace_url: str = Field("https://api.animetrace.com", description="AnimeTrace API 地址（公共 API，无需鉴权；识别会把图片上传到该服务）")
+    aigfm_animetrace_timeout: float = Field(20.0, description="AnimeTrace 请求超时时间（秒）")
     # AI 生图（OpenAI 兼容 images API）
     aigfm_image_gen_enabled: bool = Field(False, description="是否启用 AI 生图")
     aigfm_image_gen_model: str = Field("", description="生图模型名称")
@@ -74,6 +80,8 @@ class PluginConfig(BaseModel):
     aigfm_context_in_prompt: int = Field(10, description="注入到 prompt 中的其它插件消息条数")
     aigfm_capture_images: bool = Field(True, description="是否捕获并解析其它插件输出的图片")
     aigfm_sticker_cache_max_files: int = Field(300, description="图片缓存(sticker_cache)最大文件数，超限按 mtime 最旧删除（索引常驻后防磁盘无限增长）")
+    aigfm_image_cache_max_files: int = Field(500, description="图片描述/角色识别缓存(image_cache 下的 JSON)最大文件数，超限按 mtime 最旧删除（0=不清理）")
+    aigfm_raw_cache_max_files: int = Field(200, description="原始图片缓存(raw 目录，按 fileid 命名)最大文件数，超限按 mtime 最旧删除（0=不清理）")
 
     # 插件调用
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")

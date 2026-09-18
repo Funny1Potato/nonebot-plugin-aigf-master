@@ -157,6 +157,21 @@ AIGFM_LEARN_MIN_CONFIDENCE=3            # 命令学习的最小置信度（默�
 # --- 跨 bot 通信 ---
 AIGFM_PEER_BOTS=[]                      # 其它 bot 列表，每项含 name/port/token，如:
                                         # [{"name": "botB", "port": 8080, "token": "aaa114514"}]
+
+# --- 二次元角色识别（可选，默认关闭） ---
+AIGFM_ANIME_BACKEND=off                 # 角色识别后端：off（默认，关闭）/ anime-recognize（本地 WD14 服务）/ animetrace（AnimeTrace 公共 API）/ both（本地优先，置信度不足再问 AnimeTrace）
+AIGFM_ANIME_RECOGNIZE_URL=""            # 本地识别服务地址（backend 含 anime-recognize 时必填，如 http://127.0.0.1:8000）
+AIGFM_ANIME_RECOGNIZE_TOKEN=""          # 本地识别服务 Bearer token（服务端未启用鉴权时留空）
+AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE=0.85  # 展示角色标签的最低置信度（默认 0.85；both 模式下也用它判断本地是否有结果）
+AIGFM_ANIME_RECOGNIZE_MAX_CHARACTERS=3  # 展示的角色标签数量上限（默认 3）
+AIGFM_ANIME_NSFW_THRESHOLD=0.5          # explicit 概率超过该值标注 [NSFW]（默认 0.5；仅本地后端提供画风分级）
+AIGFM_ANIMETRACE_URL="https://api.animetrace.com"  # AnimeTrace API 地址（公共 API、无需鉴权；识别会把图片上传到该服务）
+AIGFM_ANIMETRACE_TIMEOUT=20.0           # AnimeTrace 请求超时/秒（默认 20.0）
+AIGFM_ANIME_RECOGNIZE_ENABLED=false     # 【已被 AIGFM_ANIME_BACKEND 取代，仅兼容保留】为 true 且 backend=off 时按 anime-recognize 处理
+
+# --- 缓存清理 ---
+AIGFM_IMAGE_CACHE_MAX_FILES=500         # 描述/角色识别缓存（image_cache 下的 JSON）最大数量，超出按 mtime 最旧删除（默认 500，0=不清理）
+AIGFM_RAW_CACHE_MAX_FILES=200           # 原始图片缓存（raw/，按 fileid 命名）最大数量，超出按 mtime 最旧删除（默认 200，0=不清理）
 ```
 
 ### 其它 bot 配置（安装子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer)）
@@ -537,14 +552,22 @@ memes/
 - 描述与情感两次请求**并发**发出；普通图片（非表情包）不再请求情感，只跑一次 VLM
 - VLM 请求跑到**自身超时**（`VLMClient` 写死 60 秒）为止，不再受 `AIGFM_INCOMPLETE_TIMEOUT` 限制；超时/失败/`AIGFM_VLM_ENABLED=false` 时群消息以 `[发送了一张图片]（识图失败）`、其它插件与 peer 推送的图片以 `[图片] （识图失败）` 进入上下文（消息不会被丢弃）
 - 解析未完成时该批会被推迟（见「触发机制」），因此慢 VLM 会推迟该群的回复；相同图片内容有 md5 结果缓存，命中即秒回
+- 描述/角色识别缓存（`image_cache/*.json`）与原始图片缓存（`raw/`）只增不减，超过 `AIGFM_IMAGE_CACHE_MAX_FILES`（默认 500）/ `AIGFM_RAW_CACHE_MAX_FILES`（默认 200）时按 mtime 最旧删除（启动时 + 每次写入后检查；删掉只意味着下次重新识别/重新下载）
 
 ## 🔮 二次元角色识别（可选，默认关闭）
 
-识别动漫 / 二次元手游角色（如「胡桃（原神）」），输出英文 booru 标签（如 `hu_tao_(genshin_impact)`）。
+识别动漫 / 二次元手游 / gal 游戏角色。提供两种后端，可任选其一或组合使用：
 
-**架构**：角色识别由独立部署的 WD14 推理服务提供（本地推理，免费无限量），插件通过 HTTP 调用，**不在插件进程内加载模型**。
+| 后端 | 工作方式 | 擅长 | 代价 |
+|---|---|---|---|
+| `anime-recognize` | 本地 WD14 推理服务（[aigfm-anime-recognize](https://github.com/Funny1Potato/aigfm-anime-recognize)），**需自行部署** | 动漫 / 手游角色，输出英文 booru 标签（如 `hu_tao_(genshin_impact)`）+ 数值置信度 + 画风分级 | 本地推理、免费无限量；**对 gal / 视觉小说角色识别率低** |
+| `animetrace` | [AnimeTrace](https://ai.animedb.cn/) 公共 API，**无需部署、无需鉴权** | gal / 视觉小说角色，并给出作品名（如「胡桃（原神）」） | 图片会上传到该第三方公共服务；有使用配额；不返回数值置信度、无画风分级 |
 
-**部署识别服务**（[aigfm-anime-recognize](https://github.com/Funny1Potato/aigfm-anime-recognize)）：
+`both` 模式先问本地服务，本地置信度不足（低于 `AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE`）再问 AnimeTrace，两边都没有可信结果才渲染 `[角色识别: 未能识别]`——平时不消耗公共 API 配额。
+
+**架构**：插件进程内不加载任何模型——本地后端走 HTTP 调用独立部署的服务，AnimeTrace 走公共 API。
+
+**部署本地识别服务**（[aigfm-anime-recognize](https://github.com/Funny1Potato/aigfm-anime-recognize)，用 `animetrace` 后端时不需要）：
 
 ```bash
 git clone https://github.com/Funny1Potato/aigfm-anime-recognize.git
@@ -556,30 +579,42 @@ cd aigfm-anime-recognize
 **插件配置**：
 
 ```env
-# 启用开关 + 服务地址（服务端未启用鉴权时 token 留空）
-AIGFM_ANIME_RECOGNIZE_ENABLED=true
+# 后端选择：off（默认，关闭）/ anime-recognize（本地）/ animetrace（公共 API）/ both（本地优先，不足再问 AnimeTrace）
+AIGFM_ANIME_BACKEND=both
+
+# 本地后端地址（backend 含 anime-recognize 时必填；服务端未启用鉴权时 token 留空）
 AIGFM_ANIME_RECOGNIZE_URL=http://127.0.0.1:8000
 # AIGFM_ANIME_RECOGNIZE_TOKEN=可选
 
 # 可选调参（默认值如下）
-# AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE=0.85   # 展示角色标签的最低置信度
+# AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE=0.85   # 展示角色标签的最低置信度；both 模式下也用它判断本地是否有结果
 # AIGFM_ANIME_RECOGNIZE_MAX_CHARACTERS=3      # 展示的角色标签数量上限
-# AIGFM_ANIME_NSFW_THRESHOLD=0.5              # explicit 概率超过该值标注 [NSFW]（只标注不拦截）
+# AIGFM_ANIME_NSFW_THRESHOLD=0.5              # explicit 概率超过该值标注 [NSFW]（只标注不拦截；仅本地后端提供分级）
+# AIGFM_ANIMETRACE_URL=https://api.animetrace.com
+# AIGFM_ANIMETRACE_TIMEOUT=20                 # AnimeTrace 请求超时（秒）
 ```
 
-**工作流程**：开启后，VLM 描述 prompt 会要求"二次元风格加（二次元）标记"——只有描述带该标记的图片才调用识别服务（普通照片/截图不会触发，不浪费本地推理）。识别结果渲染在图片描述后：
+> `AIGFM_ANIME_RECOGNIZE_ENABLED` 已被 `AIGFM_ANIME_BACKEND` 取代，但为兼容老配置仍然生效：它为 true 且 `AIGFM_ANIME_BACKEND` 未设（`off`）时按 `anime-recognize` 处理。
+
+**工作流程**：开启后，VLM 描述 prompt 会要求"二次元风格加（二次元）标记"——只有描述带该标记的图片才触发识别（普通照片/截图不会触发）。AnimeTrace 的模型列表在启动时查询一次（`/v1/model/list` 取 default，不写死模型名；服务报参数错会自动重查）。识别结果渲染在图片描述后：
 
 ```
 [发送了一张图片, id: xxx] [内容:红发双马尾少女的立绘] [角色识别: hu_tao_(genshin_impact) 98.7%]
 [发送了一张图片, id: xxx] [内容:…] [NSFW] [角色识别: skadi_(arknights) 99.5%]
-[发送了一张图片, id: xxx] [内容:…] [角色识别: 未能识别]        ← 二次元但模型认不出（新角色/冷门）
+[发送了一张图片, id: xxx] [内容:…] [角色识别: 胡桃（原神）]      ← 本地认不出、AnimeTrace 认出（角色（作品））
+[发送了一张图片, id: xxx] [内容:…] [角色识别: 未能识别]        ← 两种后端都没有可信结果（新角色/冷门）
 ```
 
-- 多人同图（WD14 检测到图中 N 个角色、识别出的少于 N 个时）会追加 `（图中检测到 N 个角色，仅识别出部分）`
-- 识别服务不可用/超时 → 静默降级，不影响 VLM 描述
-- 结果按图片内容 md5 缓存，同一张图不重复识别
+- 多人同图（图中 N 个角色、识别出的少于 N 个时）会追加 `（图中检测到 N 个角色，仅识别出部分）`
+- 后端调用失败/超时（含 AnimeTrace 配额用尽、服务繁忙）→ 静默降级，不影响 VLM 描述；只要有任一后端成功应答但无可信结果，才会出现 `[角色识别: 未能识别]`
+- 结果按图片内容 md5 缓存（本地与 AnimeTrace 各一份），同一张图不重复识别、不重复消耗公共 API 配额
+- **动图（GIF）取首帧**转 JPEG 后送识别（本地服务内部同样取首帧，AnimeTrace 不接受 GIF），缓存键仍是原图
+- 改 `AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE` 只影响此后新识别的图片；已缓存图片要重新判定需删除其 `{md5}_anime.json`
 
-**已知局限**：训练数据截止 2024 年前后，新游/新角色可能认不出；多人合影会漏识别；皮肤/异格不区分；3D 战斗小人/游戏内截图识别率偏低；输出为英文标签（中文映射需自行扩展）。
+**已知局限**：
+- **本地后端**：训练数据截止 2024 年前后，新游/新角色可能认不出，**gal / 视觉小说角色识别率尤其低（建议改用 `animetrace` 或 `both`）**；多人合影会漏识别；皮肤/异格不区分；3D 战斗小人/游戏内截图识别率偏低；输出为英文标签（中文映射需自行扩展）
+- **AnimeTrace**：不返回数值置信度，只有服务自己的低置信判定——被判低置信时一律按「未能识别」处理，日志 `[角色识别] AnimeTrace 无可信结果，低置信候选: …` 会给出它认为最可能的候选，便于排查；其检测框可能包含误检，多人提示仅供参考；`[NSFW]` 标记只由本地后端提供
+- 识别结果（角色名）会进入 LLM 上下文，也就是群里能看到；在意隐私请只用 `anime-recognize`（纯本地）或关闭本功能
 
 > 仅 `AIGFM_IMAGE_MODE=vlm` 模式生效；`llm` 模式图片不经过 VLM，无二次元判断。
 
@@ -628,8 +663,10 @@ LLM 支持以下回复类型：
 
 {cache_dir}/
   image_cache/
-    {md5}.json              # 图片 VLM 描述缓存（开启角色识别时另有 {md5}_anime.json 描述缓存与 {md5}_anime_recognize.json 识别结果缓存）
+    {md5}.json              # 图片 VLM 描述缓存（开启角色识别时另有 {md5}_anime.json 描述缓存、{md5}_anime_recognize.json 与 {md5}_animetrace.json 识别结果缓存）
+                            # 清理：超过 AIGFM_IMAGE_CACHE_MAX_FILES（默认 500）时按 mtime 最旧删除，启动时与每次写入描述缓存后各检查一次
   raw/{fileid}              # 原始图片缓存（按消息 url 里的 fileid 命名，与 image_cache 同级）
+                            # 清理：超过 AIGFM_RAW_CACHE_MAX_FILES（默认 200）时按 mtime 最旧删除，启动时与每次写入后各检查一次
   sticker_cache/
     {hash}.{ext}            # 图片/表情包缓存文件
 
