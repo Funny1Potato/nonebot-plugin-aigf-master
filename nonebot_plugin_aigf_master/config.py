@@ -21,6 +21,13 @@ class PluginConfig(BaseModel):
     aigfm_vlm_model: str = Field("", description="VLM 模型名称")
     aigfm_vlm_base_url: str = Field("", description="VLM API 地址")
     aigfm_vlm_api_key: str = Field("", description="VLM API Key（为空时使用 llm_api_key）")
+    # 二次元角色识别（外部 WD14 推理服务，需独立部署 aigfm-anime-recognize，默认关闭）
+    aigfm_anime_recognize_enabled: bool = Field(False, description="是否启用二次元角色识别（开启后 VLM 描述带（二次元）标记时调用外部服务）")
+    aigfm_anime_recognize_url: str = Field("", description="角色识别服务地址（如 http://127.0.0.1:8000）")
+    aigfm_anime_recognize_token: str = Field("", description="角色识别服务 Bearer token（服务端未启用鉴权时留空）")
+    aigfm_anime_recognize_min_confidence: float = Field(0.85, description="角色标签展示的最低置信度")
+    aigfm_anime_recognize_max_characters: int = Field(3, description="展示的角色标签数量上限")
+    aigfm_anime_nsfw_threshold: float = Field(0.5, description="explicit 概率超过该值时在渲染中标注 [NSFW]")
     # AI 生图（OpenAI 兼容 images API）
     aigfm_image_gen_enabled: bool = Field(False, description="是否启用 AI 生图")
     aigfm_image_gen_model: str = Field("", description="生图模型名称")

@@ -79,3 +79,6 @@ class ImageInfo:
     description: str
     emotion: str
     is_sticker: bool = False
+    anime_chars: list | None = None          # [(角色标签, 置信度), ...]；None=未触发/失败，[]=触发但无命中
+    anime_rating: dict | None = None         # WD14 画风分级概率
+    anime_people_count: int | None = None    # 图中人数（Ngirls/Nboys 取最大）

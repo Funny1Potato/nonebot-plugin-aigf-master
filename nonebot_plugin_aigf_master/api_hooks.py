@@ -14,7 +14,7 @@ from nonebot.internal.matcher import current_matcher
 
 from .config import plugin_config
 from .context_bus import ContextBus
-from .image_handler import ImageHandler
+from .image_handler import ImageHandler, anime_section_text
 from .models import PluginMessage
 
 
@@ -209,7 +209,10 @@ async def _process_image_bytes(bus: ContextBus, image_handler: ImageHandler, ima
     """公共图片处理逻辑"""
     image_base64 = base64.b64encode(image_bytes).decode()
     desc = await image_handler.describe(image_base64, False)
-    content = desc.description if desc else "（识图失败）"
+    if desc:
+        content = desc.description + anime_section_text(desc)
+    else:
+        content = "（识图失败）"
 
     bus.push(PluginMessage(
         content=content, source_plugin=source,

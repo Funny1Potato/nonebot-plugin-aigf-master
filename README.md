@@ -538,6 +538,51 @@ memes/
 - VLM 请求跑到**自身超时**（`VLMClient` 写死 60 秒）为止，不再受 `AIGFM_INCOMPLETE_TIMEOUT` 限制；超时/失败/`AIGFM_VLM_ENABLED=false` 时群消息以 `[发送了一张图片]（识图失败）`、其它插件与 peer 推送的图片以 `[图片] （识图失败）` 进入上下文（消息不会被丢弃）
 - 解析未完成时该批会被推迟（见「触发机制」），因此慢 VLM 会推迟该群的回复；相同图片内容有 md5 结果缓存，命中即秒回
 
+## 🔮 二次元角色识别（可选，默认关闭）
+
+识别动漫 / 二次元手游角色（如「胡桃（原神）」），输出英文 booru 标签（如 `hu_tao_(genshin_impact)`）。
+
+**架构**：角色识别由独立部署的 WD14 推理服务提供（本地推理，免费无限量），插件通过 HTTP 调用，**不在插件进程内加载模型**。
+
+**部署识别服务**（[aigfm-anime-recognize](https://github.com/Funny1Potato/aigfm-anime-recognize)）：
+
+```bash
+git clone https://github.com/Funny1Potato/aigfm-anime-recognize.git
+cd aigfm-anime-recognize
+# Windows: install.bat ；Linux/macOS: chmod +x install.sh && ./install.sh
+# 一键完成：建虚拟环境 → 装钉版本依赖 → 下载模型（约 446MB）→ 启动服务（0.0.0.0:8000）
+```
+
+**插件配置**：
+
+```env
+# 启用开关 + 服务地址（服务端未启用鉴权时 token 留空）
+AIGFM_ANIME_RECOGNIZE_ENABLED=true
+AIGFM_ANIME_RECOGNIZE_URL=http://127.0.0.1:8000
+# AIGFM_ANIME_RECOGNIZE_TOKEN=可选
+
+# 可选调参（默认值如下）
+# AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE=0.85   # 展示角色标签的最低置信度
+# AIGFM_ANIME_RECOGNIZE_MAX_CHARACTERS=3      # 展示的角色标签数量上限
+# AIGFM_ANIME_NSFW_THRESHOLD=0.5              # explicit 概率超过该值标注 [NSFW]（只标注不拦截）
+```
+
+**工作流程**：开启后，VLM 描述 prompt 会要求"二次元风格加（二次元）标记"——只有描述带该标记的图片才调用识别服务（普通照片/截图不会触发，不浪费本地推理）。识别结果渲染在图片描述后：
+
+```
+[发送了一张图片, id: xxx] [内容:红发双马尾少女的立绘] [角色识别: hu_tao_(genshin_impact) 98.7%]
+[发送了一张图片, id: xxx] [内容:…] [NSFW] [角色识别: skadi_(arknights) 99.5%]
+[发送了一张图片, id: xxx] [内容:…] [角色识别: 未能识别]        ← 二次元但模型认不出（新角色/冷门）
+```
+
+- 多人同图（WD14 检测到图中 N 个角色、识别出的少于 N 个时）会追加 `（图中检测到 N 个角色，仅识别出部分）`
+- 识别服务不可用/超时 → 静默降级，不影响 VLM 描述
+- 结果按图片内容 md5 缓存，同一张图不重复识别
+
+**已知局限**：训练数据截止 2024 年前后，新游/新角色可能认不出；多人合影会漏识别；皮肤/异格不区分；3D 战斗小人/游戏内截图识别率偏低；输出为英文标签（中文映射需自行扩展）。
+
+> 仅 `AIGFM_IMAGE_MODE=vlm` 模式生效；`llm` 模式图片不经过 VLM，无二次元判断。
+
 ## 🎭 预设系统
 
 首次运行后在 `<插件配置目录>/presets/` 下生成 `default.json`：
@@ -583,7 +628,7 @@ LLM 支持以下回复类型：
 
 {cache_dir}/
   image_cache/
-    {md5}.json              # 图片 VLM 描述缓存
+    {md5}.json              # 图片 VLM 描述缓存（开启角色识别时另有 {md5}_anime.json 描述缓存与 {md5}_anime_recognize.json 识别结果缓存）
   raw/{fileid}              # 原始图片缓存（按消息 url 里的 fileid 命名，与 image_cache 同级）
   sticker_cache/
     {hash}.{ext}            # 图片/表情包缓存文件

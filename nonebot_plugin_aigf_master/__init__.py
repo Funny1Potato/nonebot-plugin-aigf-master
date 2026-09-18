@@ -27,7 +27,7 @@ from .config import PluginConfig, plugin_config
 from .context_bus import ContextBus
 from .command_learner import CommandLearner
 from .llm_client import LLMClient
-from .image_handler import ImageHandler
+from .image_handler import ImageHandler, anime_section_text
 from .image_gen_client import ImageGenClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
@@ -159,10 +159,11 @@ async def _parse_message(bot: Bot, event: GroupMessageEvent, message: Message, b
                     desc = await _image_handler.describe(image_base64, is_sticker)
                     if desc:
                         cache_id = await _memes.save_to_cache(event.group_id, image_bytes, desc.description, desc.emotion)
+                        anime_text = anime_section_text(desc)
                         if is_sticker:
-                            content += f"\n[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]\n"
+                            content += f"\n[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]{anime_text}\n"
                         else:
-                            content += f"\n[发送了一张图片, id: {cache_id}] [内容:{desc.description}]\n"
+                            content += f"\n[发送了一张图片, id: {cache_id}] [内容:{desc.description}]{anime_text}\n"
                     else:
                         # VLM 失败/超时/未启用也要留下痕迹，否则纯图片消息会整条消失
                         content += "\n[发送了一张图片]（识图失败）\n"
@@ -335,10 +336,11 @@ async def _extract_reply_content(bot: Bot, message_content, group_id: int) -> st
                     desc = await _image_handler.describe(image_base64, is_sticker)
                     if desc:
                         cache_id = await _memes.save_to_cache(group_id, image_bytes, desc.description, desc.emotion)
+                        anime_text = anime_section_text(desc)
                         if is_sticker:
-                            parts.append(f"[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]")
+                            parts.append(f"[发送了一张可能是表情包的图片, id: {cache_id}] [情感:{desc.emotion}] [内容:{desc.description}]{anime_text}")
                         else:
-                            parts.append(f"[发送了一张图片, id: {cache_id}] [内容:{desc.description}]")
+                            parts.append(f"[发送了一张图片, id: {cache_id}] [内容:{desc.description}]{anime_text}")
                     else:
                         parts.append("[发送了一张图片]（识图失败）")
             except Exception as e:
@@ -424,7 +426,10 @@ async def _describe_peer_image(group_id: int, source: str, image_url: str = "", 
             return
         image_b64 = base64.b64encode(image_bytes).decode()
         desc = await _image_handler.describe(image_b64, False)
-        content = f"[图片] {desc.description if desc else '（识图失败）'}"
+        if desc:
+            content = f"[图片] {desc.description}{anime_section_text(desc)}"
+        else:
+            content = "[图片] （识图失败）"
         _add_peer_message(group_id, source, content, reset_timer=False)
         logger.info(f"[Peer] 捕获图片: [{source}] {content[:80]}")
     except Exception as e:

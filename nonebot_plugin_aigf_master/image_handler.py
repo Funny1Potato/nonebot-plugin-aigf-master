@@ -12,6 +12,7 @@ import numpy as np
 from openai import APITimeoutError
 from PIL import Image
 
+from .anime_recognizer import AnimeRecognizer
 from .config import plugin_config
 from .llm_client import make_http_client
 from .models import ImageInfo
@@ -24,6 +25,7 @@ class ImageHandler:
     def __init__(self, cache_dir: Path):
         self._cache_dir = cache_dir / "image_cache"
         self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._anime = AnimeRecognizer(cache_dir)
         self._vlm: VLMClient | None = None
         if plugin_config.aigfm_image_mode == "vlm" and plugin_config.aigfm_vlm_enabled:
             if not plugin_config.aigfm_vlm_model or not plugin_config.aigfm_vlm_base_url:
@@ -43,7 +45,9 @@ class ImageHandler:
 
         image_bytes = base64.b64decode(image_base64)
         image_hash = hashlib.md5(image_bytes).hexdigest()
-        cache_file = self._cache_dir / f"{image_hash}.json"
+        anime_on = self._anime.enabled()
+        # 开关开启时 VLM 描述带（二次元）标记要求，结果单独缓存，避免旧缓存无标记导致永不触发识别
+        cache_file = self._cache_dir / f"{image_hash}{'_anime' if anime_on else ''}.json"
 
         if cache_file.exists():
             try:
@@ -51,7 +55,15 @@ class ImageHandler:
                     import json
                     data = json.loads(await f.read())
                 logger.debug(f"[VLM] 命中缓存: hash={image_hash[:8]}")
-                return ImageInfo(**data)
+                raw_chars = data.get("anime_chars")
+                return ImageInfo(
+                    description=data.get("description", ""),
+                    emotion=data.get("emotion", ""),
+                    is_sticker=data.get("is_sticker", False),
+                    anime_chars=[tuple(x) for x in raw_chars] if raw_chars is not None else None,
+                    anime_rating=data.get("anime_rating") or {},
+                    anime_people_count=data.get("anime_people_count"),
+                )
             except Exception:
                 cache_file.unlink(missing_ok=True)
 
@@ -68,6 +80,8 @@ class ImageHandler:
         else:
             payload, desc_format = image_base64, image_format.lower()
             desc_prompt = "用中文简短描述这张图片的内容。如果图中有人物，只描述外貌特征，不要识别角色。若有文字请描述。"
+        if anime_on:
+            desc_prompt += "如果这是动漫、漫画、游戏立绘等二次元风格，请在描述末尾加上（二次元）标记。"
 
         # 情感只用于贴纸的展示与收藏判断，普通图片拿到的情感不进 prompt → 省掉这次往返；
         # 剩下的请求并发发出，识图耗时从两次串行压成一次
@@ -95,9 +109,26 @@ class ImageHandler:
 
         logger.info(f"[VLM] 描述: {desc[:80]}, 情感: {emo}")
         result = ImageInfo(description=desc, emotion=emo, is_sticker=is_sticker)
+        anime = await self._anime.maybe_recognize(image_bytes, desc)
+        if anime is not None:
+            result.anime_chars = anime.chars
+            result.anime_rating = anime.rating
+            result.anime_people_count = anime.people_count
+            if anime.chars:
+                top = ", ".join(f"{n} {s:.1%}" for n, s in anime.chars[:3])
+                logger.info(f"[角色识别] 命中: {top}")
+            else:
+                logger.info("[角色识别] 未能识别（二次元但无角色命中）")
         import json
         async with await anyio.open_file(cache_file, "w", encoding="utf-8") as f:
-            await f.write(json.dumps({"description": desc, "emotion": emo, "is_sticker": is_sticker}, ensure_ascii=False))
+            await f.write(json.dumps({
+                "description": desc,
+                "emotion": emo,
+                "is_sticker": is_sticker,
+                "anime_chars": [[n, s] for n, s in anime.chars] if anime is not None else None,
+                "anime_rating": anime.rating if anime is not None else None,
+                "anime_people_count": anime.people_count if anime is not None else None,
+            }, ensure_ascii=False))
         return result
 
 
@@ -133,3 +164,26 @@ def _transform_gif(gif_base64: str, max_frames: int = 15) -> str | None:
         return base64.b64encode(buf.getvalue()).decode()
     except Exception:
         return None
+
+
+def anime_section_text(info: ImageInfo) -> str:
+    """角色识别渲染段；anime_chars 为 None（未触发/服务失败）时返回空串（静默降级）。"""
+    if info.anime_chars is None:
+        return ""
+    filtered = [(n, s) for n, s in info.anime_chars
+                if s >= plugin_config.aigfm_anime_recognize_min_confidence]
+    shown = filtered[:plugin_config.aigfm_anime_recognize_max_characters]
+    pc = info.anime_people_count
+    bits = []
+    if (info.anime_rating or {}).get("explicit", 0.0) >= plugin_config.aigfm_anime_nsfw_threshold:
+        bits.append("[NSFW]")
+    if shown:
+        bits.append("[角色识别: " + ", ".join(f"{n} {s:.1%}" for n, s in shown) + "]")
+        if pc and pc >= 2 and len(shown) < pc:
+            bits.append(f"（图中检测到 {pc} 个角色，仅识别出部分）")
+    else:
+        if pc and pc >= 2:
+            bits.append(f"[角色识别: 未能识别]（图中检测到 {pc} 个角色）")
+        else:
+            bits.append("[角色识别: 未能识别]")
+    return " " + " ".join(bits)
