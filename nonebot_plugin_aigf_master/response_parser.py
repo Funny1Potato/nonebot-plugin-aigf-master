@@ -5,11 +5,53 @@ import re
 
 from .models import MemoryOps, ReplySegment
 
+# 响应里会出现这些顶层键：兜底扫描时优先选含它们的对象，避免只抽到内层片段（如 memory 里的 short_term）
+_RESPONSE_KEYS = ("reply", "memory", "command_learning", "command_edit", "command_delete")
+
+
+def _escape_inner_quotes(text: str) -> str:
+    """给字符串值里**未转义**的双引号补上反斜杠（LLM 常见：content 里写「喊她"我妈"」而没转义）
+
+    判据：字符串内的 `"` 之后跳过空白，若紧跟 `,` `:` `}` `]` 或到达串尾，才算字符串结束；
+    否则视为内容里的字面量引号。对合法 JSON 是恒等变换（一个字都不改）。
+    """
+    n = len(text)
+    out: list[str] = []
+    in_str = False
+    esc = False
+    for idx, ch in enumerate(text):
+        if esc:
+            out.append(ch)
+            esc = False
+            continue
+        if ch == "\\":
+            out.append(ch)
+            esc = True
+            continue
+        if ch != '"':
+            out.append(ch)
+            continue
+        if not in_str:
+            in_str = True
+            out.append(ch)
+            continue
+        j = idx + 1
+        while j < n and text[j] in " \t\r\n":
+            j += 1
+        if j >= n or text[j] in ",:}]":
+            in_str = False
+            out.append(ch)
+        else:
+            out.append('\\"')
+    return "".join(out)
+
 
 def _extract_json_object(text: str) -> str | None:
     """扫描每个 '{' 起点做花括号平衡（正确处理字符串内的 {} 与 \\" 转义），
-    返回第一个能成功解析为 JSON 的对象子串；找不到返回 None。"""
+    返回可解析为 JSON 的对象子串；**优先含已知顶层键的那个**，都不含时才退回第一个；
+    找不到返回 None。"""
     n = len(text)
+    first_any: str | None = None
     i = 0
     while i < n:
         if text[i] != "{":
@@ -41,27 +83,44 @@ def _extract_json_object(text: str) -> str | None:
         if j < n:
             candidate = text[i:j + 1]
             try:
-                json.loads(candidate)
-                return candidate
+                data = json.loads(candidate)
             except json.JSONDecodeError:
-                pass
+                data = None
+            if isinstance(data, dict):
+                if first_any is None:
+                    first_any = candidate
+                if any(key in data for key in _RESPONSE_KEYS):
+                    return candidate
         i += 1
-    return None
+    return first_any
 
 
 def parse_llm_response(raw: str) -> dict | None:
-    """解析 LLM 返回的 JSON，去除 think 标签和代码块标记；容忍前导/尾随文字"""
+    """解析 LLM 返回的 JSON，去除代码块标记；容忍前导/尾随文字与未转义的字符串内引号"""
+    if not raw:
+        return None
     cleaned = re.sub(r"^```json\s*|\s*```$", "", raw.strip())
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        candidate = _extract_json_object(cleaned)
+    # 先整体严格解析（原文优先、其次修复内嵌引号后的文本）；
+    # 整体都失败才退回花括号平衡扫描——否则「第一个能解析的片段」可能是内层对象（如 memory 里的 short_term），
+    # 那样会拿到没有 reply 的 dict，回复就发不出去了
+    texts = (cleaned, _escape_inner_quotes(cleaned))
+    for text in texts:
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+    for text in texts:
+        candidate = _extract_json_object(text)
         if candidate:
             try:
-                return json.loads(candidate)
+                data = json.loads(candidate)
+                if isinstance(data, dict):
+                    return data
             except json.JSONDecodeError:
-                return None
-        return None
+                pass
+    return None
 
 
 def extract_reply_segments(data: dict) -> list[ReplySegment]:

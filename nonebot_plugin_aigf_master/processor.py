@@ -424,41 +424,42 @@ class MessageProcessor:
         recent_5 = "\n".join(f"  [{m.user_name}] {m.content[:80]}" for m in self.recent_messages[-5:])
         logger.debug(f"[处理] 最近聊天记录(最新5条):\n{recent_5}")
 
-        used_tool = False
-        if (self.config.aigfm_search_enabled and self.search):
-            response_str, used_tool = await self._call_llm_with_tools(prompt, sticker_images, plugin_commands, peer_commands)
-        else:
-            response_str = await self.llm.chat(
-                prompt, self.config.aigfm_llm_model,
+        async def _request_llm(text_prompt: str) -> str | None:
+            """按本批配置发起一次 LLM 请求（工具路径与普通路径保持原样）"""
+            if self.config.aigfm_search_enabled and self.search:
+                resp, _ = await self._call_llm_with_tools(
+                    text_prompt, sticker_images, plugin_commands, peer_commands)
+                return resp
+            return await self.llm.chat(
+                text_prompt, self.config.aigfm_llm_model,
                 json_mode=self.config.aigfm_llm_json_mode,
                 images=sticker_images if sticker_images else None,
             )
 
+        response_str = await _request_llm(prompt)
         if not response_str:
             logger.warning(f"[处理] 群{self.group_id} LLM 返回空响应，跳过本批")
             return None
 
-        logger.info(f"[LLM] 响应: {response_str[:200]}")
+        logger.info(f"[LLM] 响应(len={len(response_str)}): {response_str[:200]}")
 
-        # 解析响应
+        # 解析响应；失败就保持原有工具配置重试一次（最常见原因是字符串内容里的半角双引号没转义）
         result = parse_llm_response(response_str)
         if not result:
-            if used_tool:
-                logger.warning("[处理] JSON 解析失败，去掉 tools 重试一次")
-                retry_prompt = prompt + "\n## 注意\n上一次输出无法解析为 JSON。请仅根据对话上下文回复，**只输出 JSON，不要附带任何多余文字**。\n\n"
-                response_str = await self.llm.chat(
-                    retry_prompt, self.config.aigfm_llm_model,
-                    json_mode=self.config.aigfm_llm_json_mode,
-                    images=sticker_images if sticker_images else None,
-                )
-                if not response_str:
-                    return None
-                result = parse_llm_response(response_str)
-                if not result:
-                    logger.error(f"[处理] 重试后仍解析失败: {response_str[:200]}")
-                    return None
-            else:
-                logger.error(f"[处理] JSON 解析失败: {response_str[:200]}")
+            logger.warning(f"[处理] JSON 解析失败，重试一次 | 头部: {response_str[:200]} | 尾部: {response_str[-120:]}")
+            retry_prompt = prompt + (
+                "\n## 注意\n上一次输出无法解析为 JSON。请仅根据对话上下文回复，"
+                "只输出一个完整合法的 JSON 对象、不要附带任何多余文字；"
+                "**字符串内容里不要出现半角双引号**（需要引号时用 「」 或 “”），换行用 \\n 转义。\n\n"
+            )
+            response_str = await _request_llm(retry_prompt)
+            if not response_str:
+                logger.error("[处理] 重试未获得响应")
+                return None
+            logger.info(f"[LLM] 重试响应(len={len(response_str)}): {response_str[:200]}")
+            result = parse_llm_response(response_str)
+            if not result:
+                logger.error(f"[处理] 重试后仍解析失败 | 头部: {response_str[:200]} | 尾部: {response_str[-120:]}")
                 return None
 
         # 执行记忆操作
@@ -494,6 +495,15 @@ class MessageProcessor:
         # 提取回复
         reply_segments = extract_reply_segments(result)
         if not reply_segments:
+            if "reply" not in result:
+                # 解析出的对象里没有 reply：兜底可能只抽到内层片段（如 memory 里的 short_term），
+                # 这时整条回复会静默丢掉，所以留一条带顶层键与首尾片段的告警
+                logger.warning(
+                    f"[处理] 响应缺少 reply 字段（顶层键: {sorted(result)}），本批不回复"
+                    f" | 头部: {response_str[:200]} | 尾部: {response_str[-120:]}"
+                )
+            else:
+                logger.info("[处理] 模型本批选择不回复（reply 为空或内容为空）")
             return None
 
         # 更新最近消息
