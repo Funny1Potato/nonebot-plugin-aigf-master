@@ -167,7 +167,6 @@ AIGFM_ANIME_RECOGNIZE_MAX_CHARACTERS=3  # 展示的角色标签数量上限（�
 AIGFM_ANIME_NSFW_THRESHOLD=0.5          # explicit 概率超过该值标注 [NSFW]（默认 0.5；仅本地后端提供画风分级）
 AIGFM_ANIMETRACE_URL="https://api.animetrace.com"  # AnimeTrace API 地址（公共 API、无需鉴权；识别会把图片上传到该服务）
 AIGFM_ANIMETRACE_TIMEOUT=20.0           # AnimeTrace 请求超时/秒（默认 20.0）
-AIGFM_ANIME_RECOGNIZE_ENABLED=false     # 【已被 AIGFM_ANIME_BACKEND 取代，仅兼容保留】为 true 且 backend=off 时按 anime-recognize 处理
 
 # --- 缓存清理 ---
 AIGFM_IMAGE_CACHE_MAX_FILES=500         # 描述/角色识别缓存（image_cache 下的 JSON）最大数量，超出按 mtime 最旧删除（默认 500，0=不清理）
@@ -561,7 +560,7 @@ memes/
 | 后端 | 工作方式 | 擅长 | 代价 |
 |---|---|---|---|
 | `anime-recognize` | 本地 WD14 推理服务（[aigfm-anime-recognize](https://github.com/Funny1Potato/aigfm-anime-recognize)），**需自行部署** | 动漫 / 手游角色，输出英文 booru 标签（如 `hu_tao_(genshin_impact)`）+ 数值置信度 + 画风分级 | 本地推理、免费无限量；**对 gal / 视觉小说角色识别率低** |
-| `animetrace` | [AnimeTrace](https://ai.animedb.cn/) 公共 API，**无需部署、无需鉴权** | gal / 视觉小说角色，并给出作品名（如「胡桃（原神）」） | 图片会上传到该第三方公共服务；有使用配额；不返回数值置信度、无画风分级 |
+| `animetrace` | [AnimeTrace](https://ai.animedb.cn/) 公共 API，**无需部署、无需鉴权** | gal / 视觉小说角色，并给出作品名（如「胡桃（原神）」） | 图片会上传到该第三方公共服务；有使用配额；不返回数值置信度、无画风分级；对gal以外游戏角色的识别率一般 |
 
 `both` 模式先问本地服务，本地置信度不足（低于 `AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE`）再问 AnimeTrace，两边都没有可信结果才渲染 `[角色识别: 未能识别]`——平时不消耗公共 API 配额。
 
@@ -572,8 +571,10 @@ memes/
 ```bash
 git clone https://github.com/Funny1Potato/aigfm-anime-recognize.git
 cd aigfm-anime-recognize
+# 安装
 # Windows: install.bat ；Linux/macOS: chmod +x install.sh && ./install.sh
-# 一键完成：建虚拟环境 → 装钉版本依赖 → 下载模型（约 446MB）→ 启动服务（0.0.0.0:8000）
+# 启动
+# Windows: start.bat ; Linux / macOS: chmod +x start.sh && ./start.sh
 ```
 
 **插件配置**：
@@ -583,14 +584,14 @@ cd aigfm-anime-recognize
 AIGFM_ANIME_BACKEND=both
 
 # 本地后端地址（backend 含 anime-recognize 时必填；服务端未启用鉴权时 token 留空）
-AIGFM_ANIME_RECOGNIZE_URL=http://127.0.0.1:8000
+AIGFM_ANIME_RECOGNIZE_URL="http://127.0.0.1:8000"
 # AIGFM_ANIME_RECOGNIZE_TOKEN=可选
 
 # 可选调参（默认值如下）
 # AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE=0.85   # 展示角色标签的最低置信度；both 模式下也用它判断本地是否有结果
 # AIGFM_ANIME_RECOGNIZE_MAX_CHARACTERS=3      # 展示的角色标签数量上限
 # AIGFM_ANIME_NSFW_THRESHOLD=0.5              # explicit 概率超过该值标注 [NSFW]（只标注不拦截；仅本地后端提供分级）
-# AIGFM_ANIMETRACE_URL=https://api.animetrace.com
+# AIGFM_ANIMETRACE_URL="https://api.animetrace.com"
 # AIGFM_ANIMETRACE_TIMEOUT=20                 # AnimeTrace 请求超时（秒）
 ```
 
@@ -612,8 +613,8 @@ AIGFM_ANIME_RECOGNIZE_URL=http://127.0.0.1:8000
 - 改 `AIGFM_ANIME_RECOGNIZE_MIN_CONFIDENCE` 只影响此后新识别的图片；已缓存图片要重新判定需删除其 `{md5}_anime.json`
 
 **已知局限**：
-- **本地后端**：训练数据截止 2024 年前后，新游/新角色可能认不出，**gal / 视觉小说角色识别率尤其低（建议改用 `animetrace` 或 `both`）**；多人合影会漏识别；皮肤/异格不区分；3D 战斗小人/游戏内截图识别率偏低；输出为英文标签（中文映射需自行扩展）
-- **AnimeTrace**：不返回数值置信度，只有服务自己的低置信判定——被判低置信时一律按「未能识别」处理，日志 `[角色识别] AnimeTrace 无可信结果，低置信候选: …` 会给出它认为最可能的候选，便于排查；其检测框可能包含误检，多人提示仅供参考；`[NSFW]` 标记只由本地后端提供
+- **本地后端**：训练数据截止 2024 年前后，新游/新角色可能认不出，**gal / 视觉小说角色识别率尤其低（建议改用 `animetrace` 或 `both`）**；多人合影可能会漏识别；3D 战斗小人/游戏内截图识别率不高；输出为英文标签（中文映射需自行扩展）
+- **AnimeTrace**：对gal以外的游戏角色识别率一般；不返回数值置信度，只有服务自己的低置信判定——被判低置信时一律按「未能识别」处理，日志 `[角色识别] AnimeTrace 无可信结果，低置信候选: …` 会给出它认为最可能的候选，便于排查；其检测框可能包含误检，多人提示仅供参考；`[NSFW]` 标记只由本地后端提供
 - 识别结果（角色名）会进入 LLM 上下文，也就是群里能看到；在意隐私请只用 `anime-recognize`（纯本地）或关闭本功能
 
 > 仅 `AIGFM_IMAGE_MODE=vlm` 模式生效；`llm` 模式图片不经过 VLM，无二次元判断。
