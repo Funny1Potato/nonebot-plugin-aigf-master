@@ -305,8 +305,8 @@ async def _handle_peer_capture(group_id, source: str, data: dict):
         # 更新该 bot 的已注册命令列表（供 LLM 了解可调用命令）
         _peer_scanned_commands[source] = data["commands"]
         logger.debug(f"[Peer] 更新命令列表: bot={source}, {len(data['commands'])} 个")
-    # 其它 bot 都是 onebot 实例，其会话键按 onebot11 映射
-    key = session_key("onebot11", str(group_id))
+    # peer 0.4.0+ 直接给会话键（支持多适配器）；旧 peer 只有数字 group_id（按 onebot11 映射）
+    key = data.get("session") or session_key("onebot11", str(group_id))
     # 未启用会话：不入缓冲、不做 VLM
     if key not in _enabled_keys():
         return

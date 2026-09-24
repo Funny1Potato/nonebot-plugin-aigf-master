@@ -649,7 +649,7 @@ class MessageProcessor:
                 result = await self.peer_client.invoke(
                     peer_name, command, int(getattr(self._session, "numeric_chat_id", 0) or 0), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
-                    sender_name=self.bot_name,
+                    sender_name=self.bot_name, session=self.session_key,
                 )
                 self._consume_invoke_energy()
                 self.recent_messages.append(ChatMessage(
