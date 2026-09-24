@@ -40,7 +40,7 @@ class PluginMessage:
     """其它插件输出的消息"""
     content: str
     source_plugin: str | None
-    group_id: int
+    session_key: str
     timestamp: datetime
     message_type: Literal["text", "image"]
 

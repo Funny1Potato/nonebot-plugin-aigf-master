@@ -8,23 +8,23 @@ from .models import PluginMessage
 
 
 class ContextBus:
-    """每群独立的跨插件消息缓冲区"""
+    """每会话独立的跨插件消息缓冲区（键为会话键 `适配器:会话id`）"""
 
     def __init__(self, max_per_group: int = 50):
         self._max = max_per_group
-        self._buffers: dict[int, deque[PluginMessage]] = {}
+        self._buffers: dict[str, deque[PluginMessage]] = {}
 
     def push(self, msg: PluginMessage):
-        if msg.group_id not in self._buffers:
-            self._buffers[msg.group_id] = deque(maxlen=self._max)
-        self._buffers[msg.group_id].append(msg)
+        if msg.session_key not in self._buffers:
+            self._buffers[msg.session_key] = deque(maxlen=self._max)
+        self._buffers[msg.session_key].append(msg)
         logger.debug(f"[ContextBus] 捕获: [{msg.source_plugin}] {msg.content[:50]}")
 
-    def get_recent(self, group_id: int, limit: int = 20) -> list[PluginMessage]:
-        buf = self._buffers.get(group_id)
+    def get_recent(self, session_key: str, limit: int = 20) -> list[PluginMessage]:
+        buf = self._buffers.get(session_key)
         if not buf:
             return []
         return list(buf)[-limit:]
 
-    def clear(self, group_id: int):
-        self._buffers.pop(group_id, None)
+    def clear(self, session_key: str):
+        self._buffers.pop(session_key, None)

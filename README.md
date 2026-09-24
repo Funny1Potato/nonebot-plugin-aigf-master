@@ -4,21 +4,30 @@
 
 ## ✨ AI-group-friend-master ✨
 
-群聊特化 LLM 聊天机器人，具备表情包管理、记忆存储、联网搜索、跨插件感知、插件调用、LLM 命令学习等能力。
+群聊特化 LLM 聊天机器人，具备表情包管理、记忆存储、联网搜索、跨插件感知、插件调用、LLM 命令学习等能力，并以适配器无关的方式收发消息（OneBot / Satori / Telegram / Discord 等 alconna 支持的适配器均可）。
 
 <p>
     <img src="https://img.shields.io/badge/python-3.10+-blue?style=flat-square&logo=python&logoColor=white" alt="python">
-    <img src="https://img.shields.io/badge/nonebot-2.3+-red?style=flat-square" alt="nonebot">
+    <img src="https://img.shields.io/badge/nonebot-2.5+-red?style=flat-square" alt="nonebot">
 </p>
 </div>
 
+> [!WARNING]
+> **这是 beta 分支（2.0.0 开发中）：跨适配器改造版**，与 1.6.x（main）不兼容，请勿直接覆盖生产环境的稳定版：
+> - 会话改用 `适配器:会话id` 为键（旧版 `memory/{群号}` 目录会在启动时**自动迁移**为 `onebot11_群号`），新增私聊会话支持
+> - 新增依赖 `nonebot-plugin-alconna`（统一消息）与 `nonebot-plugin-uninfo`（跨适配器会话/成员信息）
+> - 插件调用改为「复制真实消息事件」，合成事件里携带**真实发送者的昵称/群名片/角色**（见「无法代为执行的命令」）
+>
+> 稳定版请留在 main 分支（1.6.x），beta 的功能验证完成后再合并发版。
+
 ## 📖 介绍
 
-一个基于 NoneBot2 的群聊 AI 助手插件，能够自主收集和发送表情包、联网搜索知识、对群内信息进行记忆，还能够感知同实例内其它插件的输出、通过 LLM 调用其它插件、自主学习群内命令用法，并能通过子插件与其它 bot 通信获取消息和远程调用命令。
+一个基于 NoneBot2 的群聊 AI 助手插件，能够自主收集和发送表情包、联网搜索知识、对群内信息进行记忆，还能够感知同实例内其它插件的输出、通过 LLM 调用其它插件、自主学习群内命令用法，并能通过子插件与其它 bot 通信获取消息和远程调用命令。消息收发走 [nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna) 的通用消息层、会话与成员信息走 [nonebot-plugin-uninfo](https://github.com/nonebot/plugin-uninfo)，因此同一份代码可以在多个适配器上工作（详细边界见「多适配器支持」）。
 > 本项目有AI高度参与，若有做得不够好及需要改进的地方，欢迎在issue提出意见。
 
 ### 核心能力
 
+- 🧩 **多适配器支持**：消息收发与会话身份走通用层，OneBot / Satori / Telegram / Discord 等适配器共用同一套聊天、记忆、表情包与命令逻辑（跨插件感知、插件调用等能力仍以 OneBot 为主，见下文边界）
 - 🔌 **跨插件感知**：LLM 能看到同实例内其它插件的输出（如 rollpig 的小猪卡片、搜索结果等）
 - 🤖 **插件调用**：LLM 可通过 function calling 调用其它插件（如 `/roll`、`/天气`），支持传递参数与 @ 群友（如 `决斗 @张三 10`）
 - 🧠 **LLM 命令学习**：通过观察群聊自动学习命令用法，支持学习、编辑、删除
@@ -46,6 +55,8 @@
 > 要使用本插件, 你至少需要
 >
 > - 一个有效的 openai 规范接口 api key，你需要在 `.env` 文件中配置对应的 api 地址
+>
+> 从 2.0 起插件还依赖 `nonebot-plugin-alconna` 与 `nonebot-plugin-uninfo`（跨适配器收发与会话/成员信息），用下面的方式安装时会自动装上。
 
 <details open>
 <summary>使用 nb-cli 安装</summary>
@@ -83,7 +94,8 @@ plugins = ["nonebot-plugin-aigf-master"]
 AIGFM_LLM_API_KEY="sk-xxxxxxxxxxxx"                               # LLM API Key
 AIGFM_LLM_BASE_URL="https://api.deepseek.com"                     # LLM API 地址
 AIGFM_LLM_MODEL="deepseek-v4-flash"                               # LLM 模型名称
-AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群号列表
+AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群/频道会话（可写 `适配器:会话id`，只写数字按 OneBot V11 识别）
+AIGFM_ENABLED_PRIVATE=[]                                          # 启用的私聊会话（同上写法；留空则私聊不响应）
 
 # --- 图片理解（VLM） ---
 AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
@@ -203,6 +215,30 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 - 消息合并窗口内的同一用户连续消息会被合并为一条
 - 每次处理时，LLM 收到最近 **20 条**（可配置）历史聊天记录 + 四层记忆 + 预设 + 表情包列表 + 其它插件响应；本批消息只出现在「新消息」段，同一条插件响应也只注入一次（不会在历史与新消息里重复）
 - LLM 一次调用同时完成：回复决策 + 记忆管理 + 表情包选择 + 命令学习
+
+## 🧩 多适配器支持
+
+插件的消息**收发**（文本、@、图片、语音、视频、群文件、链接分享、回复、合并转发等）走 [nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna) 的通用消息层，**会话与成员信息**（昵称、群名片、角色、群名、@ 目标解析）走 [nonebot-plugin-uninfo](https://github.com/nonebot/plugin-uninfo)。因此只要适配器被这两个库支持，聊天 / 记忆 / 表情包 / 生图 / 命令学习等功能就能直接工作，不需要为每个适配器改代码。
+
+### 会话与启用清单
+
+- 会话以 **`适配器:会话id`** 为键，例如 `onebot11:617770183`（群）、`console:console-chat`（频道）、`onebot11:20001`（私聊）
+- `AIGFM_ENABLED_GROUPS` 管群/频道会话、`AIGFM_ENABLED_PRIVATE` 管私聊会话；条目可写带前缀的完整键，也可以只写 id（**按 OneBot V11 识别**，旧配置无需改动）
+- 落盘目录名不能含 `:`，因此磁盘上写作 `onebot11_617770183`；`memory/` 下旧版裸数字目录会在启动时**一次性自动迁移**（目标已存在则跳过，幂等）
+- 非启用会话不发请求、不入缓冲：插件只会为启用的会话解析成员信息与图片
+
+### 各能力在非 OneBot 适配器上的边界
+
+| 能力 | 其它适配器 | 说明 |
+|---|---|---|
+| 聊天、记忆、表情包、生图、命令学习、管理命令 | ✅ 可用 | `status` / `reset` / `set_role` / `presets` / `set_preset` / `reload_meme` 已改为 alconna 响应器，各适配器通用 |
+| 跨插件感知（捕获其它插件的输出） | ✅ 一般可用 | 依赖 NoneBot 基类的 `on_calling_api` 钩子（所有适配器）；会话取自当前事件，消息取自适配器消息对象，取不到就静默跳过 |
+| 插件调用（`invoke_plugin`） | ⚠️ 尽力支持 | 通过复制该会话最近一条真实事件来投递命令；事件类型、消息类都由适配器自己决定，不需 onebot 专属类型。目标插件若依赖适配器特有能力（例如 OneBot 的 `get_msg`）仍可能失败 |
+| 群系统通知（戳一戳/禁言/进出群/撤回） | ❌ 仅 OneBot | 这些是 OneBot 专属事件类型，其它适配器没有统一的通知模型，不处理 |
+| 跨 bot 通信（子插件 `/peer/capture`） | ❌ 仅 OneBot | 其它 bot 都是同号 OneBot 实例，推送按 `onebot11:` 会话映射 |
+| 群名片记录 | ✅ 有则记录 | 成员信息来自 uninfo，适配器不提供名片时该项为空 |
+
+> 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器。
 
 ## 🔌 跨插件感知
 
@@ -344,23 +380,30 @@ LLM 只能调用 prompt 里「可用的群功能」/「其它 bot 的命令」�
 
 ### 无法代为执行的命令
 
-`invoke_plugin` / `invoke_peer_plugin` 是构造一个**合成群事件**（`GroupMessageEvent`）把命令文本投递给目标插件，而不是让真人发消息。合成事件与真实消息存在字段差异，下列命令**调不动**（表现为投递后聊天记录里始终不出现该插件的响应）：
+`invoke_plugin` / `invoke_peer_plugin` 并不是让真人发消息，而是**复制该会话里最近一条真实消息事件**、把消息体换成命令文本后投递（2.0 起改为这种做法，此前是手工拼一个 `GroupMessageEvent`）。因此事件的适配器字段、发送者信息都来自那条真实消息，比过去准确得多，但仍与"真的有人发了这条命令"有差别，下列命令**调不动**（表现为投递后聊天记录里始终不出现该插件的响应）：
 
 | 命令类型 | 无法执行的原因 |
 |---|---|
-| 需要 @机器人 或呼叫昵称才触发 | 合成事件的 `to_me` 恒为 `False`（该字段由适配器在真实消息上计算，投递时绕过了这一步） |
-| 需要管理员 / 群主 / 超级用户权限 | `sender.role` 固定为 `"member"`，且传入的 `user_id` 一般不在 `SUPERUSERS` 内，权限检查直接拒绝 |
-| 私聊命令 | 合成事件固定 `message_type="group"`，不会命中只监听私聊的 Matcher |
-| 必须先回复/引用某条消息才能执行 | 合成事件的 `reply` 恒为 `None`，且真实消息里的 `reply` 段会被适配器展开，这里没有 |
-| 依赖群名片 / 头衔 / 等级 / 地区判断身份 | `sender` 只填 `user_id`、`nickname`（当前群预设名，默认「小助手」；peer 侧由 Bot A 传入同一名字）、`role`，其余字段为空 |
-| 依赖真实 `message_id` 的后续操作 | `message_id` 是占位值 `0`，插件拿它去 `get_msg` / 撤回 / 引用回复会失败 |
+| 需要 @机器人 或呼叫昵称才触发 | 合成消息里没有 @机器人，`to_me` 沿用被复制那条消息的值（通常为 `False`） |
+| 私聊命令 / 与事件类型强相关 | 复制的是群/频道事件（`message_type` 保持原样），不会命中只监听私聊或其它事件类型的 Matcher |
+| 必须先回复/引用某条消息才能执行 | 合成消息不含回复段，事件里的 `reply` 也被清空 |
+| 依赖群名片 / 头衔 / 等级 / 地区判断身份 | 发送者昵称、群名片、角色已按真实身份填好（`refresh` 不到的字段仍为空：头衔、等级、地区等） |
+| 需要特殊 `message_id` 语义的操作 | `message_id` 是**被复制那条消息的真实 id**（不再是占位 `0`）：引用回复可用，但插件若对"这条消息"做撤回/编辑等操作，作用的其实是那条真实消息 |
+
+关于**权限**：合成事件的发送者是**提出请求的那位群友**（`user_id`、昵称、群名片、角色都按真实身份填），所以：
+
+- 需要管理员/群主权限的命令，**请托者本身有相应权限时可以被执行**（1.6.x 及更早版本里 `role` 固定为 `member`，一律拒绝）；请托者没有权限时仍会被目标插件拒绝
+- `SUPERUSERS` 相关的命令同理：以请托者的身份通过检查
+- 本插件自己的管理命令（`status`/`reset`/`set_role`/…）**无论谁请托都一律拒绝**，不会代为执行（避免真实用户恰好是 SUPERUSER 时被 LLM 触发）
 
 两点补充：
 
 - `on_keyword` / `on_regex` / `on_message` 型插件（不用 `on_command` 注册）**不会出现在静态命令列表**里，无法被自动发现；但它们的 rule 只匹配文本时，合成事件仍会命中，所以可以靠 LLM 命令学习掌握后调用。
 - 命令学习会**主动跳过**上表中无法代为执行的命令（不会为它们生成用法记录），避免 LLM 反复误调用。
 
-> 需要多步确认的命令（执行中等待用户再回复）不在上表内：会话按 `group_{group_id}_{user_id}` 归组，只要后续真实消息来自同一个 `user_id`，等待流程仍能接上。
+> 需要多步确认的命令（执行中等待用户再回复）不在上表内：会话按适配器的会话 id 归组（OneBot V11 为 `group_{group_id}_{user_id}`），只要后续真实消息来自同一个 `user_id`，等待流程仍能接上。
+
+> 若目标插件是用 alconna 写的，插件会在投递前把 alconna 按 `message_id` 缓存的那条消息**替换成命令内容**——否则它会把命令读成"原来那条用户消息"，永远匹配不上。
 
 ## 🌐 跨 bot 通信
 

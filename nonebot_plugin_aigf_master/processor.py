@@ -11,7 +11,7 @@ from typing import NamedTuple
 import anyio
 import httpx
 from nonebot import get_driver, logger
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
+from nonebot_plugin_alconna import UniMessage
 
 from .command_learner import CommandLearner
 from .config import PluginConfig
@@ -21,13 +21,14 @@ from .image_handler import ImageHandler
 from .llm_client import LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
-from .message_builder import resolve_at_target
 from .models import ChatMessage, PluginCommand, ReplySegment
 from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
 from .preset_store import PresetStore
 from .prompt_builder import build_prompt
 from .response_parser import extract_command_learning, extract_memory_ops, extract_reply_segments, parse_llm_response
+from .session import SessionInfo, resolve_at_target
+from .unimsg import send_unimsg
 from .search_client import SearchClient
 
 
@@ -130,7 +131,7 @@ class _Invocation(NamedTuple):
     time: datetime
     command: str        # 命令名（不含前缀）
     parts_key: str      # 参数指纹（已解析后的 parts 序列化）
-    user_id: str        # 调用身份（QQ 号）
+    user_id: str        # 调用身份（用户 id）
     label: str          # prompt 展示用，如 "`今日小猪`（本机，以 111 身份）"
 
 
@@ -151,7 +152,7 @@ class MessageProcessor:
 
     def __init__(
         self,
-        group_id: str,
+        session_key: str,
         llm: LLMClient,
         memory: MemoryStore,
         memes: MemeStore,
@@ -166,7 +167,7 @@ class MessageProcessor:
         image_gen: ImageGenClient | None = None,
         image_handler: ImageHandler | None = None,
     ):
-        self.group_id = group_id
+        self.session_key = session_key
         self.llm = llm
         self.memory = memory
         self.memes = memes
@@ -190,7 +191,10 @@ class MessageProcessor:
         self._invoke_log: list[_Invocation] = []
         self.social_energy = 0.75
         self._bot = None
-        self._current_user_id: int = 0
+        self._current_user_id: str = ""
+        # 会话信息与「该会话最近一条真实事件」（合成调用事件以它为模板）
+        self._session: SessionInfo | None = None
+        self._session_event = None
 
     async def load_preset(self, name: str) -> bool:
         preset = self.presets.get(name)
@@ -295,7 +299,7 @@ class MessageProcessor:
             ptype = part.get("type")
             if ptype == "at":
                 target = part.get("name") or part.get("target")
-                uid = await resolve_at_target(self._bot, int(self.group_id), target)
+                uid = await resolve_at_target(self._bot, self._session, target)
                 if uid:
                     resolved.append({"type": "at", "target": uid})
                 else:
@@ -317,7 +321,7 @@ class MessageProcessor:
     async def process(
         self, messages: list[ChatMessage], cached_stickers: list[dict] | None = None,
     ) -> list[ReplySegment] | None:
-        logger.info(f"[处理] 群{self.group_id} 开始处理 {len(messages)} 条消息")
+        logger.info(f"[处理] {self.session_key} 开始处理 {len(messages)} 条消息")
         for msg in messages:
             logger.debug(f"[处理] 消息: [{msg.user_name}] {msg.content[:80]}")
 
@@ -337,7 +341,7 @@ class MessageProcessor:
         if self.config.aigfm_image_mode == "llm" and cached_stickers:
             import base64
             for s in cached_stickers:
-                cache_info = self.memes.get_cache_info(int(self.group_id), s["id"])
+                cache_info = self.memes.get_cache_info(self.session_key, s["id"])
                 if cache_info:
                     try:
                         import anyio
@@ -403,7 +407,7 @@ class MessageProcessor:
 
         # 构建 prompt
         preset = self.presets.get(self.current_preset)
-        bus_messages = self.context_bus.get_recent(int(self.group_id), self.config.aigfm_context_in_prompt)
+        bus_messages = self.context_bus.get_recent(self.session_key, self.config.aigfm_context_in_prompt)
         meme_prompt_list = self.memes.prompt_list()
         prompt = build_prompt(
             bot_name=self.bot_name, bot_role=self.bot_role,
@@ -420,7 +424,7 @@ class MessageProcessor:
         )
 
         # 调用 LLM
-        logger.info(f"[处理] 群{self.group_id} 调用 LLM, sticker_images: {len(sticker_images)} 张")
+        logger.info(f"[处理] {self.session_key} 调用 LLM, sticker_images: {len(sticker_images)} 张")
         recent_5 = "\n".join(f"  [{m.user_name}] {m.content[:80]}" for m in self.recent_messages[-5:])
         logger.debug(f"[处理] 最近聊天记录(最新5条):\n{recent_5}")
 
@@ -438,7 +442,7 @@ class MessageProcessor:
 
         response_str = await _request_llm(prompt)
         if not response_str:
-            logger.warning(f"[处理] 群{self.group_id} LLM 返回空响应，跳过本批")
+            logger.warning(f"[处理] {self.session_key} LLM 返回空响应，跳过本批")
             return None
 
         logger.info(f"[LLM] 响应(len={len(response_str)}): {response_str[:200]}")
@@ -540,8 +544,8 @@ class MessageProcessor:
                     "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
-                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "user_id": {"type": "string", "description": "命令归属的用户 id（可选，可从群友信息中选择任意群友，不同用户调用可能返回不同结果，默认当前消息发送者）"},
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称（也可填用户 id）"}}, "required": ["type"]}}
                     }, "required": ["command"]},
                 },
             })
@@ -554,8 +558,8 @@ class MessageProcessor:
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
-                        "user_id": {"type": "integer", "description": "命令归属的用户 QQ 号（可选，可从群友信息中选择任意群友，不同 QQ 号调用可能返回不同结果，默认当前消息发送者）"},
-                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称"}}, "required": ["type"]}}
+                        "user_id": {"type": "string", "description": "命令归属的用户 id（可选，可从群友信息中选择任意群友，不同用户调用可能返回不同结果，默认当前消息发送者）"},
+                        "parts": {"type": "array", "description": "命令的参数段（可选，与回复的 reply 字段同结构）：@ 群友用 {\"type\":\"at\",\"name\":\"群友昵称\"}，普通文字用 {\"type\":\"text\",\"content\":\"文字\"}。这里**只放参数，不要再把命令名写进来**，也不用自己加空格（拼接由系统处理）。例：command 填“决斗”、parts 填 [{\"type\":\"at\",\"name\":\"某某\"},{\"type\":\"text\",\"content\":\"10\"}] → 实际发出「决斗 @某某 10」。不需要参数时省略。", "items": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "at"]}, "content": {"type": "string", "description": "type=text 时的文字内容"}, "name": {"type": "string", "description": "type=at 时的群友昵称（也可填用户 id）"}}, "required": ["type"]}}
                     }, "required": ["bot", "command"]},
                 },
             })
@@ -603,8 +607,8 @@ class MessageProcessor:
                 if gate:
                     return gate
                 outcome = await self.invoker.invoke(
-                    self._bot, int(self.group_id), command, self.config.aigfm_invoke_timeout,
-                    user_id=uid, parts=parts, sender_name=self.bot_name,
+                    self._bot, self._session, self._session_event, command,
+                    self.config.aigfm_invoke_timeout, user_id=uid, parts=parts,
                 )
                 self._consume_invoke_energy()
                 # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
@@ -638,8 +642,12 @@ class MessageProcessor:
                 if gate:
                     return gate
                 first_at = next((p["target"] for p in parts if p.get("type") == "at"), 0)
+                try:
+                    first_at = int(first_at)
+                except (TypeError, ValueError):
+                    first_at = 0
                 result = await self.peer_client.invoke(
-                    peer_name, command, int(self.group_id), uid,
+                    peer_name, command, int(getattr(self._session, "numeric_chat_id", 0) or 0), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
                     sender_name=self.bot_name,
                 )
@@ -694,7 +702,7 @@ class MessageProcessor:
             reference_note = ""
             if reference_id:
                 ref_path = None
-                info = self.memes.get_cache_info(int(self.group_id), reference_id)
+                info = self.memes.get_cache_info(self.session_key, reference_id)
                 if info and info.get("path") and Path(info["path"]).is_file():
                     ref_path = info["path"]
                 else:
@@ -733,10 +741,8 @@ class MessageProcessor:
                     content="图片生成失败：无法获取图片数据",
                 ))
                 return
-            await self._bot.send_msg(
-                message_type="group", group_id=int(self.group_id),
-                message=Message(MessageSegment.image(f"base64://{b64}")),
-            )
+            target = getattr(self._session, "target", None) or self._session_event
+            await send_unimsg(self._bot, target, UniMessage.image(raw=b64))
             # VLM 描述（本插件自己发的图不会被钩子捕获，需主动描述让 LLM 感知结果）
             desc_text = ""
             if self.image_handler:
@@ -768,7 +774,7 @@ class MessageProcessor:
                 keywords = ["表情包"]
             if cache_id and description and cache_id in current_ids:
                 try:
-                    ok = await self.memes.save_from_cache(int(self.group_id), cache_id, description, keywords)
+                    ok = await self.memes.save_from_cache(self.session_key, cache_id, description, keywords)
                     if not ok:
                         logger.info(f"[表情包收藏] 未收藏: id={cache_id}（缓存文件缺失，或库内已有同图）")
                 except Exception as e:

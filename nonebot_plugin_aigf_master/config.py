@@ -43,8 +43,15 @@ class PluginConfig(BaseModel):
     aigfm_image_gen_min_size: str = Field("", description="生图最小尺寸（宽x高），用于满足服务的最低像素要求（如豆包 Seedream 需 ≥ 1920x1920 即 3686400 像素）；为空不限制，非空时按比例放大到不小于该面积（最小优先于最大）")
     aigfm_image_gen_watermark: bool = Field(False, description="生图水印（参考豆包类服务，仅参考图路径传入 watermark 参数）")
 
-    # 群聊配置
-    aigfm_enabled_groups: list[int] = Field(default_factory=list, description="启用的群号列表")
+    # 会话配置（群/频道与私聊分开；条目可写 `适配器:会话id`，裸 id 一律按 onebot11 识别）
+    aigfm_enabled_groups: list[int | str] = Field(
+        default_factory=list,
+        description="启用的群/频道会话列表；可写 `onebot11:617770183` 形式的会话键，也可只写群号（按 onebot11 识别，兼容旧配置）",
+    )
+    aigfm_enabled_private: list[int | str] = Field(
+        default_factory=list,
+        description="启用的私聊会话列表；可写 `适配器:用户id`，也可只写用户 id（按 onebot11 识别）。为空则私聊不响应",
+    )
     aigfm_default_preset: str = Field("default", description="默认预设名称")
 
     # 消息批处理
