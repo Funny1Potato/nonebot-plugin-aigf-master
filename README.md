@@ -249,18 +249,19 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
 | WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
 | EFChat | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| YunHu | ⚠ 需 Python ≥3.12⁴ | ⚠ 同左 | ⚠ 同左 | ⚠ 同左 | ⚠ | ⚠ 同左 | ⚠ 同左 | ❌ | ⚠ |
-| bilibili Live | ⚠ 需 Python ≥3.12⁴ | ⚠ 同左 | ⚠ 同左 | ❌ 无好友私聊类型 | ⚠ | ⚠ 同左 | ⚠ 同左 | ❌ | ⚠ |
+| YunHu⁴ | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| bilibili Live⁴ | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠ | ✅ | ✅ | ❌ | ⚠ |
 
 **读表说明**
 
-- **✅ 已实测通过**：会话键、渲染文本、发送接口、捕获入缓冲、目标插件确实收到了命令，逐项断言过（共 165 项检查）
+- **✅ 已实测通过**：会话键、渲染文本、发送接口、捕获入缓冲、目标插件确实收到了命令，逐项断言过。**本表 17 行在 Python 3.10 实测（167 项检查）**；**YunHu / bilibili Live 两行在 Python 3.14 实测**（3.10 装不上，见下），19 个适配器合计 **187 项检查、只有 2 项未通过**（Satori / Kaiheila 的插件调用）
+- **整套依赖栈在 Python 3.14 上跑通**：`nonebot2 2.5.0` + `nonebot-plugin-alconna 0.62.1` + `nonebot-plugin-uninfo 0.11.2` 在 **Python 3.14.3** 上通过了全部回归——主插件 150 项、peer 子插件 67 项、适配器矩阵 187 项（仅上述 2 项未通过）
 - **⚠ 需真机/特例**：
   - **@ 按昵称**：只有 OneBot V11 实测能按群昵称反查出用户 id（走 `get_group_member_list`）；其它适配器需要 uninfo 的成员列表查询实现（多数适配器没有），因此**让 LLM 直接用用户 id 更稳**；渲染 @ 时昵称拿不到会回落成 id
   - **插件调用（Satori / Kaiheila）**：这两类适配器的事件结构特殊（Satori 的 `message` 是 `{id, content}` 结构体、Kaiheila 的消息在嵌套的 `event` 里），离线构造"uninfo 与 alconna 都认可"的事件未能复现，因此**未验证通过**；其余 14 个适配器已实测目标响应器收到命令。真机使用请以实际表现为准
   - **跨 bot**：需要 peer 0.4.0+（推送/调用带 `session` 键）；旧 peer 只能按 `onebot11:{group_id}` 落到 OneBot 会话
 - **❌ 不支持**：群系统通知¹（戳一戳/禁言/进出群/撤回是 OneBot 专属事件类型）
-- **⚠ 需要 Python ≥ 3.12**（上表 YunHu / bilibili Live）：这两个适配器包在 3.11 及以下装不上/用不了——`bilibili Live` 用了 `typing.TypedDict`（pydantic 在 Python < 3.12 直接拒绝），`YunHu` 还额外用到 `typing.NotRequired`（Python 3.11+）。**已在 Python 3.14.3 上实测**：两个包都能导入，`alconna` 的 builder/exporter 与 `uninfo` 的 fetcher 三者齐备；`bilibili Live` 的弹幕事件跑通了会话解析（场景路径＝房间号）+ 渲染 + 通用化，`YunHu` 的群消息事件同样能跑通渲染与通用化（会话解析那步需要真实 bot API，mock 下拿不到群资料）。想在本机测这两个平台，用 `py -3.14` 单独建个环境即可（本机已有一个 `C:\Users\94512\.qwen\tmp\py314test` 作为参考）
+- **⚠ Python 版本要求**（上表 YunHu / bilibili Live）：这两个适配器包**需要 Python ≥ 3.12**——`bilibili Live` 用了 `typing.TypedDict`（pydantic 在 Python < 3.12 直接拒绝），`YunHu` 还额外用到 `typing.NotRequired`（Python 3.11+），所以在 Python 3.10 的 bot 里**导入即失败**。上表这两行的 ✅ 是**在本机 Python 3.14.3 上实测的结果**：两个包都能导入，`alconna` 的 builder/exporter 与 `uninfo` 的 fetcher 三者齐备，会话解析/渲染/发送/捕获/插件调用全部通过（`bilibili Live` 的场景路径＝房间号；`YunHu` 的群资料需要真实 API 才有昵称）。**要用这两个平台就把 bot 跑在 Python 3.12+/3.14 上**（本工作目录另建了参考环境 `.venv314`：Python 3.14.3 + `nonebot2 2.5.0` + `alconna 0.62.1` + `uninfo 0.11.2` + 全部 19 个适配器包，回归与矩阵都在里面跑过）
 - **Kook 注意**：社区包 `nonebot-adapter-kook` 的模块名是 `nonebot.adapters.kook`、`get_name()` 报 `Kook`，而 alconna/uninfo 期望的是 `nonebot.adapters.kaiheila`（`Kaiheila`）——**请安装 `nonebot-adapter-kaiheila`**，否则该平台等同于"不被支持"
 - **昵称/群名片**：取决于适配器的 uninfo fetcher 能取到什么（很多要真实 API 调用，离线 mock 拿不到），拿不到时回落成用户 id，功能不受影响
 - 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器
