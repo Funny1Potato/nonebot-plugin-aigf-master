@@ -233,24 +233,24 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | 适配器 | 会话解析 | 收发/渲染 | 回复发送 | 私聊 | @ 按昵称 | 跨插件捕获 | 插件调用 | 群通知¹ | 跨 bot² |
 |---|---|---|---|---|---|---|---|---|---|
 | OneBot V11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| OneBot V12 | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Console | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Satori | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ⚠ | ❌ | ⚠ |
-| Telegram | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Discord | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| QQ（频道/C2C/群） | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Milky | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Mirai | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ⚠ | ❌ | ⚠ |
-| DoDo | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Kritor | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Mail | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| EFChat | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| YunHu⁴ | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| bilibili Live⁴ | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| OneBot V12 | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Console | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Satori | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ⚠ | ❌ | ✅ |
+| Telegram | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Discord | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| QQ（频道/C2C/群） | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Milky | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Mirai | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ⚠ | ❌ | ✅ |
+| DoDo | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Kritor | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Mail | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| EFChat | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| YunHu⁴ | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ✅ |
+| bilibili Live⁴ | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠ | ✅ | ✅ | ❌ | ✅ |
 
 **读表说明**
 
@@ -259,7 +259,6 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 - **⚠ 需真机/特例**：
   - **@ 按昵称**：只有 OneBot V11 实测能按群昵称反查出用户 id（走 `get_group_member_list`）；其它适配器需要 uninfo 的成员列表查询实现（多数适配器没有），因此**让 LLM 直接用用户 id 更稳**；渲染 @ 时昵称拿不到会回落成 id
   - **插件调用（Satori / Kaiheila）**：这两类适配器的事件结构特殊（Satori 的 `message` 是 `{id, content}` 结构体、Kaiheila 的消息在嵌套的 `event` 里），离线构造"uninfo 与 alconna 都认可"的事件未能复现，因此**未验证通过**；其余 14 个适配器已实测目标响应器收到命令。真机使用请以实际表现为准
-  - **跨 bot**：需要 peer 0.4.0+（推送/调用带 `session` 键）；旧 peer 只能按 `onebot11:{group_id}` 落到 OneBot 会话
 - **❌ 不支持**：群系统通知¹（戳一戳/禁言/进出群/撤回是 OneBot 专属事件类型）
 - **⚠ Python 版本要求**（上表 YunHu / bilibili Live）：这两个适配器包**需要 Python ≥ 3.12**——`bilibili Live` 用了 `typing.TypedDict`（pydantic 在 Python < 3.12 直接拒绝），`YunHu` 还额外用到 `typing.NotRequired`（Python 3.11+），所以在 Python 3.10 的 bot 里**导入即失败**。上表这两行的 ✅ 是**在本机 Python 3.14.3 上实测的结果**：两个包都能导入，`alconna` 的 builder/exporter 与 `uninfo` 的 fetcher 三者齐备，会话解析/渲染/发送/捕获/插件调用全部通过（`bilibili Live` 的场景路径＝房间号；`YunHu` 的群资料需要真实 API 才有昵称）。**要用这两个平台就把 bot 跑在 Python 3.12+/3.14 上**（本工作目录另建了参考环境 `.venv314`：Python 3.14.3 + `nonebot2 2.5.0` + `alconna 0.62.1` + `uninfo 0.11.2` + 全部 19 个适配器包，回归与矩阵都在里面跑过）
 - **Kook 注意**：社区包 `nonebot-adapter-kook` 的模块名是 `nonebot.adapters.kook`、`get_name()` 报 `Kook`，而 alconna/uninfo 期望的是 `nonebot.adapters.kaiheila`（`Kaiheila`）——**请安装 `nonebot-adapter-kaiheila`**，否则该平台等同于"不被支持"
@@ -291,9 +290,9 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 </details>
 
 > ¹ 群系统通知 = 戳一戳/禁言/进出群/消息撤回。
-> ² 跨 bot = 子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 的推送与远程调用。
+> ² 跨 bot = 子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 的推送与远程调用。上表按 **peer 0.4.0+** 的协议标 ✅：推送与调用都会带 `session`（`适配器:会话id`）、主插件按会话键落位，因此各适配器都可用。**用旧 peer（0.3.x）时只有 OneBot V11 的会话能对上**（旧协议只带 `group_id`，按 `onebot11:{group_id}` 映射）。peer 侧捕获/推送与主插件侧落位各自实测过，端到端的「复制事件执行命令」在 OneBot V11 与 Console 上跑通。
 > ³ Kritor / Kaiheila 的私聊事件本次未构造，故未测；它们的私聊类型在 alconna/uninfo 里是有实现的。
-> ⁴ 这两个适配器**需要 Python ≥ 3.12**，见下方说明（本机 Python 3.10 环境下无法导入，故未做逐项实测；已在 3.14 上验证可导入且依赖齐备）。
+> ⁴ 这两个适配器**需要 Python ≥ 3.12**（3.10 环境里导入即失败），表里这两行是在 **Python 3.14.3** 下实测的结果，见下方说明。
 
 ## 🔌 跨插件感知
 
