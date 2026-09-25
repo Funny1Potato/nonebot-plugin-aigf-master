@@ -255,15 +255,33 @@ async def build_unimsg(bot: Bot, event: Event) -> UniMessage | None:
 
 
 def _sender_label(sender) -> str:
-    """从 sender（对象或 dict）里取「昵称(用户id)」标签"""
+    """从 sender（对象或 dict）里取「昵称(用户id)」标签
+
+    只接受**字符串**取值：部分适配器（如 Kaiheila）原始回复段上的 sender 是对象/方法甚至占位值，
+    直接 `value.strip()` 会抛 TypeError 把整条消息的渲染打挂（实测踩过）。
+    """
     if sender is None:
         return ""
-    if isinstance(sender, dict):
-        nick = (sender.get("nickname") or sender.get("name") or "").strip()
-        uid = str(sender.get("user_id") or "")
-    else:
-        nick = (getattr(sender, "nickname", None) or getattr(sender, "name", None) or "").strip()
-        uid = str(getattr(sender, "user_id", "") or "")
+
+    def pick(obj, name: str) -> str:
+        try:
+            value = obj.get(name) if isinstance(obj, dict) else getattr(obj, name, None)
+        except Exception:
+            return ""
+        return value.strip() if isinstance(value, str) else ""
+
+    def pick_id(obj, name: str) -> str:
+        """用户 id 可能是 int（onebot）也可能是 str（多数平台），只拒掉非标量"""
+        try:
+            value = obj.get(name) if isinstance(obj, dict) else getattr(obj, name, None)
+        except Exception:
+            return ""
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            return ""
+        return str(value).strip()
+
+    nick = pick(sender, "nickname") or pick(sender, "name")
+    uid = pick_id(sender, "user_id")
     if uid and nick:
         return f"{nick}({uid})"
     return nick or uid

@@ -226,18 +226,72 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 - 落盘目录名不能含 `:`，因此磁盘上写作 `onebot11_617770183`；`memory/` 下旧版裸数字目录会在启动时**一次性自动迁移**（目标已存在则跳过，幂等）
 - 非启用会话不发请求、不入缓冲：插件只会为启用的会话解析成员信息与图片
 
-### 各能力在非 OneBot 适配器上的边界
+### 功能 × 适配器支持表（2026-09-25 实测）
 
-| 能力 | 其它适配器 | 说明 |
-|---|---|---|
-| 聊天、记忆、表情包、生图、命令学习、管理命令 | ✅ 可用 | `status` / `reset` / `set_role` / `presets` / `set_preset` / `reload_meme` 已改为 alconna 响应器，各适配器通用 |
-| 跨插件感知（捕获其它插件的输出） | ✅ 一般可用 | 依赖 NoneBot 基类的 `on_calling_api` 钩子（所有适配器）；会话取自当前事件，消息取自适配器消息对象，取不到就静默跳过 |
-| 插件调用（`invoke_plugin`） | ⚠️ 尽力支持 | 通过复制该会话最近一条真实事件来投递命令；事件类型、消息类都由适配器自己决定，不需 onebot 专属类型。目标插件若依赖适配器特有能力（例如 OneBot 的 `get_msg`）仍可能失败 |
-| 群系统通知（戳一戳/禁言/进出群/撤回） | ❌ 仅 OneBot | 这些是 OneBot 专属事件类型，其它适配器没有统一的通知模型，不处理 |
-| 跨 bot 通信（子插件 `/peer/capture`） | ❌ 仅 OneBot | 其它 bot 都是同号 OneBot 实例，推送按 `onebot11:` 会话映射 |
-| 群名片记录 | ✅ 有则记录 | 成员信息来自 uninfo，适配器不提供名片时该项为空 |
+测试方式：本机用 `nb`/pip 装上各适配器包后，为每个适配器**构造真实事件**（各适配器的消息/事件模型），跑本插件同一套功能路径——会话解析（uninfo）→ 消息渲染（uniseg）→ 回复发送（alconna exporter）→ 跨插件捕获（`on_calling_api`）→ 插件调用（复制真实事件 + 目标响应器实际收到命令）。bot 为记录型 mock（拦下所有 API 调用并断言调用的接口名），**未连真实平台**，因此"需要真实 API 才有数据"的项目另标 ⚠。
 
-> 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器。
+| 适配器 | 会话解析 | 收发/渲染 | 回复发送 | 私聊 | @ 按昵称 | 跨插件捕获 | 插件调用 | 群通知¹ | 跨 bot² |
+|---|---|---|---|---|---|---|---|---|---|
+| OneBot V11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| OneBot V12 | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Console | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Satori | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ⚠ | ❌ | ⚠ |
+| Telegram | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Discord | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| QQ（频道/C2C/群） | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Milky | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Mirai | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ⚠ | ❌ | ⚠ |
+| DoDo | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Kritor | ✅ | ✅ | ✅ | 未测³ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Mail | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| EFChat | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
+| YunHu | ❌ 库侧不支持⁴ | | | | | | | | |
+| bilibili Live | ❌ 库侧不支持⁴ | | | | | | | | |
+
+**读表说明**
+
+- **✅ 已实测通过**：会话键、渲染文本、发送接口、捕获入缓冲、目标插件确实收到了命令，逐项断言过（共 165 项检查）
+- **⚠ 需真机/特例**：
+  - **@ 按昵称**：只有 OneBot V11 实测能按群昵称反查出用户 id（走 `get_group_member_list`）；其它适配器需要 uninfo 的成员列表查询实现（多数适配器没有），因此**让 LLM 直接用用户 id 更稳**；渲染 @ 时昵称拿不到会回落成 id
+  - **插件调用（Satori / Kaiheila）**：这两类适配器的事件结构特殊（Satori 的 `message` 是 `{id, content}` 结构体、Kaiheila 的消息在嵌套的 `event` 里），离线构造"uninfo 与 alconna 都认可"的事件未能复现，因此**未验证通过**；其余 14 个适配器已实测目标响应器收到命令。真机使用请以实际表现为准
+  - **跨 bot**：需要 peer 0.4.0+（推送/调用带 `session` 键）；旧 peer 只能按 `onebot11:{group_id}` 落到 OneBot 会话
+- **❌ 不支持**：群系统通知¹（戳一戳/禁言/进出群/撤回是 OneBot 专属事件类型）；**YunHu 与 bilibili Live** 的适配器包在 Python 3.10 上**无法导入**（`typing.NotRequired` / `typing.TypedDict`），alconna/uninfo 的对应实现随之缺失 → 本插件在这两个平台上不可用（库侧限制，等上游支持 3.10 或改用 3.12）
+- **Kook 注意**：社区包 `nonebot-adapter-kook` 的模块名是 `nonebot.adapters.kook`、`get_name()` 报 `Kook`，而 alconna/uninfo 期望的是 `nonebot.adapters.kaiheila`（`Kaiheila`）——**请安装 `nonebot-adapter-kaiheila`**，否则该平台等同于"不被支持"
+- **昵称/群名片**：取决于适配器的 uninfo fetcher 能取到什么（很多要真实 API 调用，离线 mock 拿不到），拿不到时回落成用户 id，功能不受影响
+- 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器
+
+<details>
+<summary>实测到的各适配器发送接口（供排查用）</summary>
+
+| 适配器 | 回复发送最终调用的接口 |
+|---|---|
+| OneBot V11 / V12 | `send_msg` / `send_message` |
+| Console | `send_message`（私聊 `send_private_message`） |
+| Satori | `send_message`（私聊 `send_private_message`） |
+| Telegram | `send_to` |
+| Discord | `send_to` |
+| QQ | `send_to_group` / `send_to_channel` / `send_to_c2c` |
+| Feishu | `send_msg` |
+| Milky | `send_group_message` / `send_private_message` |
+| Mirai | `send_group_message` / `send_friend_message` |
+| Kaiheila | `send_msg`（按 channel/private 区分） |
+| DoDo | `send_to_channel` / `send_to_personal` |
+| Kritor | `send_message` / `send_channel_message` |
+| Mail | `send_to` |
+| Minecraft | `send_msg` |
+| WXMP | `send_custom_message` |
+| EFChat | `send_chat_message` |
+
+</details>
+
+> ¹ 群系统通知 = 戳一戳/禁言/进出群/消息撤回。
+> ² 跨 bot = 子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 的推送与远程调用。
+> ³ Kritor / Kaiheila 的私聊事件本次未构造，故未测；它们的私聊类型在 alconna/uninfo 里是有实现的。
+> ⁴ 见上表说明：包本身在 Python 3.10 上导入失败。
 
 ## 🔌 跨插件感知
 

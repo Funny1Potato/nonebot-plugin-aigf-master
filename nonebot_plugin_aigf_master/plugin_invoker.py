@@ -6,10 +6,13 @@
 """
 
 import asyncio
+from copy import deepcopy
 from typing import Literal
+from collections.abc import MutableMapping
 
 from nonebot import get_driver, logger
 from nonebot.message import handle_event
+from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_uninfo import get_interface
 
 from .session import SessionInfo, display_name
@@ -100,6 +103,129 @@ async def _sender_update(bot, session: SessionInfo | None, user_id) -> dict:
     return update
 
 
+def _can_hold_message(template, message, expected_text: str) -> bool:
+    """事件的 `message` 字段能否直接放本适配器的 Message
+
+    多数适配器（onebot/telegram/discord…）可以；但 **Satori** 这类事件的 `message` 是 `{id, content}`
+    结构体，真正的消息由 `get_message()` 解析出来——硬塞 Message 进去会把事件弄坏
+    （`get_message()` 报错、`get_message_id()` 取不到 id），目标插件也就读不到命令。
+
+    做法是**实测**：塞进副本后能取到非空 `get_message()` 就认（拿不准时保留原行为、由文本替换兜底）。
+    """
+    try:
+        probe = template.model_copy(update={"message": message})
+        text = str(probe.get_message())
+    except Exception as e:
+        logger.debug(f"[Invoker] message 字段不接受统一消息，改用文本替换: {e}")
+        return False
+    if not text.strip():
+        return False
+    # 能读到新内容才认为放得下：纯文本比对（at/图片段在 extract 里看不到）或整串比对
+    return expected_text.strip() in text or str(message) in text
+
+
+def _plain_incoming(bot, event) -> str:
+    """取事件里原来的纯文本（用于「把旧文本替换成命令文本」）
+
+    先用 alconna 的通用层解析（各适配器都可靠），拿不到再退回适配器自己的 `extract_plain_text()`
+    —— 部分适配器的 `extract_plain_text()` 会返回空串（实测 Satori），直接用它会让替换失效。
+    """
+    try:
+        unimsg = UniMessage.of(event.get_message(), bot=bot)
+        text = unimsg.extract_plain_text().strip()
+        if not text:
+            # 个别适配器（Satori）的 extract_plain_text 取不到文本，直接拼 Text 段
+            text = "".join(str(getattr(seg, "text", "") or "") for seg in unimsg).strip()
+        if text:
+            return text
+    except Exception as e:
+        logger.debug(f"[Invoker] 通用层取原文失败: {e}")
+    try:
+        return event.get_message().extract_plain_text().strip()
+    except Exception:
+        return ""
+
+
+def _is_patchable(value) -> bool:
+    """能继续往里找文本字段的容器：映射 / 列表 / pydantic 模型"""
+    return (isinstance(value, (MutableMapping, list))
+            or bool(getattr(type(value), "model_fields", None)))
+
+
+def _patch_text_fields(event, old_text: str, new_text: str) -> None:
+    """把事件里出现的旧消息文本替换成新文本（递归进嵌套模型/字典/列表，先复制再改以免污染原事件）
+
+    消息文本不总在统一的 `message` 字段里：discord 用 `content`、dodo 用 `message_body`、
+    feishu 在嵌套的 `event.event.message.content`、**Satori 的 `message` 是 `{id, content}` 结构体**。
+    只替换 `message` 的话，目标插件 `get_message()` 读到的仍是原来那条用户消息，命令永远匹配不上。
+    这里采用「旧文本出现在哪个字符串槽位就替换哪个」的通用兜底（不做适配器特判）。
+    """
+    if not old_text:
+        return
+
+    def visit(parent, name, value, depth: int, setter) -> None:
+        if isinstance(value, str):
+            if old_text in value:
+                try:
+                    setter(name, value.replace(old_text, new_text))
+                except Exception as e:
+                    logger.debug(f"[Invoker] 替换文本字段 {name} 失败: {e}")
+            return
+        if not _is_patchable(value):
+            return
+        if getattr(type(parent), "model_fields", None):
+            # 从模型往下走时复制一份，避免改到用于下次调用的模板事件
+            try:
+                copied = deepcopy(value)
+                setter(name, copied)
+                value = copied
+            except Exception:
+                pass
+        walk(value, depth + 1)
+
+    def walk(obj, depth: int = 0) -> None:
+        if depth > 4:
+            return
+        fields = list(getattr(type(obj), "model_fields", None) or [])
+        if fields:
+            for name in fields:
+                try:
+                    value = getattr(obj, name)
+                except Exception:
+                    continue
+                visit(obj, name, value, depth, lambda n, v, o=obj: setattr(o, n, v))
+        elif isinstance(obj, MutableMapping):
+            for name in list(obj.keys()):
+                visit(obj, name, obj.get(name), depth,
+                      lambda n, v: obj.__setitem__(n, v))
+        elif isinstance(obj, list):
+            for item in obj:
+                if _is_patchable(item):
+                    walk(item, depth + 1)
+
+    walk(event)
+
+
+def _reset_message_cache(event) -> None:
+    """清掉适配器「懒加载的消息缓存」私有属性（如 Discord 的 `_message` / `_original_message`）
+
+    Discord 的 `get_message()` 是 `if not hasattr(self, "_message"): self._message = ...` —— 结果会
+    缓存在私有属性里，而 `model_copy` 会把这份缓存一起带过来。不清理的话，即使我们换掉了消息体，
+    目标插件调用 `get_message()` 读到的仍是**原来那条消息**，命令永远匹配不上。
+    只动「名字里带 message 的私有属性」，不碰任何协议字段。
+    """
+    for holder in (getattr(event, "__dict__", None), getattr(event, "__pydantic_private__", None)):
+        if not isinstance(holder, dict):
+            continue
+        stale = [k for k in holder
+                 if k.startswith("_") and not k.startswith("__") and "message" in k.lower()]
+        for key in stale:
+            try:
+                holder.pop(key, None)
+            except Exception as e:
+                logger.debug(f"[Invoker] 清理消息缓存 {key} 失败: {e}")
+
+
 class PluginInvoker:
     """调用本实例的其它插件
 
@@ -165,13 +291,16 @@ class PluginInvoker:
         unimsg = messages[0] if messages else None
         message = await unimsg.export(bot=bot) if unimsg is not None else bot.adapter.get_message_class()()
 
-        update: dict = {"message": message}
+        update: dict = {}
+        command_text = plain_text(unimsg) if unimsg is not None else command
+        if _can_hold_message(template, message, command_text):
+            update["message"] = message
+            # 部分适配器（onebot 等）另有 original_message（@ 机器人时保留的原文），一并换掉，
+            # 否则 alconna 的 use_origin 路径仍会读到原来的用户消息
+            if hasattr(template, "original_message"):
+                update["original_message"] = message
         if hasattr(template, "raw_message"):
-            update["raw_message"] = plain_text(unimsg) if unimsg is not None else command
-        # 部分适配器（onebot 等）另有 original_message（@ 机器人时保留的原文），一并换掉，
-        # 否则 alconna 的 use_origin 路径仍会读到原来的用户消息
-        if hasattr(template, "original_message"):
-            update["original_message"] = message
+            update["raw_message"] = command_text
         # 合成消息没有引用关系：清掉被复制消息的 reply，避免目标插件以为它在回复某条消息
         if hasattr(template, "reply"):
             update["reply"] = None
@@ -193,6 +322,10 @@ class PluginInvoker:
                 setattr(event, SYNTHETIC_FLAG, True)
             except Exception:
                 pass
+        # 消息文本不总在 `message` 字段里（见 _patch_text_fields），补齐后才对得上目标插件
+        old_text = _plain_incoming(bot, template)
+        _patch_text_fields(event, old_text, plain_text(unimsg) if unimsg is not None else command)
+        _reset_message_cache(event)
         _refresh_uniseg_cache(event, bot)
         logger.debug(f"[Invoker] 创建 synthetic event: command={command}, session="
                      f"{getattr(session, 'key', '')}, user={user_id}, parts={parts}")
