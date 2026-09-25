@@ -58,9 +58,9 @@
 >
 > 从 2.0 起插件还依赖 `nonebot-plugin-alconna` 与 `nonebot-plugin-uninfo`（跨适配器收发与会话/成员信息），用下面的方式安装时会自动装上。
 
-### 安装 beta 版本（2.0.0b2）
+### 安装 beta 版本（2.0.0b3）
 
-`2.0.0b2` 是**预发布（pre-release）版本**，因此：
+`2.0.0b3` 是**预发布（pre-release）版本**，因此：
 
 - `pip install nonebot-plugin-aigf-master` 装的仍是稳定版 **1.6.x**
 - `nb plugin install nonebot-plugin-aigf-master` 同样只装稳定版，而且 nb-cli **不支持指定版本**，所以 beta 只能用 pip 装
@@ -68,7 +68,7 @@
 要装 beta，**必须显式写出版本号**：
 
 ```bash
-pip install nonebot-plugin-aigf-master==2.0.0b2
+pip install nonebot-plugin-aigf-master==2.0.0b3
 ```
 
 在 `pyproject.toml` 中添加：
@@ -93,8 +93,8 @@ plugins = ["nonebot-plugin-aigf-master"]
 AIGFM_LLM_API_KEY="sk-xxxxxxxxxxxx"                               # LLM API Key
 AIGFM_LLM_BASE_URL="https://api.deepseek.com"                     # LLM API 地址
 AIGFM_LLM_MODEL="deepseek-v4-flash"                               # LLM 模型名称
-AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群/频道会话（可写 `适配器:会话id`，只写数字按 OneBot V11 识别）
-AIGFM_ENABLED_PRIVATE=[]                                          # 启用的私聊会话（同上写法；留空则私聊不响应）
+AIGFM_ENABLED_GROUPS=["onebot11:123456789", "console:console-chat"]  # 启用的群/频道会话（`适配器:会话id`；也可只写数字，按 OneBot V11 识别）
+AIGFM_ENABLED_PRIVATE=["onebot11:20001"]                          # 启用的私聊会话（同上写法；留空则私聊不响应）
 
 # --- 图片理解（VLM） ---
 AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
