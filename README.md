@@ -58,9 +58,9 @@
 >
 > 从 2.0 起插件还依赖 `nonebot-plugin-alconna` 与 `nonebot-plugin-uninfo`（跨适配器收发与会话/成员信息），用下面的方式安装时会自动装上。
 
-### 安装 beta 版本（2.0.0b0）
+### 安装 beta 版本（2.0.0b1）
 
-`2.0.0b0` 是**预发布（pre-release）版本**，因此：
+`2.0.0b1` 是**预发布（pre-release）版本**，因此：
 
 - `pip install nonebot-plugin-aigf-master` 装的仍是稳定版 **1.6.x**
 - `nb plugin install nonebot-plugin-aigf-master` 同样只装稳定版，而且 nb-cli **不支持指定版本**，所以 beta 只能用 pip 装
@@ -68,7 +68,7 @@
 要装 beta，**必须显式写出版本号**：
 
 ```bash
-pip install nonebot-plugin-aigf-master==2.0.0b0
+pip install nonebot-plugin-aigf-master==2.0.0b1
 ```
 
 在 `pyproject.toml` 中添加：
