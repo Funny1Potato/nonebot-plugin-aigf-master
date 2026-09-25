@@ -228,9 +228,9 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 
 ### 功能 × 适配器支持表（2026-09-25 实测）
 
-测试方式：本机用 `nb`/pip 装上各适配器包后，为每个适配器**构造真实事件**（各适配器的消息/事件模型），跑本插件同一套功能路径——会话解析（uninfo）→ 消息渲染（uniseg）→ 回复发送（alconna exporter）→ 跨插件捕获（`on_calling_api`）→ 插件调用（复制真实事件 + 目标响应器实际收到命令）。bot 为记录型 mock（拦下所有 API 调用并断言调用的接口名），**未连真实平台**，因此"需要真实 API 才有数据"的项目另标 ⚠️。
+为每个适配器**构造真实事件**跑同一套功能路径（会话解析 → 渲染 → 回复发送 → 跨插件捕获 → 插件调用），bot 是记录型 mock，**未连真实平台**。
 
-| 适配器 | 会话解析 | 收发/渲染 | 回复发送 | 私聊 | @ 按昵称 | 跨插件捕获 | 插件调用 | 群通知¹ | 跨 bot² |
+| 适配器 | 会话解析 | 收发/渲染 | 回复发送 | 私聊 | @ 按昵称 | 跨插件捕获 | 插件调用 | 群通知 | 跨 bot |
 |---|---|---|---|---|---|---|---|---|---|
 | OneBot V11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | OneBot V12 | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
@@ -239,32 +239,30 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | Telegram | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | Discord | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | QQ（频道/C2C/群） | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
-| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️⁵ | ✅ |
+| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | Milky | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | Mirai | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测³ | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
+| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ⚠️ | ⚠️ | ✅ |
 | DoDo | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
-| Kritor | ✅ | ✅ | ✅ | 未测³ | ⚠️ | ✅ | ✅ | ⚠️⁵ | ✅ |
+| Kritor | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | Mail | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
 | Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | EFChat | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
-| YunHu⁴ | ✅ | ✅ | ✅ | 未测³ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
-| bilibili Live⁴ | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
+| YunHu | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
+| bilibili Live | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 
-**读表说明**
+图例：**✅ 已实测通过** ｜ **⚠️ 已实现但未验证通过**（离线构造不出该适配器的事件，或需要真实 API / 真机）｜ **❌ 该适配器没有这类事件** ｜ **未测** 本次未构造该场景。
 
-- **✅ 已实测通过**：会话键、渲染文本、发送接口、捕获入缓冲、目标插件确实收到了命令，逐项断言过。**本表 17 行在 Python 3.10 实测（167 项检查）**；**YunHu / bilibili Live 两行在 Python 3.14 实测**（3.10 装不上，见下），19 个适配器合计 **187 项检查、只有 2 项未通过**（Satori / Kaiheila 的插件调用）
-- **整套依赖栈在 Python 3.14 上跑通**：`nonebot2 2.5.0` + `nonebot-plugin-alconna 0.62.1` + `nonebot-plugin-uninfo 0.11.2` 在 **Python 3.14.3** 上通过了全部回归——主插件 150 项、peer 子插件 67 项、适配器矩阵 187 项（仅上述 2 项未通过）
-- **⚠️ 需真机/特例**：
-  - **@ 按昵称**：只有 OneBot V11 实测能按群昵称反查出用户 id（走 `get_group_member_list`）；其它适配器需要 uninfo 的成员列表查询实现（多数适配器没有），因此**让 LLM 直接用用户 id 更稳**；渲染 @ 时昵称拿不到会回落成 id
-  - **插件调用（Satori / Kaiheila）**：这两类适配器的事件结构特殊（Satori 的 `message` 是 `{id, content}` 结构体、Kaiheila 的消息在嵌套的 `event` 里），离线构造"uninfo 与 alconna 都认可"的事件未能复现，因此**未验证通过**；其余 14 个适配器已实测目标响应器收到命令。真机使用请以实际表现为准
-- **群通知¹ 的 ✅ / ⚠️ / ❌**：**✅ = 本轮实测**（OneBot V11 真实事件 + 完整 handler 入缓冲；Mirai 用真包的事件模型验证渲染，共 56 项检查）；**⚠️ = 通用路径已实现、但未在该适配器的真实通知事件上实测**——类型闸门来自 NoneBot 内核、文案来自类别映射表，这两步都与适配器无关，未实测的是「uninfo 能否为通知事件解析出会话」（见 ⁵）与各平台的真实通知字段；**❌ = Console / Mail 适配器本身没有通知事件类型**
-- **❌ 其它不支持**：适配器不提供任何会话线索的通知（好友添加、私聊戳一戳）按预期跳过；会话解析不出时同样跳过（只留 debug 日志）
-- **⚠️ Python 版本要求**（上表 YunHu / bilibili Live）：这两个适配器包**需要 Python ≥ 3.12**——`bilibili Live` 用了 `typing.TypedDict`（pydantic 在 Python < 3.12 直接拒绝），`YunHu` 还额外用到 `typing.NotRequired`（Python 3.11+），所以在 Python 3.10 的 bot 里**导入即失败**。上表这两行的 ✅ 是**在本机 Python 3.14.3 上实测的结果**：两个包都能导入，`alconna` 的 builder/exporter 与 `uninfo` 的 fetcher 三者齐备，会话解析/渲染/发送/捕获/插件调用全部通过（`bilibili Live` 的场景路径＝房间号；`YunHu` 的群资料需要真实 API 才有昵称）。**要用这两个平台就把 bot 跑在 Python 3.12+/3.14 上**（本工作目录另建了参考环境 `.venv314`：Python 3.14.3 + `nonebot2 2.5.0` + `alconna 0.62.1` + `uninfo 0.11.2` + 全部 19 个适配器包，回归与矩阵都在里面跑过）
-- **Kook 注意**：社区包 `nonebot-adapter-kook` 的模块名是 `nonebot.adapters.kook`、`get_name()` 报 `Kook`，而 alconna/uninfo 期望的是 `nonebot.adapters.kaiheila`（`Kaiheila`）——**请安装 `nonebot-adapter-kaiheila`**，否则该平台等同于"不被支持"
-- **昵称/群名片**：取决于适配器的 uninfo fetcher 能取到什么（很多要真实 API 调用，离线 mock 拿不到），拿不到时回落成用户 id，功能不受影响
-- 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器
+**已知特例**
+
+- **@ 按昵称**：只有 OneBot V11 能按群昵称反查用户 id，其余适配器请让 LLM 直接用用户 id
+- **插件调用**：Satori / Kaiheila 的事件结构特殊，离线未验证通过；其余 14 个已实测目标响应器收到命令
+- **群通知**：OneBot V11 与 Mirai 已实测；其余 ⚠️ 指「uninfo 能否为该适配器的通知事件解析出会话」尚未实测
+- **YunHu / bilibili Live**：需要把 bot 跑在 **Python ≥ 3.12**（3.10 里导入即失败；这两行的 ✅ 是在 3.14 实测的）
+- **Kaiheila**：请装 `nonebot-adapter-kaiheila`（社区包 `nonebot-adapter-kook` 的模块名与 alconna/uninfo 期望的不一致）
+- **跨 bot**：按 peer 0.4.0+ 的 `session` 协议可用；旧 peer（0.3.x）只有 OneBot V11 的会话能对上
+- 适配器不被 alconna/uninfo 支持时，该会话的消息静默跳过（只留 debug 日志），不影响其它适配器
 
 <details>
 <summary>实测到的各适配器发送接口（供排查用）</summary>
@@ -289,12 +287,6 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | EFChat | `send_chat_message` |
 
 </details>
-
-> ¹ 群系统通知 = 戳一戳/禁言/进出群/消息撤回等。**事件类型闸门是 NoneBot 内核给的**（`Matcher.check_rule` 里就是 `event.get_type() == cls.type`，`on_notice` 即按 `"notice"` 过滤，与适配器无关），本插件只负责两件事：**会话归属**（uninfo → alconna Target 回落）与**文案**。OneBot V11 有结构化字段（`sub_type`/`operator_id`/`target_id`），文案最细（`张三 将 李四 禁言 10 分钟`、`我被移出了群聊` 等）；其它适配器按通知类别关键词映射成中文（成员进出 / 禁言 / 撤回 / 戳一戳 / 权限变更 / 置顶精华 / 表情回应 / 会话设置 / 直播类），映射不到的用适配器自带的事件名，**`model_dump` 形态的 JSON 描述一律丢弃**（不会灌进 prompt）。私聊类通知（好友添加、私聊戳一戳）与未启用会话照旧跳过。
-> ² 跨 bot = 子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 的推送与远程调用。上表按 **peer 0.4.0+** 的协议标 ✅：推送与调用都会带 `session`（`适配器:会话id`）、主插件按会话键落位，因此各适配器都可用。**用旧 peer（0.3.x）时只有 OneBot V11 的会话能对上**（旧协议只带 `group_id`，按 `onebot11:{group_id}` 映射）。peer 侧捕获/推送与主插件侧落位各自实测过，端到端的「复制事件执行命令」在 OneBot V11 与 Console 上跑通。
-> ³ Kritor / Kaiheila 的私聊事件本次未构造，故未测；它们的私聊类型在 alconna/uninfo 里是有实现的。
-> ⁴ 这两个适配器**需要 Python ≥ 3.12**（3.10 环境里导入即失败），表里这两行是在 **Python 3.14.3** 下实测的结果，见下方说明。
-> ⁵ Feishu / Kritor 的 uninfo 适配器**没有覆盖通知事件**（只注册了消息/请求类），这类通知的会话归属只能靠 alconna Target 回落，是否成立**未实测**。
 
 ## 🔌 跨插件感知
 
