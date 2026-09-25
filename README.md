@@ -249,8 +249,8 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
 | WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
 | EFChat | ✅ | ✅ | ✅ | ✅ | ⚠ | ✅ | ✅ | ❌ | ⚠ |
-| YunHu | ❌ 库侧不支持⁴ | | | | | | | | |
-| bilibili Live | ❌ 库侧不支持⁴ | | | | | | | | |
+| YunHu | ⚠ 需 Python ≥3.12⁴ | ⚠ 同左 | ⚠ 同左 | ⚠ 同左 | ⚠ | ⚠ 同左 | ⚠ 同左 | ❌ | ⚠ |
+| bilibili Live | ⚠ 需 Python ≥3.12⁴ | ⚠ 同左 | ⚠ 同左 | ❌ 无好友私聊类型 | ⚠ | ⚠ 同左 | ⚠ 同左 | ❌ | ⚠ |
 
 **读表说明**
 
@@ -259,7 +259,8 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
   - **@ 按昵称**：只有 OneBot V11 实测能按群昵称反查出用户 id（走 `get_group_member_list`）；其它适配器需要 uninfo 的成员列表查询实现（多数适配器没有），因此**让 LLM 直接用用户 id 更稳**；渲染 @ 时昵称拿不到会回落成 id
   - **插件调用（Satori / Kaiheila）**：这两类适配器的事件结构特殊（Satori 的 `message` 是 `{id, content}` 结构体、Kaiheila 的消息在嵌套的 `event` 里），离线构造"uninfo 与 alconna 都认可"的事件未能复现，因此**未验证通过**；其余 14 个适配器已实测目标响应器收到命令。真机使用请以实际表现为准
   - **跨 bot**：需要 peer 0.4.0+（推送/调用带 `session` 键）；旧 peer 只能按 `onebot11:{group_id}` 落到 OneBot 会话
-- **❌ 不支持**：群系统通知¹（戳一戳/禁言/进出群/撤回是 OneBot 专属事件类型）；**YunHu 与 bilibili Live** 的适配器包在 Python 3.10 上**无法导入**（`typing.NotRequired` / `typing.TypedDict`），alconna/uninfo 的对应实现随之缺失 → 本插件在这两个平台上不可用（库侧限制，等上游支持 3.10 或改用 3.12）
+- **❌ 不支持**：群系统通知¹（戳一戳/禁言/进出群/撤回是 OneBot 专属事件类型）
+- **⚠ 需要 Python ≥ 3.12**（上表 YunHu / bilibili Live）：这两个适配器包在 3.11 及以下装不上/用不了——`bilibili Live` 用了 `typing.TypedDict`（pydantic 在 Python < 3.12 直接拒绝），`YunHu` 还额外用到 `typing.NotRequired`（Python 3.11+）。**已在 Python 3.14.3 上实测**：两个包都能导入，`alconna` 的 builder/exporter 与 `uninfo` 的 fetcher 三者齐备；`bilibili Live` 的弹幕事件跑通了会话解析（场景路径＝房间号）+ 渲染 + 通用化，`YunHu` 的群消息事件同样能跑通渲染与通用化（会话解析那步需要真实 bot API，mock 下拿不到群资料）。想在本机测这两个平台，用 `py -3.14` 单独建个环境即可（本机已有一个 `C:\Users\94512\.qwen\tmp\py314test` 作为参考）
 - **Kook 注意**：社区包 `nonebot-adapter-kook` 的模块名是 `nonebot.adapters.kook`、`get_name()` 报 `Kook`，而 alconna/uninfo 期望的是 `nonebot.adapters.kaiheila`（`Kaiheila`）——**请安装 `nonebot-adapter-kaiheila`**，否则该平台等同于"不被支持"
 - **昵称/群名片**：取决于适配器的 uninfo fetcher 能取到什么（很多要真实 API 调用，离线 mock 拿不到），拿不到时回落成用户 id，功能不受影响
 - 适配器完全不被 alconna/uninfo 支持时，该会话的消息会被静默跳过（只留 debug 日志），不会报错、也不会影响其它适配器
@@ -291,7 +292,7 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 > ¹ 群系统通知 = 戳一戳/禁言/进出群/消息撤回。
 > ² 跨 bot = 子插件 [nonebot-plugin-aigfm-peer](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer) 的推送与远程调用。
 > ³ Kritor / Kaiheila 的私聊事件本次未构造，故未测；它们的私聊类型在 alconna/uninfo 里是有实现的。
-> ⁴ 见上表说明：包本身在 Python 3.10 上导入失败。
+> ⁴ 这两个适配器**需要 Python ≥ 3.12**，见下方说明（本机 Python 3.10 环境下无法导入，故未做逐项实测；已在 3.14 上验证可导入且依赖齐备）。
 
 ## 🔌 跨插件感知
 
