@@ -15,10 +15,6 @@ import anyio
 import httpx
 from nonebot import get_driver, logger, on_message, on_notice, require
 from nonebot.adapters import Bot, Event
-from nonebot.adapters.onebot.v11 import (
-    GroupBanNoticeEvent, GroupDecreaseNoticeEvent, GroupIncreaseNoticeEvent,
-    GroupRecallNoticeEvent, PokeNotifyEvent,
-)
 from nonebot.permission import SUPERUSER
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
@@ -43,6 +39,7 @@ from .image_gen_client import ImageGenClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
 from .models import ChatMessage
+from .notice import is_group_notice, notice_text
 from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
 from .preset_store import PresetStore
@@ -434,60 +431,6 @@ def _is_message(event: Event) -> bool:
         return True
 
 
-_NOTICE_TYPES = (
-    PokeNotifyEvent, GroupBanNoticeEvent, GroupIncreaseNoticeEvent,
-    GroupDecreaseNoticeEvent, GroupRecallNoticeEvent,
-)
-
-
-def _is_group_notice(event: Event) -> bool:
-    """只收群内系统通知；PokeNotifyEvent 的 group_id 可能为空（私聊戳一戳），过滤掉
-
-    群 notice 是 onebot 专属事件类型，其它适配器暂不处理（没有统一的通用通知模型）。
-    """
-    if not isinstance(event, _NOTICE_TYPES):
-        return False
-    return bool(getattr(event, "group_id", None))
-
-
-async def _resolve_notice_text(bot: Bot, event: Event) -> str | None:
-    """把群 notice 事件渲染成一行文本；昵称查询失败回落用户 id"""
-    group_id = int(getattr(event, "group_id"))
-    info = SessionInfo(
-        key=session_key("onebot11", str(group_id)), slug="onebot11", scene_path=str(group_id),
-        native_chat_id=str(group_id), adapter_name=bot.adapter.get_name(),
-    )
-
-    async def _name(user_id) -> str:
-        from .session import display_user
-        name = await display_user(bot, info, user_id)
-        return name or str(user_id)
-
-    if isinstance(event, PokeNotifyEvent):
-        return f"{await _name(event.user_id)} 戳了戳 {await _name(event.target_id)}"
-    if isinstance(event, GroupBanNoticeEvent):
-        if event.sub_type == "self_ban":
-            return f"我被禁言 {event.duration} 分钟"
-        if event.sub_type == "self_lift_ban":
-            return "我被解除禁言"
-        if event.sub_type == "lift_ban":
-            return f"{await _name(event.operator_id)} 解除了 {await _name(event.user_id)} 的禁言"
-        return f"{await _name(event.operator_id)} 将 {await _name(event.user_id)} 禁言 {event.duration} 分钟"
-    if isinstance(event, GroupIncreaseNoticeEvent):
-        return f"{await _name(event.user_id)} 加入了群聊"
-    if isinstance(event, GroupDecreaseNoticeEvent):
-        if event.sub_type == "kick_me":
-            return "我被移出了群聊"
-        if event.sub_type == "kick":
-            return f"{await _name(event.user_id)} 被 {await _name(event.operator_id)} 移出了群聊"
-        return f"{await _name(event.user_id)} 退出了群聊"
-    if isinstance(event, GroupRecallNoticeEvent):
-        if event.user_id == event.operator_id:
-            return f"{await _name(event.user_id)} 撤回了一条消息"
-        return f"{await _name(event.operator_id)} 撤回了 {await _name(event.user_id)} 的一条消息"
-    return None
-
-
 async def _command_session(bot: Bot, event: Event) -> SessionInfo | None:
     """管理命令用：解析当前会话（解析不出时给用户一句可读的提示）"""
     return await resolve_session(bot, event)
@@ -525,7 +468,9 @@ set_preset_cmd = on_alconna(_cmd("set_preset", Args["rest", MultiVar(str, "*")])
 reload_meme_cmd = on_alconna(_cmd("reload_meme", Args["rest", MultiVar(str, "*")]),
                              aliases={"重载表情包"}, permission=SUPERUSER, priority=0, block=True)
 auto_chat = on_message(rule=_is_message, priority=1, block=False)
-group_notice = on_notice(rule=_is_group_notice, priority=1, block=False)
+# 类型闸门是内核给的（Matcher.check_rule 按 event.get_type() == "notice" 过滤，见 notice.py 开头），
+# 所以这里收的是所有适配器的通知事件；rule 只做「带会话线索」的廉价预筛
+group_notice = on_notice(rule=is_group_notice, priority=1, block=False)
 
 
 @status_cmd.handle()
@@ -687,23 +632,23 @@ async def handle_auto_chat(bot: Bot, event: Event):
 
 @group_notice.handle()
 async def handle_group_notice(bot: Bot, event: Event):
-    """群系统通知（戳一戳/禁言/进出群/消息撤回）→ 渲染后入缓冲区
+    """群/频道系统通知（戳一戳/禁言/进出群/消息撤回等）→ 渲染后入缓冲区
 
-    notice 事件没有用户消息上下文：不更新 processor._current_user_id（避免污染工具调用身份），
+    通知事件没有用户消息上下文：不更新 processor._current_user_id（避免污染工具调用身份），
     批处理触发依赖该会话最近一次真实用户消息（与 peer 推送的等待行为一致）
     """
-    key = session_key("onebot11", str(getattr(event, "group_id")))
-    if key not in _enabled_keys():
+    info = await resolve_session(bot, event)
+    if info is None or info.is_private or not is_enabled(info, plugin_config):
         return
     try:
-        text = await _resolve_notice_text(bot, event)
+        text = await notice_text(bot, info, event)
     except Exception as e:
         logger.error(f"[通知] 事件渲染失败: {e}")
         return
     if not text:
         return
-    logger.info(f"[通知] {key}: {text}")
-    _add_notice_message(key, text)
+    logger.info(f"[通知] {info.key}: {text}")
+    _add_notice_message(info.key, text)
 
 
 # ========== 启动 ==========
