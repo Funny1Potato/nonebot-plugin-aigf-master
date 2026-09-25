@@ -146,6 +146,9 @@ def _parts_key(parts: list[dict] | None) -> str:
 # 调用台账注入 prompt 时最多展示的条数（比对的台账条数由 aigfm_invoke_dedup_records 控制）
 _LEDGER_DISPLAY = 10
 
+# 「最近的聊天记录」在内存与落盘文件中保留的条数上限（注入 prompt 的条数另由 aigfm_recent_messages 控制）
+_RECENT_KEEP = 50
+
 
 class MessageProcessor:
     """消息处理编排器，协调所有组件"""
@@ -186,6 +189,8 @@ class MessageProcessor:
         self.bot_role = "一个友好的群聊助手"
         self.current_preset = ""
         self.recent_messages: list[ChatMessage] = []
+        # 「最近的聊天记录」在首次处理时从 memory/{会话}/recent.json 读回（重启后不丢历史）
+        self._recent_loaded = False
         # 代为执行过的命令台账：既注入 prompt 让模型「看得见自己刚调过什么」，
         # 也作为「最近调用过相同命令」去重的比对依据（见 _find_recent_same）
         self._invoke_log: list[_Invocation] = []
@@ -325,10 +330,22 @@ class MessageProcessor:
         for msg in messages:
             logger.debug(f"[处理] 消息: [{msg.user_name}] {msg.content[:80]}")
 
-        # 更新最近消息
+        # 更新最近消息（首次处理时先读回上次落盘的记录，这样重启后 LLM 仍能看到历史）
+        if not self._recent_loaded:
+            self._recent_loaded = True
+            try:
+                restored = await self.memory.load_recent()
+            except Exception as e:
+                logger.error(f"[记忆] 加载聊天记录失败: {e}")
+                restored = []
+            if restored:
+                self.recent_messages = restored + self.recent_messages
+                logger.info(f"[记忆] {self.session_key} 恢复聊天记录 {len(restored)} 条")
         self.recent_messages.extend(messages)
-        if len(self.recent_messages) > 50:
-            self.recent_messages = self.recent_messages[-50:]
+        if len(self.recent_messages) > _RECENT_KEEP:
+            self.recent_messages = self.recent_messages[-_RECENT_KEEP:]
+        # 先落盘一次：后面任何提前 return（没回复/解析失败）都不影响历史的保存
+        await self._persist_recent()
 
         # 加载记忆
         short_term = await self.memory.load_short_term()
@@ -512,6 +529,7 @@ class MessageProcessor:
 
         # 更新最近消息
         self._record_bot_reply(reply_segments)
+        await self._persist_recent()
 
         # 消耗社交能量
         text_length = sum(len(s.content) for s in reply_segments if s.type == "text")
@@ -782,6 +800,19 @@ class MessageProcessor:
             elif cache_id:
                 # 索引常驻后 LLM 会引用历史 id，被上限淘汰或不存在时在此暴露，避免静默失败无从排查
                 logger.warning(f"[表情包收藏] 跳过: id={cache_id} 不在缓存索引中（已淘汰或不存在）")
+
+    async def _persist_recent(self):
+        """把「最近的聊天记录」落盘，让重启后的会话仍带着上下文（条数与内存里一致）
+
+        落盘前后都按 `_RECENT_KEEP` 截断：批次内还会追加机器人的回复/自述等，
+        不在这里截一次的话内存与文件都会慢慢超过上限。
+        """
+        if len(self.recent_messages) > _RECENT_KEEP:
+            self.recent_messages = self.recent_messages[-_RECENT_KEEP:]
+        try:
+            await self.memory.save_recent(self.recent_messages)
+        except Exception as e:
+            logger.error(f"[记忆] 保存聊天记录失败: {e}")
 
     def _record_bot_reply(self, segments: list[ReplySegment]):
         for seg in segments:

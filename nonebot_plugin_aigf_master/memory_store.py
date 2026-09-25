@@ -10,7 +10,7 @@ from pathlib import Path
 import anyio
 from nonebot import logger
 
-from .models import MemoryOps
+from .models import ChatMessage, MemoryOps
 
 
 class MemoryStore:
@@ -58,6 +58,53 @@ class MemoryStore:
         path = self._group_dir / "long_term.json"
         async with await anyio.open_file(path, "w", encoding="utf-8") as f:
             await f.write(json.dumps({"facts": facts}, ensure_ascii=False, indent=2))
+
+    # ========== 最近的聊天记录（重启后仍可读） ==========
+
+    async def load_recent(self) -> list[ChatMessage]:
+        """读回落盘的聊天记录；文件缺失/损坏时返回空列表"""
+        path = self._group_dir / "recent.json"
+        if not path.exists():
+            return []
+        try:
+            async with await anyio.open_file(path, encoding="utf-8") as f:
+                raw = json.loads(await f.read()).get("messages", [])
+        except Exception as e:
+            logger.error(f"加载聊天记录失败: {e}")
+            return []
+        messages = []
+        for item in raw if isinstance(raw, list) else []:
+            try:
+                messages.append(ChatMessage(
+                    time=datetime.fromisoformat(item["time"]),
+                    user_name=item.get("user_name", ""),
+                    content=item.get("content", ""),
+                    user_id=str(item.get("user_id", "")),
+                    is_at_only=bool(item.get("is_at_only", False)),
+                ))
+            except Exception:
+                continue          # 单条坏数据丢弃，不影响其余记录
+        return messages
+
+    async def save_recent(self, messages: list[ChatMessage]):
+        path = self._group_dir / "recent.json"
+        data = {"messages": [
+            {
+                "time": m.time.isoformat(), "user_name": m.user_name, "content": m.content,
+                "user_id": m.user_id, "is_at_only": m.is_at_only,
+            }
+            for m in messages
+        ]}
+        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+
+    async def clear_recent(self):
+        path = self._group_dir / "recent.json"
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception as e:
+            logger.error(f"清除聊天记录失败: {e}")
 
     # ========== 群友信息 ==========
 

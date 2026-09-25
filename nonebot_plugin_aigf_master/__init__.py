@@ -507,6 +507,8 @@ async def _(bot: Bot, event: Event):
     processor.bot_name = "小助手"
     processor.bot_role = "一个友好的群聊助手"
     processor.recent_messages.clear()
+    # 落盘的聊天记录一起清，否则重置后重启又会把旧历史读回来
+    await processor.memory.clear_recent()
     # 插件响应另有一份存在 ContextBus 里，不清会跨 reset 残留进后续 prompt
     processor.context_bus.clear(session.key)
     # 图片缓存索引随聊天记录一起清（历史 id 已不在 prompt 中，留着也无可收藏的上下文）
