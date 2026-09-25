@@ -15,6 +15,7 @@ NoneBot 的 `on_notice` 已经按 `event.get_type() == "notice"` 过滤（内核
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
 from nonebot.adapters import Bot, Event
 from nonebot.adapters.onebot.v11 import (
@@ -30,17 +31,26 @@ _ONEBOT_NOTICE_TYPES = (
     GroupDecreaseNoticeEvent, GroupRecallNoticeEvent,
 )
 
-# 事件实例上可能承载「会话」的字段名；命中任一即认为不是纯好友/私聊类通知。
-# 只做属性判断、不发请求，用于 on_notice 的廉价预筛。
-_SCENE_ATTRS = (
-    "group_id", "channel_id", "guild_id", "chat_id", "room_id",
+# 「会话线索」的字段/键名（比较前统一规范化：去掉非字母数字并小写，因此
+# group_id / groupId / chat_id / chatId 都等价）。命中且取值非空即认为不是纯好友/私聊类通知。
+_SCENE_FIELDS = frozenset({
+    "groupid", "channelid", "guildid", "chatid", "roomid",
     "group", "channel", "guild", "chat", "room", "scene",
-)
+})
 
-# 通用主体 id 的候选路径（`event.get_user_id()` 拿不到时依次尝试）
+# 递归查找的深度与每个容器的取样条数（只为便宜预筛，不需要穷举）
+_SCENE_DEPTH = 3
+_SCENE_SAMPLE = 8
+
+# 递归时跳过的字段：消息体/回复体又大又不会带会话线索
+_SKIP_FIELDS = frozenset({"message", "original_message", "raw_message", "reply"})
+
+# 通用主体 id 的候选路径（`event.get_user_id()` 拿不到时依次尝试；整数表示列表下标）。
+# 列表型（Telegram 的 new_chat_members[0] / left_chat_member）要排在通用字段前，否则会拿错人
 _SUBJECT_PATHS = (
-    ("user_id",), ("user", "id"), ("member", "user", "id"), ("target_id",),
-    ("operator_id",), ("operator", "id"), ("member_id",), ("uin",), ("from_id",),
+    ("new_chat_members", 0, "id"), ("left_chat_member", "id"),
+    ("user_id",), ("user", "id"), ("member", "id"), ("member", "user", "id"),
+    ("target_id",), ("operator_id",), ("operator", "id"), ("member_id",), ("uin",), ("from_id",),
 )
 
 # 类别关键词表：`type(event).__name__ + get_event_name()` 规范化（只留小写字母数字）后按序匹配，
@@ -82,11 +92,48 @@ _DESCRIPTION_MAX = 200
 
 
 def is_group_notice(event: Event) -> bool:
-    """`on_notice` 的规则：只看事件是否带会话线索，不发任何请求
+    """`on_notice` 的规则：只看事件里有没有会话线索，不发任何请求
 
     真正的「是否启用/是否私聊」判断在 handler 里做（需要 uninfo，可能有 API 调用）。
+    这里必须**递归**找：多数适配器把会话 id 放在顶层（`group_id`/`channel_id`…），但
+    Feishu 在 `event.event.chat_id`、Milky 在 `data.group_id`、YunHu 在 `event.chatId`。
+    放宽的代价只是多查一次 uninfo（handler 还会按 `is_private` 复核），漏判才会真的丢通知。
     """
-    return any(getattr(event, attr, None) for attr in _SCENE_ATTRS)
+    return _has_scene_hint(event, _SCENE_DEPTH)
+
+
+def _has_scene_hint(value, depth: int) -> bool:
+    if depth < 0 or value is None or isinstance(value, (str, bytes, int, float, bool)):
+        return False
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if _norm_key(key) in _SCENE_FIELDS and item:
+                return True
+            if _has_scene_hint(item, depth - 1):
+                return True
+        return False
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return any(_has_scene_hint(item, depth - 1) for item in list(value)[:_SCENE_SAMPLE])
+    fields = getattr(value, "model_fields", None)
+    if fields is not None:  # pydantic 模型（事件/嵌套模型）
+        for name in fields:
+            if name.startswith("_") or name in _SKIP_FIELDS:
+                continue
+            try:
+                item = getattr(value, name, None)
+            except Exception:
+                continue
+            if _norm_key(name) in _SCENE_FIELDS and item:
+                return True
+            if _has_scene_hint(item, depth - 1):
+                return True
+        extra = getattr(value, "__pydantic_extra__", None)
+        return bool(extra) and _has_scene_hint(extra, depth - 1)
+    return False
+
+
+def _norm_key(name) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(name).lower())
 
 
 async def notice_text(bot: Bot, info: SessionInfo, event: Event) -> str | None:
@@ -162,7 +209,10 @@ def _subject_id(event: Event) -> str:
     for path in _SUBJECT_PATHS:
         obj: object = event
         for attr in path:
-            obj = getattr(obj, attr, None)
+            if isinstance(attr, int):
+                obj = obj[attr] if isinstance(obj, (list, tuple)) and len(obj) > attr else None
+            else:
+                obj = getattr(obj, attr, None)
             if obj is None:
                 break
         if obj not in (None, ""):

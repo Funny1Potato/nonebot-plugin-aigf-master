@@ -110,6 +110,14 @@ class SessionInfo:
         return int(self.native_chat_id) if self.native_chat_id.isdigit() else 0
 
 
+def event_user_id(event: Event) -> str:
+    """事件主体 id；通知类事件的 `get_user_id()` 常常直接抛 ValueError（OneBot V12 / Telegram / EFChat 等）"""
+    try:
+        return str(event.get_user_id() or "")
+    except Exception:
+        return ""
+
+
 def _from_uninfo(bot: Bot, event: Event, sess) -> SessionInfo:
     scene = sess.scene
     member_scene = scene.parent or scene
@@ -134,7 +142,7 @@ def _from_uninfo(bot: Bot, event: Event, sess) -> SessionInfo:
         scene_type=scene.type,
         member_scene_type=member_scene.type,
         member_scene_id=str(member_scene.id),
-        user_id=str(event.get_user_id() or user.id or ""),
+        user_id=event_user_id(event) or user.id or "",
         user_name=display_name(user),
         card=card,
         target=target,
@@ -173,7 +181,7 @@ async def resolve_session(bot: Bot, event: Event) -> SessionInfo | None:
         adapter_name=bot.adapter.get_name(),
         is_private=bool(target.private),
         is_channel=bool(target.channel),
-        user_id=str(event.get_user_id() or ""),
+        user_id=event_user_id(event),
         target=target,
     )
 
