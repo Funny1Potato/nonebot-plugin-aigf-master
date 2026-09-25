@@ -20,7 +20,7 @@ from nonebot.adapters.onebot.v11 import (
     GroupRecallNoticeEvent, PokeNotifyEvent,
 )
 from nonebot.permission import SUPERUSER
-from nonebot.plugin import PluginMetadata
+from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 
 # require 必须先于任何 import（否则库会以「先被 import」的方式装载，require 会判定它不是插件）
 require("nonebot_plugin_localstore")
@@ -58,8 +58,12 @@ __plugin_meta__ = PluginMetadata(
     name="AI群友（增强版）", description="群聊特化LLM聊天机器人（增强版），具备表情包管理、记忆存储、联网搜索、跨插件感知、插件调用、命令学习等能力。",
     usage="群聊特化LLM聊天机器人", type="application",
     config=PluginConfig,
-    # 通用适配器支持：收发走 alconna、会话/成员信息走 uninfo，两者不支持的适配器会静默跳过
-    supported_adapters=None,
+    # 收发走 alconna 的 uniseg、会话/成员信息走 uninfo，因此只声明两者共同支持的适配器
+    # （两者都不支持的适配器上本插件无法工作；inherit_supported_adapters 取交集，需在上面的 require 之后调用）
+    supported_adapters=inherit_supported_adapters(
+        "nonebot_plugin_alconna",
+        "nonebot_plugin_uninfo",
+    ),
     homepage="https://github.com/Funny1Potato/nonebot-plugin-aigf-master",
     extra={"author": "Funny1Potato"},
 )
