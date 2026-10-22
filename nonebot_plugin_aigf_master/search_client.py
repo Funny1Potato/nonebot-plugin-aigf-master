@@ -112,7 +112,62 @@ class OpenWebSearchClient(SearchClient):
             return []
 
 
-def create_search_client(api: str, api_key: str, base_url: str = "") -> SearchClient | None:
+class DeepSeekSearchClient(SearchClient):
+    """DeepSeek 联网搜索（POST {base}/v1/tools/search）
+
+    文档：https://api-docs.deepseek.com/zh-cn/api/search
+    - 按**成功请求次数**计费（不按 token、不按条数），`results` 为空数组不算成功、不计费
+    - `summary` 是给模型看的长摘要，`snippet` 是短摘要；`content` 只有传 `need_content`
+      才会带网页正文（默认不带，省掉额外抓取）
+    - QPS 100；401 = Key 无效，402 = 余额不足
+    """
+
+    def __init__(self, api_key: str, base_url: str = ""):
+        self._api_key = api_key
+        self._base_url = (base_url or "https://api.deepseek.com").rstrip("/")
+
+    async def search(self, query: str, max_results: int = 3) -> list[dict]:
+        try:
+            headers = {"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"}
+            # count 取值范围 1-50，越界会被判 400
+            payload = {"query": query, "count": max(1, min(int(max_results or 1), 50))}
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(f"{self._base_url}/v1/tools/search", headers=headers, json=payload)
+                if resp.status_code != 200:
+                    self._log_failure(resp)
+                    return []
+                data = resp.json()
+            results = []
+            for r in data.get("results", []):
+                content = (r.get("summary") or r.get("snippet") or "").strip()
+                results.append({"title": r.get("title", ""), "content": content, "url": r.get("url", "")})
+            return results
+        except Exception as e:
+            logger.error(f"[搜索] DeepSeek 失败: {e}")
+            return []
+
+    def _log_failure(self, resp):
+        """DeepSeek 的错误体是 OpenAI 兼容格式，挑出人能看懂的说明"""
+        try:
+            err = (resp.json() or {}).get("error", {}) or {}
+            msg = err.get("message") or ""
+        except Exception:
+            msg = ""
+        hint = {
+            400: "请求参数不合法",
+            401: "API Key 无效",
+            402: "余额不足",
+            429: "触发 QPS 限制",
+            500: "服务端错误",
+            504: "下游超时",
+        }.get(resp.status_code, "")
+        logger.error(f"[搜索] DeepSeek 失败: HTTP {resp.status_code}"
+                     + (f"（{hint}）" if hint else "")
+                     + (f" {msg}" if msg else ""))
+
+
+def create_search_client(api: str, api_key: str, base_url: str = "",
+                         api_base_url: str = "") -> SearchClient | None:
     api = api.lower()
     if api == "tavily":
         return TavilySearchClient(api_key) if api_key else None
@@ -122,4 +177,6 @@ def create_search_client(api: str, api_key: str, base_url: str = "") -> SearchCl
         return BingSearchClient(api_key) if api_key else None
     elif api == "openwebsearch":
         return OpenWebSearchClient(base_url) if base_url else None
+    elif api == "deepseek":
+        return DeepSeekSearchClient(api_key, api_base_url) if api_key else None
     return None

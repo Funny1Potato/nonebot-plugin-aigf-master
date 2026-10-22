@@ -33,7 +33,7 @@
 - 🧠 **LLM 命令学习**：通过观察群聊自动学习命令用法，支持学习、编辑、删除
 - 🌐 **跨 bot 通信**：通过 HTTP 获取其它 bot（同一 QQ 号下）的插件输出，并可远程调用其命令
 - 🖼️ **表情包功能**：AI 自主决定发表情包；自动从群聊中收藏
-- 🔍 **联网搜索**：支持 Tavily / Bocha / Bing，自动搜索不懂的梗和网络用语
+- 🔍 **联网搜索**：支持 Tavily / Bocha / Bing / DeepSeek / 本地 open-websearch，自动搜索不懂的梗和网络用语
 - 🧠 **四层记忆系统**：短期记忆、长期记忆、群友信息、文化记忆，LLM 自主管理
 - 🎨 **AI 生图**：LLM可调用生图模型生成图片发到群里，尺寸由 LLM 决定（程序限最大尺寸），支持参考图改绘（回复图片消息或从聊天记录选图）
 
@@ -136,10 +136,11 @@ AIGFM_ENERGY_BASELINE=0.7               # 社交能量基线（默认 0.7，范�
 
 # --- 联网搜索 ---
 AIGFM_SEARCH_ENABLED=false              # 是否启用联网搜索（默认 false）
-AIGFM_SEARCH_API=tavily                 # 搜索API: tavily / bocha / bing / openwebsearch（默认 tavily）
-AIGFM_SEARCH_API_KEY="xxx"              # 搜索 API Key（api=tavily/bocha/bing 时必填）
+AIGFM_SEARCH_API=tavily                 # 搜索API: tavily / bocha / bing / openwebsearch / deepseek（默认 tavily）
+AIGFM_SEARCH_API_KEY="xxx"              # 搜索 API Key（api=tavily/bocha/bing 时必填；deepseek 留空则沿用 LLM Key）
 AIGFM_SEARCH_MAX_RESULTS=3              # 最大搜索结果数（默认 3）
 AIGFM_OPENWEBSEARCH_URL=""              # open-websearch 本地服务地址（api=openwebsearch 时必填，如 http://127.0.0.1:3210）
+AIGFM_SEARCH_BASE_URL=""                # 搜索 API 根地址（api=deepseek 时用，留空则用官方 https://api.deepseek.com）
 
 # --- 代理 ---
 AIGFM_PROXY_ENABLED=false                  # 是否启用代理（默认 false）
@@ -541,6 +542,7 @@ LLM 可以：
 | `bocha` | 国产 AI 搜索 API，中文搜索效果好 | 无 | https://open.bochaai.com |
 | `bing` | 微软必应搜索（Azure Bing Search API v7） | 无 | https://portal.azure.com |
 | `openwebsearch` | 本地 Node.js 搜索服务，聚合多引擎（bing/baidu/duckduckgo 等） | 需先启动 daemon：`cd open-webSearch && npm install && npm run serve`，配置 `AIGFM_OPENWEBSEARCH_URL` | 无需 Key，项目：https://github.com/Aas-ee/open-webSearch |
+| `deepseek` | DeepSeek 自带联网搜索，摘要写得很适合喂给模型 | 无（`AIGFM_SEARCH_API_KEY` 留空则沿用 LLM Key） | https://platform.deepseek.com |
 
 > **Tavily** 需额外安装依赖：`pip install tavily-python`（或安装本插件时带上 extra：`pip install "nonebot-plugin-aigf-master[tavily]"`）
 
