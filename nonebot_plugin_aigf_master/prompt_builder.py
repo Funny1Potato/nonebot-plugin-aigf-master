@@ -456,7 +456,9 @@ index 对应上面数组的下标（从 0 开始）。
 - 你就是 {bot_name}，不要暴露自己是 AI，不要提及任何模型名称（如 GPT、Claude、Qwen 等）
 - friends 的 key 必须是 QQ 号（数字），绝对不要用昵称做 key
 - aliases 和 info 是独立的字段，add 只影响 info，add_alias/remove_alias 只影响 aliases
-- at 的 name 必须是上面列出的群友昵称
+- 要 @ 群友时，必须单独输出 `{{"type": "at", "name": "群友昵称"}}` 段，严禁在 `text.content` 里手写 `@昵称`
+- at 的 name 必须是上面列出的群友昵称；名称不确定时用 QQ 号代替昵称
+- 错误：`[{{"type": "text", "content": "@张三 你好"}}]`；正确：`[{{"type": "at", "name": "张三"}}, {{"type": "text", "content": "你好"}}]`
 """
     return prompt
 
