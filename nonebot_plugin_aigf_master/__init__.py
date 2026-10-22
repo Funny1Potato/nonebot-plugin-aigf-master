@@ -73,8 +73,12 @@ _image_gen = ImageGenClient(
     _proxy,
 ) if plugin_config.aigfm_image_gen_enabled else None
 _search = create_search_client(
-    plugin_config.aigfm_search_api, plugin_config.aigfm_search_api_key,
+    plugin_config.aigfm_search_api,
+    # deepseek 的 Key 一般和 LLM 是同一个，没单独配就沿用 LLM Key
+    plugin_config.aigfm_search_api_key
+    or (plugin_config.aigfm_llm_api_key if plugin_config.aigfm_search_api == "deepseek" else ""),
     plugin_config.aigfm_openwebsearch_url,
+    plugin_config.aigfm_search_base_url,
 ) if plugin_config.aigfm_search_enabled else None
 _peer_client = PeerClient(plugin_config.aigfm_peer_bots) if plugin_config.aigfm_peer_bots else None
 
