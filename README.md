@@ -15,7 +15,7 @@
 > [!TIP]
 > **有个跨适配器 beta 版正在测试中**：`2.0.0-beta` 已作为**预发布**发到 PyPI，消息收发与会话身份改走 `nonebot-plugin-alconna` / `nonebot-plugin-uninfo`，OneBot / Satori / Telegram / Discord 等适配器共用同一套聊天、记忆与命令逻辑。
 > 稳定版仍是 **1.6.x**（`pip install` 与 `nb plugin install` 默认只会装稳定版），装 beta 必须显式写出版本号：
-> `pip install nonebot-plugin-aigf-master==2.0.0b3`
+> `pip install nonebot-plugin-aigf-master==2.0.0b4`
 > 最新版本号与支持边界见 [beta 分支的 README](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/tree/beta)。
 
 ## 📖 介绍
