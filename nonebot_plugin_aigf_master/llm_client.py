@@ -24,6 +24,16 @@ def make_http_client(proxy: str | None = None) -> httpx.AsyncClient | None:
     return httpx.AsyncClient(proxy=proxy)
 
 
+def _build_user_message(prompt: str, images: list[str] | None = None) -> dict:
+    """构造用户消息；有图片时使用 OpenAI 兼容的多模态内容格式"""
+    if not images:
+        return {"role": "user", "content": prompt}
+    content = [{"type": "text", "text": prompt}]
+    for img_b64 in images:
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
+    return {"role": "user", "content": content}
+
+
 class LLMClient:
     """LLM 客户端"""
 
@@ -37,13 +47,7 @@ class LLMClient:
         self, prompt: str, model: str,
         json_mode: bool = False, images: list[str] | None = None,
     ) -> str | None:
-        if images:
-            content = [{"type": "text", "text": prompt}]
-            for img_b64 in images:
-                content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
-            messages = [{"role": "user", "content": content}]
-        else:
-            messages = [{"role": "user", "content": prompt}]
+        messages = [_build_user_message(prompt, images)]
 
         kwargs: dict = {"messages": messages, "model": model, "temperature": 0.5, "timeout": 300}
         if json_mode:
@@ -58,14 +62,16 @@ class LLMClient:
         tools: list[dict], tool_handler,
         json_mode: bool = False,
         first_call_json: bool = False,
+        images: list[str] | None = None,
     ) -> tuple[str | None, bool]:
         """支持 function calling 的响应生成
 
         first_call_json: 首次带 tools 的请求是否也强制 JSON 输出。
         默认 False（避免与 function calling 冲突，部分兼容服务不支持两者组合）；
         工具回填后的最终答复始终按 json_mode 强制 JSON。
+        images: 可选的 base64 图片，与普通回复路径一样随首轮请求发送。
         """
-        messages = [{"role": "user", "content": prompt}]
+        messages = [_build_user_message(prompt, images)]
         used_tool = False
 
         kwargs: dict = {"messages": messages, "model": model, "tools": tools, "temperature": 0.5, "timeout": 300}

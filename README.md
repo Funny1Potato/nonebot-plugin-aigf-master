@@ -91,8 +91,8 @@ AIGFM_LLM_BASE_URL="https://api.deepseek.com"                     # LLM API 地�
 AIGFM_LLM_MODEL="deepseek-v4-flash"                               # LLM 模型名称
 AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群号列表
 
-# --- 图片理解（VLM） ---
-AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
+# --- 图片理解（多模态 LLM / VLM） ---
+AIGFM_IMAGE_MODE="llm"                  # 图片模式: llm（默认，多模态统一模型）/ vlm（独立视觉模型）
 AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效，默认 true）
 AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
@@ -550,8 +550,10 @@ memes/
 
 | 模式 | 流程 | 适用场景 |
 |------|------|---------|
-| `vlm`（默认） | 图片 → VLM 分析 → 文字描述给 LLM | LLM 不支持图片输入 |
-| `llm` | 图片 → base64 直接附在 LLM prompt 中 | LLM 支持视觉 |
+| `llm`（默认） | 图片 → base64 直接附在 LLM prompt 中 | 主模型支持视觉；推荐用统一多模态模型 |
+| `vlm` | 图片 → VLM 分析 → 文字描述给 LLM | 主 LLM 不支持图片输入 |
+
+> 默认使用 `llm` 模式，适应当前主流多模态模型。若主 LLM 只能处理文字，请显式设置 `AIGFM_IMAGE_MODE=vlm` 并配置 VLM，否则图片请求可能被服务端拒绝。
 
 `vlm` 模式下的行为说明：
 
@@ -668,7 +670,7 @@ LLM 支持以下回复类型：
 主要影响因素：
 
 - **模型单价**：不同模型差别很大，建议先用便宜的模型跑量
-- **图片**：`AIGFM_IMAGE_MODE=llm` 会把图片本体随请求发送，比默认的 `vlm`（另发一次识图请求）更贵
+- **图片**：默认的 `AIGFM_IMAGE_MODE=llm` 会把图片本体随主请求发送，费用按主模型的多模态输入计算；也可改用 `vlm`（另发一次识图请求），适合主模型不支持图片或希望使用轻量视觉模型的场景
 - **联网搜索 / 生图 / 插件调用**：会额外产生调用轮次
 - **批次大小**：`AIGFM_BATCH_COUNT` / `AIGFM_BATCH_TIMEOUT` 攒得越多，单次请求里的上下文（历史、记忆、命令清单）越长，但**请求次数越少**；调小则相反
 - **启用的会话数**：每个群/频道各自独立计费

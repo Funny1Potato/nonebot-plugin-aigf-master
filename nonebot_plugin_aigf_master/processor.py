@@ -676,6 +676,7 @@ class MessageProcessor:
             prompt, self.config.aigfm_llm_model, tools, handler,
             json_mode=self.config.aigfm_llm_json_mode,
             first_call_json=self.config.aigfm_llm_tools_json_strict,
+            images=sticker_images if sticker_images else None,
         )
 
     async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = ""):
