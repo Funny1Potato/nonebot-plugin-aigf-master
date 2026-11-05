@@ -93,7 +93,8 @@ AIGFM_ENABLED_GROUPS=[123456, 789012]                             # 启用的群
 
 # --- 图片理解（多模态 LLM / VLM） ---
 AIGFM_IMAGE_MODE="llm"                  # 图片模式: llm（默认，多模态统一模型）/ vlm（独立视觉模型）
-AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效，默认 true）
+AIGFM_LLM_MULTIMODAL=""                 # 主模型是否支持图片: 留空=启动时自动探测 / true=强制支持 / false=强制不支持并回落到 vlm
+AIGFM_VLM_ENABLED=true                  # 是否启用VLM（vlm 模式必需；llm 模式主模型不支持图片时作为回落通道，默认 true）
 AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
 AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 llm 的 key）
@@ -554,6 +555,14 @@ memes/
 | `vlm` | 图片 → VLM 分析 → 文字描述给 LLM | 主 LLM 不支持图片输入 |
 
 > 默认使用 `llm` 模式，适应当前主流多模态模型。若主 LLM 只能处理文字，请显式设置 `AIGFM_IMAGE_MODE=vlm` 并配置 VLM，否则图片请求可能被服务端拒绝。
+
+`llm` 模式下主模型不支持图片时的自动回落：
+
+- 启动时用一张 16×16 的小图探测一次主模型是否接受图片输入，探不过就自动回落到 `vlm` 模式（解析期把图片转成文字描述，请求期只发文本），存量用户升级后不会因为主模型只支持文本而整批不回复
+- 运行期若带图请求被服务端明确拒绝（400/415/422），同样标记为不支持多模态，**下一批**消息起自动回落到 `vlm` 模式
+- 回落到 `vlm` 模式需要 VLM 可用：没配 `AIGFM_VLM_MODEL` / `AIGFM_VLM_BASE_URL` 时图片只能以「识图失败」进上下文
+- `AIGFM_LLM_MULTIMODAL` 可覆盖探测结果：`true` 强制按支持处理（跳过探测，不额外消耗请求）、`false` 强制按不支持处理并直接回落 `vlm`
+- 探测本身出问题时（鉴权失败、限流、网络异常）不做判定，仍按支持处理，避免掩盖真实错误
 
 `vlm` 模式下的行为说明：
 

@@ -17,8 +17,13 @@ class PluginConfig(BaseModel):
 
     # 图片理解配置
     aigfm_image_mode: Literal["vlm", "llm"] = Field(
-        "llm", description="图片理解模式（默认 llm；主模型不支持图片时改为 vlm）")
-    aigfm_vlm_enabled: bool = Field(True, description="是否启用 VLM")
+        "llm", description="图片理解模式（默认 llm；主模型不支持图片时自动回落 vlm）")
+    aigfm_llm_multimodal: bool | None = Field(
+        None,
+        description="主模型是否支持图片输入：未设置=启动时自动探测一次；true=强制按支持处理（跳过探测）；false=强制按不支持处理并回落到 VLM 模式",
+    )
+    aigfm_vlm_enabled: bool = Field(
+        True, description="是否启用 VLM（vlm 模式必需；llm 模式下作为主模型不支持图片时的回落通道）")
     aigfm_vlm_model: str = Field("", description="VLM 模型名称")
     aigfm_vlm_base_url: str = Field("", description="VLM API 地址")
     aigfm_vlm_api_key: str = Field("", description="VLM API Key（为空时使用 llm_api_key）")
