@@ -214,11 +214,59 @@ async def display_user(bot: Bot, info: SessionInfo | None, user_id) -> str:
     return uid
 
 
+@dataclass(frozen=True)
+class MemberName:
+    """成员可用于 @ 匹配的一个名字（昵称或群名片）"""
+
+    name: str
+    user_id: str
+
+
+async def list_member_names(bot: Bot, info: SessionInfo | None) -> list[MemberName]:
+    """会话成员的可匹配名字列表（uninfo 成员列表优先，onebot 群成员列表回落）
+
+    返回 [] 表示拿不到成员列表（私聊、适配器不支持、接口异常），调用方据此跳过文本 @ 转换。
+    """
+    results: list[MemberName] = []
+    if info is not None and info.is_private:
+        return results
+    try:
+        interface = get_interface(bot)
+    except Exception as e:      # 极少数 Bot 实现没有 adapter（测试 mock / 非常规封装）
+        logger.debug(f"[会话] 取 uninfo 接口失败: {e}")
+        interface = None
+    if interface and info is not None and info.member_scene_type is not None and info.member_scene_id:
+        try:
+            for member in await interface.get_members(info.member_scene_type, info.member_scene_id):
+                uid = str(member.user.id)
+                for name in (display_name(member.user), (member.nick or "").strip()):
+                    if name:
+                        results.append(MemberName(name, uid))
+            if results:
+                return results
+        except Exception as e:
+            logger.debug(f"[会话] 成员列表匹配失败: {e}")
+    # onebot 回落：部分适配器的成员列表未实现 uninfo 查询接口
+    chat_id = info.native_chat_id if info is not None else ""
+    if hasattr(bot, "get_group_member_list") and str(chat_id).isdigit():
+        try:
+            for m in await bot.get_group_member_list(group_id=int(chat_id)):
+                uid = str(m.get("user_id") or "")
+                if not uid:
+                    continue
+                for name in ((m.get("nickname") or "").strip(), (m.get("card") or "").strip()):
+                    if name:
+                        results.append(MemberName(name, uid))
+        except Exception as e:
+            logger.error(f"获取群成员列表失败: {e}")
+    return results
+
+
 async def resolve_at_target(bot: Bot, info: SessionInfo | None, target) -> str | None:
     """把 @ 目标规范成用户 id（与回复/调用共用）
 
     - 纯数字 → 直接使用（不发请求）
-    - 其余按 uninfo 成员列表精确匹配昵称/群名片，再回落 onebot 的群成员列表
+    - 其余按昵称 / 群名片 / 用户 id 精确匹配成员列表（1.6.3 合并 PR #1 后放开群名片）
     解析不出返回 None（调用方决定跳过或提示）。
     """
     text = str(target or "").strip()
@@ -226,27 +274,73 @@ async def resolve_at_target(bot: Bot, info: SessionInfo | None, target) -> str |
         return None
     if text.isdigit():
         return text
-    interface = get_interface(bot)
-    if interface and info is not None and info.member_scene_type is not None and info.member_scene_id:
-        try:
-            for member in await interface.get_members(info.member_scene_type, info.member_scene_id):
-                names = {display_name(member.user), (member.nick or "").strip()}
-                if text in {n for n in names if n}:
-                    return str(member.user.id)
-        except Exception as e:
-            logger.debug(f"[会话] 成员列表匹配失败: {e}")
-    # onebot 回落：部分适配器的成员列表未实现 uninfo 查询接口
-    chat_id = info.native_chat_id if info is not None else ""
-    if hasattr(bot, "get_group_member_list") and str(chat_id).isdigit():
-        try:
-            members = await bot.get_group_member_list(group_id=int(chat_id))
-            for m in members:
-                names = {(m.get("nickname") or "").strip(), (m.get("card") or "").strip()}
-                if text in {n for n in names if n}:
-                    return str(m.get("user_id") or "")
-        except Exception as e:
-            logger.error(f"获取群成员列表失败: {e}")
+    for member in await list_member_names(bot, info):
+        if text == member.name or text == member.user_id:
+            return member.user_id
     return None
+
+
+def _looks_like_ascii_word(char: str) -> bool:
+    return char.isascii() and (char.isalnum() or char == "_")
+
+
+def split_text_mentions(text: str, members: list[MemberName]) -> list[tuple[str, str]]:
+    """把文本里能精确匹配成员的 `@昵称 / ＠昵称 / @QQ号 / @群名片` 拆成文本段与 at 段
+
+    返回 [("text", 文本) | ("at", 用户id), ...]。只转换能匹配到成员的名字，其余原样保留；
+    同名成员（同一名字对应多人）无法判断 @ 的是谁，不自动转换，避免误 @；
+    英文/数字结尾的名字还要求后面不是 ASCII 单词字符，避免把 `@Alice2` 误拆成 `@Alice`。
+    移植自 main 1.6.3（PR #1，`message_builder._split_text_mentions`）。
+    """
+    if not text or not members or not any(mark in text for mark in ("@", "＠")):
+        return [("text", text)]
+    # 名字 → 用户 id；重名且指向不同人时置 None（不转换）
+    targets: dict[str, str | None] = {}
+    for member in members:
+        for name in (member.name, member.user_id):
+            if not name:
+                continue
+            if name in targets and targets[name] != member.user_id:
+                targets[name] = None
+            else:
+                targets[name] = member.user_id
+    ordered = sorted(
+        ((name, uid) for name, uid in targets.items() if name and uid),
+        key=lambda item: len(item[0]),
+        reverse=True,  # 长名字优先，避免短名字抢先匹配
+    )
+    if not ordered:
+        return [("text", text)]
+
+    parts: list[tuple[str, str]] = []
+    cursor = 0
+    search_from = 0
+    while True:
+        at_positions = [pos for pos in (text.find(mark, search_from) for mark in ("@", "＠")) if pos >= 0]
+        if not at_positions:
+            break
+        start = min(at_positions)
+        matched: tuple[str, str] | None = None
+        for name, uid in ordered:
+            end = start + 1 + len(name)
+            if not text.startswith(name, start + 1):
+                continue
+            if _looks_like_ascii_word(name[-1]) and end < len(text) and _looks_like_ascii_word(text[end]):
+                continue
+            matched = (name, uid)
+            break
+        if matched is None:
+            search_from = start + 1
+            continue
+        name, uid = matched
+        if start > cursor:
+            parts.append(("text", text[cursor:start]))
+        parts.append(("at", uid))
+        cursor = start + 1 + len(name)
+        search_from = cursor
+    if cursor < len(text):
+        parts.append(("text", text[cursor:]))
+    return parts or [("text", text)]
 
 
 def migrate_legacy_dirs(data_dir: Path) -> int:

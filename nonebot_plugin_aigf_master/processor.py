@@ -18,7 +18,7 @@ from .config import PluginConfig
 from .context_bus import ContextBus
 from .image_gen_client import ImageGenClient
 from .image_handler import ImageHandler
-from .llm_client import LLMClient
+from .llm_client import ImagePayload, LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
 from .models import ChatMessage, PluginCommand, ReplySegment
@@ -201,6 +201,17 @@ class MessageProcessor:
         self._session: SessionInfo | None = None
         self._session_event = None
 
+    @property
+    def _image_mode(self) -> str:
+        """实际生效的图片理解模式。
+
+        llm 模式下若主模型不支持图片输入（启动探测或运行期判定为不支持），自动回落到 vlm：
+        解析期已把图片转成文字描述，请求期就只发文本，不会整批失败。
+        """
+        if self.config.aigfm_image_mode != "llm":
+            return self.config.aigfm_image_mode
+        return "llm" if self.llm.multimodal else "vlm"
+
     async def load_preset(self, name: str) -> bool:
         preset = self.presets.get(name)
         if not preset:
@@ -353,9 +364,10 @@ class MessageProcessor:
         friends = await self.memory.load_group_friends()
         culture = await self.memory.load_culture()
 
-        # LLM 模式：读取缓存图片的 base64
-        sticker_images: list[str] = []
-        if self.config.aigfm_image_mode == "llm" and cached_stickers:
+        # LLM 模式：读取缓存图片的 base64（连同图片 id，请求期据此在多模态内容里
+        # 给每张图加 [图片 id: xxx] 锚点，和 prompt 正文里的标注一一对应）
+        sticker_images: list[ImagePayload] = []
+        if self._image_mode == "llm" and cached_stickers:
             import base64
             for s in cached_stickers:
                 cache_info = self.memes.get_cache_info(self.session_key, s["id"])
@@ -363,7 +375,10 @@ class MessageProcessor:
                     try:
                         import anyio
                         async with await anyio.open_file(cache_info["path"], "rb") as f:
-                            sticker_images.append(base64.b64encode(await f.read()).decode())
+                            sticker_images.append(ImagePayload(
+                                image_id=s["id"],
+                                data_b64=base64.b64encode(await f.read()).decode(),
+                            ))
                     except Exception as e:
                         logger.error(f"读取缓存图片失败: {e}")
 
@@ -437,7 +452,7 @@ class MessageProcessor:
             plugin_commands=plugin_commands, peer_commands=peer_commands,
             invoked_recent=self._recent_invocations(),
             context_bus_messages=bus_messages,
-            preset=preset, image_mode=self.config.aigfm_image_mode, config=self.config,
+            preset=preset, image_mode=self._image_mode, config=self.config,
         )
 
         # 调用 LLM
@@ -539,7 +554,7 @@ class MessageProcessor:
 
         return reply_segments
 
-    async def _call_llm_with_tools(self, prompt: str, sticker_images: list[str],
+    async def _call_llm_with_tools(self, prompt: str, sticker_images: list[ImagePayload],
                                    plugin_commands: list | None = None,
                                    peer_commands: list | None = None) -> tuple[str | None, bool]:
         # 命令清单为空时不注入命令调用工具：模型看不到工具就不会填「无/none」占位值，
@@ -702,6 +717,7 @@ class MessageProcessor:
             prompt, self.config.aigfm_llm_model, tools, handler,
             json_mode=self.config.aigfm_llm_json_mode,
             first_call_json=self.config.aigfm_llm_tools_json_strict,
+            images=sticker_images if sticker_images else None,
         )
 
     async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = ""):

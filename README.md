@@ -58,9 +58,9 @@
 >
 > 从 2.0 起插件还依赖 `nonebot-plugin-alconna` 与 `nonebot-plugin-uninfo`（跨适配器收发与会话/成员信息），用下面的方式安装时会自动装上。
 
-### 安装 beta 版本（2.0.0b4）
+### 安装 beta 版本（2.0.0b5）
 
-`2.0.0b4` 是**预发布（pre-release）版本**，因此：
+`2.0.0b5` 是**预发布（pre-release）版本**，因此：
 
 - `pip install nonebot-plugin-aigf-master` 装的仍是稳定版 **1.6.x**
 - `nb plugin install nonebot-plugin-aigf-master` 同样只装稳定版，而且 nb-cli **不支持指定版本**，所以 beta 只能用 pip 装
@@ -68,7 +68,7 @@
 要装 beta，**必须显式写出版本号**：
 
 ```bash
-pip install nonebot-plugin-aigf-master==2.0.0b4
+pip install nonebot-plugin-aigf-master==2.0.0b5
 ```
 
 在 `pyproject.toml` 中添加：
@@ -96,9 +96,10 @@ AIGFM_LLM_MODEL="deepseek-v4-flash"                               # LLM 模型�
 AIGFM_ENABLED_GROUPS=["onebot11:123456789", "console:console-chat"]  # 启用的群/频道会话（`适配器:会话id`；也可只写数字，按 OneBot V11 识别）
 AIGFM_ENABLED_PRIVATE=["onebot11:20001"]                          # 启用的私聊会话（同上写法；留空则私聊不响应）
 
-# --- 图片理解（VLM） ---
-AIGFM_IMAGE_MODE="vlm"                  # 图片模式: vlm / llm（默认 vlm）
-AIGFM_VLM_ENABLED=true                  # 是否启用VLM（仅 vlm 模式有效，默认 true）
+# --- 图片理解（多模态 LLM / VLM） ---
+AIGFM_IMAGE_MODE="llm"                  # 图片模式: llm（默认，多模态统一模型）/ vlm（独立视觉模型）
+AIGFM_LLM_MULTIMODAL=""                 # 主模型是否支持图片: 留空=启动时自动探测 / true=强制支持 / false=强制不支持并回落到 vlm
+AIGFM_VLM_ENABLED=true                  # 是否启用VLM（vlm 模式必需；llm 模式主模型不支持图片时作为回落通道，默认 true）
 AIGFM_VLM_MODEL="..."                   # VLM 模型名称（vlm 模式必填）
 AIGFM_VLM_BASE_URL="https://..."        # VLM API 地址
 AIGFM_VLM_API_KEY=""                    # VLM API Key（为空时使用 llm 的 key）
@@ -643,8 +644,18 @@ memes/
 
 | 模式 | 流程 | 适用场景 |
 |------|------|---------|
-| `vlm`（默认） | 图片 → VLM 分析 → 文字描述给 LLM | LLM 不支持图片输入 |
-| `llm` | 图片 → base64 直接附在 LLM prompt 中 | LLM 支持视觉 |
+| `llm`（默认） | 图片 → base64 直接附在 LLM prompt 中 | 主模型支持视觉；推荐用统一多模态模型 |
+| `vlm` | 图片 → VLM 分析 → 文字描述给 LLM | 主 LLM 不支持图片输入 |
+
+> 默认使用 `llm` 模式，适应当前主流多模态模型。若主 LLM 只能处理文字，请显式设置 `AIGFM_IMAGE_MODE=vlm` 并配置 VLM，否则图片请求可能被服务端拒绝。
+
+`llm` 模式下主模型不支持图片时的自动回落：
+
+- 启动时用一张 16×16 的小图探测一次主模型是否接受图片输入，探不过就自动回落到 `vlm` 模式（解析期把图片转成文字描述，请求期只发文本），存量用户升级后不会因为主模型只支持文本而整批不回复
+- 运行期若带图请求被服务端明确拒绝（400/415/422），同样标记为不支持多模态，**下一批**消息起自动回落到 `vlm` 模式
+- 落回 `vlm` 模式需要配好 VLM；`AIGFM_LLM_MULTIMODAL=true/false` 可跳过探测、直接固定判定
+- 图片按 base64 魔数声明真实 MIME（jpeg/png/gif/webp/bmp），并在多模态内容里给每张图加 `[图片 id: xxx]` 锚点，与 prompt 正文的标注一一对应
+- 开启联网搜索等工具调用时，图片同样随首轮 LLM 请求发送（此前工具路径会漏掉图片）
 
 `vlm` 模式下的行为说明：
 
@@ -742,8 +753,10 @@ LLM 支持以下回复类型：
 | 类型 | 格式 | 说明 |
 |------|------|------|
 | 文本 | `{"type": "text", "content": "..."}` | 纯文本消息 |
-| @ | `{"type": "at", "name": "群友昵称"}` | 艾特群友 |
+| @ | `{"type": "at", "name": "群友昵称"}` | 艾特群友（也可填群名片或 QQ 号） |
 | 表情包 | `{"type": "meme", "id": "表情包id"}` | 发送表情包 |
+
+> 要 @ 群友时应使用独立的 `at` 段。为兼容部分模型误把 `@昵称` 写进文本的情况，发送前也会把能匹配到群成员的文本 @（含群名片、QQ 号写法）自动转换为真实 QQ @；重名成员不自动转换，避免误 @ 到别人。
 
 ## 📁 数据存储
 

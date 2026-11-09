@@ -19,7 +19,9 @@ from nonebot_plugin_alconna import (
     At, AtAll, Audio, Emoji, File, Hyper, Image, Other, Reference, Reply, Text, UniMessage, Video, Voice,
 )
 
-from .session import SessionInfo, display_user, resolve_at_target
+from .session import (
+    SessionInfo, display_user, list_member_names, resolve_at_target, split_text_mentions,
+)
 
 # 其余模块（api_hooks/processor）只需图片/JSON 两个提取器
 __all__ = [
@@ -406,11 +408,20 @@ async def compose_unimsg_list(bot: Bot, session: SessionInfo | None,
 
     条目之间由本函数固定插入**一个**空格；文本段的**首尾空白会被去掉**，
     这样即使 LLM 自己多写了空格也不会出现双空格（双空格会让命令参数解析失败）。
+    文本段里能精确匹配成员的 `@昵称 / @群名片 / @QQ号` 会转成真实 at 段（1.6.3 PR #1 行为），
+    匹配不到的 @ 原样保留为文本。
     图片各自独立成条（它前后的文本各成一条）。at 解析不出时跳过该段，并把目标记入 skipped。
     """
     messages: list[UniMessage] = []
     skipped: list[str] = []
     pending = UniMessage()
+    members = None      # 按需加载一次成员名列表（同一批 parts 复用）
+
+    async def member_names():
+        nonlocal members
+        if members is None:
+            members = await list_member_names(bot, session) if session is not None else []
+        return members
 
     def add(segment):
         nonlocal pending
@@ -428,8 +439,18 @@ async def compose_unimsg_list(bot: Bot, session: SessionInfo | None,
         ptype = part.get("type")
         if ptype == "text":
             content = (part.get("content") or "").strip()
-            if content:
-                add(Text(content))
+            if not content:
+                continue
+            pieces = [("text", content)]
+            if "@" in content or "＠" in content:
+                pieces = split_text_mentions(content, await member_names())
+            for kind, value in pieces:
+                if kind == "at":
+                    add(At("user", value))
+                else:
+                    value = value.strip()
+                    if value:
+                        add(Text(value))
         elif ptype == "at":
             target = part.get("target")
             if isinstance(target, int):

@@ -101,6 +101,55 @@ _peer_client = PeerClient(plugin_config.aigfm_peer_bots) if plugin_config.aigfm_
 _processors: dict[str, MessageProcessor] = {}
 
 
+def _effective_image_mode() -> str:
+    """实际生效的图片理解模式。
+
+    llm 模式下若主模型不支持图片输入（启动探测或运行期判定为不支持），自动回落到 vlm 模式：
+    解析期就把图片转成文字描述，请求期只发文本，不会整批请求失败。
+    """
+    if plugin_config.aigfm_image_mode != "llm":
+        return plugin_config.aigfm_image_mode
+    return "llm" if _llm.multimodal else "vlm"
+
+
+async def _resolve_llm_multimodal():
+    """判定主模型是否支持图片输入。
+
+    llm 模式下启动时探一次：探不过就回落到 vlm 模式，避免存量用户升级后
+    （默认模式变成 llm）因主模型只支持文本而整批请求失败。
+    显式配置 aigfm_llm_multimodal 时以配置为准，不再探测。
+    """
+    if plugin_config.aigfm_image_mode != "llm":
+        return
+    forced = plugin_config.aigfm_llm_multimodal
+    if forced is True:
+        _llm.set_multimodal(True)
+        logger.success("[启动] 主模型多模态: 已按配置强制启用")
+    elif forced is False:
+        _llm.set_multimodal(False)
+        logger.warning("[启动] 主模型多模态: 已按配置关闭，图片理解回落到 VLM 模式")
+    else:
+        ok = await _llm.probe_multimodal(plugin_config.aigfm_llm_model)
+        if ok is True:
+            _llm.set_multimodal(True)
+            logger.success("[启动] 主模型多模态: 探测通过")
+        elif ok is False:
+            _llm.set_multimodal(False)
+            logger.warning("[启动] 主模型多模态: 探测不通过，图片理解回落到 VLM 模式")
+        else:
+            logger.warning(
+                "[启动] 主模型多模态: 探测未得出结论，按支持处理"
+                "（若带图请求失败，请显式设置 AIGFM_LLM_MULTIMODAL）")
+    if not _llm.multimodal and not (
+        plugin_config.aigfm_vlm_enabled
+        and plugin_config.aigfm_vlm_model
+        and plugin_config.aigfm_vlm_base_url
+    ):
+        logger.error(
+            "[启动] 未配置 VLM（aigfm_vlm_model / aigfm_vlm_base_url），"
+            "回落后将无法识别图片")
+
+
 def _get_processor(key: str) -> MessageProcessor:
     if key not in _processors:
         _processors[key] = MessageProcessor(
@@ -184,7 +233,7 @@ async def _render_image_text(session_key_: str, image: dict, is_sticker: bool) -
         image_bytes = await _load_image_bytes(image)
         image_base64 = base64.b64encode(image_bytes).decode()
 
-        if plugin_config.aigfm_image_mode == "llm":
+        if _effective_image_mode() == "llm":
             cache_id = await _memes.save_to_cache(session_key_, image_bytes, "", "")
             return f"\n[发送了一张图片, id: {cache_id}]\n"
 
@@ -662,6 +711,7 @@ async def handle_group_notice(bot: Bot, event: Event):
 @get_driver().on_startup
 async def _on_startup():
     logger.success(f"[启动] 图片理解模式: {plugin_config.aigfm_image_mode}")
+    await _resolve_llm_multimodal()
     anime_backend = effective_backend()
     if anime_backend == "off":
         logger.info("[启动] 二次元角色识别: 未启用")
