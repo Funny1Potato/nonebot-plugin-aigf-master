@@ -2,9 +2,12 @@
 
 import asyncio
 import base64
+from copy import deepcopy
 import json
 import random
+from dataclasses import dataclass
 from datetime import datetime
+from uuid import uuid4
 from pathlib import Path
 from typing import NamedTuple
 
@@ -18,6 +21,7 @@ from .config import PluginConfig
 from .context_bus import ContextBus
 from .image_gen_client import ImageGenClient
 from .image_handler import ImageHandler
+from .invocation import DeliveryResult
 from .llm_client import ImagePayload, LLMClient
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
@@ -25,7 +29,11 @@ from .models import ChatMessage, PluginCommand, ReplySegment
 from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
 from .preset_store import PresetStore
-from .prompt_builder import build_prompt
+from .prompt_builder import build_prompt, build_tool_prompt
+from .tool_runtime import BatchContext, ProcessResult, ToolRuntime
+from .tool_handlers import ToolHandlers, start_image_job
+from .tool_schemas import QueryMemory
+from .message_sender import MessageSender
 from .response_parser import extract_command_learning, extract_memory_ops, extract_reply_segments, parse_llm_response
 from .session import SessionInfo, resolve_at_target
 from .unimsg import send_unimsg
@@ -126,13 +134,26 @@ SELF_COMMANDS = {
 }
 
 
+@dataclass
+class _InvocationBatch:
+    """Request context frozen by reference before awaiting LLM; quota shared by retries."""
+    bot: object
+    session: SessionInfo | None
+    event: object
+    user_id: str
+    attempts: int = 0
+    last_delivery: DeliveryResult | None = None
+
+
 class _Invocation(NamedTuple):
     """一次代为执行过的命令记录（台账条目；label 供 prompt 展示，其余字段供去重比对）"""
     time: datetime
     command: str        # 命令名（不含前缀）
     parts_key: str      # 参数指纹（已解析后的 parts 序列化）
     user_id: str        # 调用身份（用户 id）
-    label: str          # prompt 展示用，如 "`今日小猪`（本机，以 111 身份）"
+    label: str          # prompt 展示用
+    status: str = "dispatched"
+    request_id: str = ""
 
 
 def _parts_key(parts: list[dict] | None) -> str:
@@ -190,10 +211,13 @@ class MessageProcessor:
         self.current_preset = ""
         self.recent_messages: list[ChatMessage] = []
         # 「最近的聊天记录」在首次处理时从 memory/{会话}/recent.json 读回（重启后不丢历史）
+        self._effect_recovery_loaded = False
         self._recent_loaded = False
         # 代为执行过的命令台账：既注入 prompt 让模型「看得见自己刚调过什么」，
         # 也作为「最近调用过相同命令」去重的比对依据（见 _find_recent_same）
         self._invoke_log: list[_Invocation] = []
+        self.last_process_result = None
+        self._generation = 0
         self.social_energy = 0.75
         self._bot = None
         self._current_user_id: str = ""
@@ -223,13 +247,17 @@ class MessageProcessor:
 
     def status(self) -> str:
         recent = "\n".join(f"{m.user_name}: {m.content}" for m in self.recent_messages[-15:]) or "没有消息"
-        return f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n\n最近消息：\n{recent}"
+        result = getattr(self, "last_process_result", None)
+        execution = f"{result.stop_reason}（轮次 {result.turns}，工具 {result.tool_calls}）" if result else "尚无批次"
+        return f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n动作协议：{self.config.aigfm_action_protocol}\n最近执行：{execution}\n\n最近消息：\n{recent}"
 
-    def _log_invocation(self, command: str, parts: list[dict], user_id, label: str) -> None:
+    def _log_invocation(self, command: str, parts: list[dict], user_id, label: str,
+                        status: str = "dispatched", request_id: str = "") -> None:
         """记一笔代为执行的命令（供 prompt 展示 + 供「最近调用过相同命令」去重比对）"""
         self._invoke_log.append(_Invocation(
             time=datetime.now(), command=command,
             parts_key=_parts_key(parts), user_id=str(user_id), label=label,
+            status=status, request_id=request_id,
         ))
         keep = max(1, self.config.aigfm_invoke_dedup_records)
         if len(self._invoke_log) > keep:
@@ -276,7 +304,7 @@ class MessageProcessor:
         """拒绝调用：记进最近消息（下一轮 LLM 能看见）并返回给本次调用方"""
         logger.info(f"[调用] 拒绝: command={command}（{reason}）")
         self.recent_messages.append(ChatMessage(
-            time=datetime.now(), user_name=self.bot_name,
+            time=datetime.now(), user_name="系统" if self.config.aigfm_action_protocol == "tools" else self.bot_name,
             content=f"已拒绝调用命令「{command}」（{reason}）",
         ))
         return f"本次调用被拒绝：{reason}。不要重试这条命令；可以改用其它方式，或先和群友说明情况。"
@@ -288,7 +316,7 @@ class MessageProcessor:
             return self._reject_invoke(
                 command, f"社交能量不足（现在 {self.social_energy:.2f}，低于 {energy_min:.2f}）")
         if self.config.aigfm_invoke_dedup_enabled and self._find_recent_same(command, parts, user_id):
-            return self._reject_invoke(command, "刚刚已经执行过完全相同的命令（同样的命令、参数和身份）")
+            return self._reject_invoke(command, "近期已投递或可能已投递完全相同的命令（同样的命令、参数和身份），执行结果尚未据此确认")
         return None
 
     def _consume_invoke_energy(self) -> None:
@@ -299,12 +327,34 @@ class MessageProcessor:
         self.social_energy = max(0.0, self.social_energy - cost)
         logger.info(f"[能量] 消耗: {cost:.3f}（调用插件）, 剩余: {self.social_energy:.3f}")
 
-    async def _resolve_parts(self, raw_parts) -> tuple[list[dict], list[str]]:
+    def _invocation_batch(self) -> _InvocationBatch:
+        return _InvocationBatch(self._bot, self._session, self._session_event, self._current_user_id)
+
+    def _record_delivery(self, command: str, parts: list[dict], uid, route: str,
+                         request_id: str, result: DeliveryResult) -> str:
+        labels = {"not_sent": "未投递", "accepted": "peer 已接收，待确认执行",
+                  "dispatched": "本机已投递，待确认执行", "uncertain": "投递或执行结果不确定"}
+        state = labels[result.status]
+        logger.info(f"[调用] request={request_id} session={self.session_key} route={route} "
+                    f"command={command} user_id={uid} status={result.status}")
+        self.recent_messages.append(ChatMessage(
+            time=datetime.now(), user_name="系统" if self.config.aigfm_action_protocol == "tools" else self.bot_name,
+            content=f"命令「{command}」{state}（{route}，user_id={uid}，请求 {request_id}）",
+        ))
+        if result.may_have_run:
+            self._consume_invoke_energy()
+            self._log_invocation(command, parts, uid,
+                                 f"`{command}`（{route}，以 {uid} 身份；{state}；请求 {request_id}）",
+                                 result.status, request_id)
+        return f"[请求 {request_id}] {result.message}"
+
+    async def _resolve_parts(self, raw_parts, batch: _InvocationBatch | None = None) -> tuple[list[dict], list[str]]:
         """规范化 LLM 给的命令参数段：at 的目标解析成 QQ 号
 
         与回复的 reply 字段同结构。返回 (可直接拼装的 parts, 解析失败的 @ 目标名列表)；
         解析失败的目标会被跳过（不阻断调用），是否提示由调用方决定。
         """
+        batch = batch or self._invocation_batch()
         resolved: list[dict] = []
         skipped: list[str] = []
         if not isinstance(raw_parts, list):
@@ -315,15 +365,15 @@ class MessageProcessor:
             ptype = part.get("type")
             if ptype == "at":
                 target = part.get("name") or part.get("target")
-                uid = await resolve_at_target(self._bot, self._session, target)
+                uid = await resolve_at_target(batch.bot, batch.session, target)
                 if uid:
                     resolved.append({"type": "at", "target": uid})
                 else:
                     skipped.append(str(target or ""))
             elif ptype == "text":
                 content = part.get("content")
-                if content:
-                    resolved.append({"type": "text", "content": str(content)})
+                if content and str(content).strip():
+                    resolved.append({"type": "text", "content": str(content).strip()})
         return resolved, skipped
 
     @staticmethod
@@ -334,9 +384,32 @@ class MessageProcessor:
         logger.warning(f"[调用] @ 目标解析失败: {skipped_ats}")
         return f"（没能识别 @ 目标：{'、'.join(skipped_ats)} —— parts 里的 at 请填群友昵称；本次已跳过该 @）"
 
+    async def run_batch(self, messages, cached_stickers=None) -> ProcessResult:
+        context = BatchContext(self._invocation_batch(), self._generation, self, float("inf"))
+        try:
+            result = await self.process(messages, cached_stickers)
+            if not isinstance(result, ProcessResult):
+                if not result:
+                    result = ProcessResult("legacy_json", getattr(self, "_legacy_stop", "silent"))
+                else:
+                    delivery = await MessageSender(self, context, legacy=True).send_legacy(result)
+                    result = ProcessResult("legacy_json", "completed" if delivery["ok"] else "send_failed",
+                                           effects=[delivery], legacy_reply=result)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            logger.error(f"[处理] {self.session_key} error={type(error).__name__}")
+            result = ProcessResult(self.config.aigfm_action_protocol, "request_error")
+        self.last_process_result = result
+        return result
+
     async def process(
         self, messages: list[ChatMessage], cached_stickers: list[dict] | None = None,
     ) -> list[ReplySegment] | None:
+        messages = deepcopy(messages)
+        self._legacy_stop = "silent"
+        start_generation = self._generation
+        invocation_batch = self._invocation_batch()
         logger.info(f"[处理] {self.session_key} 开始处理 {len(messages)} 条消息")
         for msg in messages:
             logger.debug(f"[处理] 消息: [{msg.user_name}] {msg.content[:80]}")
@@ -349,6 +422,8 @@ class MessageProcessor:
             except Exception as e:
                 logger.error(f"[记忆] 加载聊天记录失败: {e}")
                 restored = []
+            if self._generation != start_generation:
+                return ProcessResult(self.config.aigfm_action_protocol, "reset")
             if restored:
                 self.recent_messages = restored + self.recent_messages
                 logger.info(f"[记忆] {self.session_key} 恢复聊天记录 {len(restored)} 条")
@@ -437,6 +512,40 @@ class MessageProcessor:
         peer_commands = list(peer_map.values())
         logger.debug(f"[命令] 静态: {len(static_commands)}, 学习: {len(learned_commands)}, peer: {len(peer_commands)}")
 
+        if self.config.aigfm_action_protocol == "tools":
+            context = BatchContext(invocation_batch, start_generation, self,
+                                   self.config.aigfm_tool_batch_timeout)
+            if not self._effect_recovery_loaded:
+                from .effect_store import EffectStore
+                from .store_coordinator import read_json
+                try:
+                    reset = read_json(self.memory._group_dir / "tool_reset.json")
+                except (ValueError, OSError):
+                    reset = {}
+                for note in EffectStore.recovery_notes(self.memory._group_dir.parent / "tool_effects",
+                                                       self.session_key, reset.get("at", 0)):
+                    self.recent_messages.append(ChatMessage(datetime.now(), "系统", note))
+                self._effect_recovery_loaded = True
+            context.evidence = {f"m{i}": msg for i, msg in enumerate(messages, 1)}
+            self._tool_prompt_data = dict(
+                bot_name=self.bot_name, bot_role=self.bot_role, social_energy=self.social_energy,
+                recent_messages=self.recent_messages, new_messages=messages, friends=friends,
+                plugin_commands=plugin_commands, peer_commands=peer_commands,
+                invoked_recent=self._recent_invocations(),
+                context_bus_messages=self.context_bus.get_recent(self.session_key, self.config.aigfm_context_in_prompt),
+                meme_prompt_list=self.memes.prompt_list() if self.config.aigfm_meme_enabled else "", cached_stickers=cached_stickers or [],
+                preset=self.presets.get(self.current_preset), config=self.config,
+                passive_memory=None if self.config.aigfm_tool_memory_enabled else {
+                    "short_term": short_term, "long_term": long_term, "culture": culture,
+                    "friends": {uid: {key: value for key, value in friend.items() if key in ("info", "aliases")} for uid, friend in friends.items()}})
+            try:
+                return await self._call_llm_with_tools("", sticker_images, plugin_commands, peer_commands,
+                                                      invocation_batch, tool_context=context)
+            finally:
+                if context.current:
+                    self.recent_messages = self.recent_messages[-_RECENT_KEEP:]
+                    await self._persist_recent()
+
         # 构建 prompt
         preset = self.presets.get(self.current_preset)
         bus_messages = self.context_bus.get_recent(self.session_key, self.config.aigfm_context_in_prompt)
@@ -462,9 +571,15 @@ class MessageProcessor:
 
         async def _request_llm(text_prompt: str) -> str | None:
             """按本批配置发起一次 LLM 请求（工具路径与普通路径保持原样）"""
-            if self.config.aigfm_search_enabled and self.search:
+            use_tools = (
+                (self.config.aigfm_search_enabled and self.search)
+                or (self.config.aigfm_invoke_enabled and
+                    (plugin_commands or (self.peer_client and peer_commands)))
+                or (self.config.aigfm_image_gen_enabled and self.image_gen)
+            )
+            if use_tools:
                 resp, _ = await self._call_llm_with_tools(
-                    text_prompt, sticker_images, plugin_commands, peer_commands)
+                    text_prompt, sticker_images, plugin_commands, peer_commands, invocation_batch)
                 return resp
             return await self.llm.chat(
                 text_prompt, self.config.aigfm_llm_model,
@@ -473,7 +588,10 @@ class MessageProcessor:
             )
 
         response_str = await _request_llm(prompt)
+        if self._generation != start_generation:
+            return ProcessResult("legacy_json", "reset")
         if not response_str:
+            self._legacy_stop = "empty_response"
             logger.warning(f"[处理] {self.session_key} LLM 返回空响应，跳过本批")
             return None
 
@@ -490,11 +608,13 @@ class MessageProcessor:
             )
             response_str = await _request_llm(retry_prompt)
             if not response_str:
+                self._legacy_stop = "empty_response"
                 logger.error("[处理] 重试未获得响应")
                 return None
             logger.info(f"[LLM] 重试响应(len={len(response_str)}): {response_str[:200]}")
             result = parse_llm_response(response_str)
             if not result:
+                self._legacy_stop = "parse_error"
                 logger.error(f"[处理] 重试后仍解析失败 | 头部: {response_str[:200]} | 尾部: {response_str[-120:]}")
                 return None
 
@@ -542,27 +662,21 @@ class MessageProcessor:
                 logger.info("[处理] 模型本批选择不回复（reply 为空或内容为空）")
             return None
 
-        # 更新最近消息
-        self._record_bot_reply(reply_segments)
-        await self._persist_recent()
-
-        # 消耗社交能量
-        text_length = sum(len(s.content) for s in reply_segments if s.type == "text")
-        energy_cost = 0.03 + min(0.12, text_length * 0.002)
-        self.social_energy = max(0.0, self.social_energy - energy_cost)
-        logger.info(f"[能量] 消耗: {energy_cost:.3f}, 剩余: {self.social_energy:.3f}")
-
+        # Actual history/energy accounting belongs to run_batch's sender.
         return reply_segments
 
     async def _call_llm_with_tools(self, prompt: str, sticker_images: list[ImagePayload],
                                    plugin_commands: list | None = None,
-                                   peer_commands: list | None = None) -> tuple[str | None, bool]:
+                                   peer_commands: list | None = None,
+                                   batch: _InvocationBatch | None = None,
+                                   tool_context: BatchContext | None = None):
+        batch = batch or self._invocation_batch()
         # 命令清单为空时不注入命令调用工具：模型看不到工具就不会填「无/none」占位值，
         # 命令学习走 JSON 输出字段，不受影响；学到第一条命令后清单非空，工具自动出现
         plugin_commands = plugin_commands or []
         peer_commands = peer_commands or []
         tools = []
-        if self.config.aigfm_search_enabled:
+        if self.config.aigfm_search_enabled and self.search:
             tools.append({
                 "type": "function", "function": {
                     "name": "search_internet",
@@ -574,7 +688,7 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_plugin",
-                    "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
+                    "description": "【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「可用的群功能」清单中的本机命令，本机与远程命令共享每批调用额度。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到与命令相关的话题词；②群友自己已经把该命令发出去了（插件会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
                     "parameters": {"type": "object", "properties": {
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「可用的群功能」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「其它 bot 的命令」清单里的命令不属于本工具，要用 invoke_peer_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
                         "user_id": {"type": "string", "description": "命令归属的用户 id（可选，可从群友信息中选择任意群友，不同用户调用可能返回不同结果，默认当前消息发送者）"},
@@ -587,7 +701,7 @@ class MessageProcessor:
             tools.append({
                 "type": "function", "function": {
                     "name": "invoke_peer_plugin",
-                    "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），一次回复最多调用 1 次。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
+                    "description": f"【未收到用户的明确执行指令时，绝对不要调用本工具】用于替用户执行「其它 bot 的命令」清单中的命令（bot 在 {peer_names} 中选），本机与远程命令共享每批调用额度。以下情况一律不要调用：①用户只是闲聊/提问/分享，或只是提到相关话题词；②群友自己已经把该命令发出去了（对应 bot 会自动处理，你再调用等于重复执行）；③该命令已出现在「你最近代为执行过的命令」清单里（**原来那条请求还留在聊天记录里也不算重做理由**，只有用户在该记录时间之后又新提出明确要求才可以）。另外：调用后响应可能在下一批才出现，**看不到响应不等于失败**，不要因此重复调用。系统限制：**完全相同的命令（命令+参数+调用身份）短时间内会被直接拒绝**，社交能量不足时也会被拒绝——遇到拒绝不要重试。",
                     "parameters": {"type": "object", "properties": {
                         "bot": {"type": "string", "description": f"目标 bot 名，可选: {peer_names}"},
                         "command": {"type": "string", "description": "命令原文（不带前缀），必须逐字来自「其它 bot 的命令」清单。**只填命令名本身，不要附带任何参数**——要 @ 的群友、附加文字等一律放到 parts 里。「可用的群功能」清单里的本机命令不属于本工具，要用 invoke_plugin。禁止填写 无/没有/none/null 之类占位值，也不要编造清单外的命令名。"},
@@ -609,7 +723,35 @@ class MessageProcessor:
                 },
             })
 
+        for tool in tools:
+            if tool["function"]["name"] in {"invoke_plugin", "invoke_peer_plugin"}:
+                tool["function"]["description"] += f" 当前每批最多尝试 {self.config.aigfm_invoke_max_per_batch} 次，本机与 peer 共用，JSON 解析重试不重置额度。"
+        enabled_tools = {tool["function"]["name"] for tool in tools}
+
+        def reserve(command: str) -> str | None:
+            if batch.attempts >= self.config.aigfm_invoke_max_per_batch:
+                return self._reject_invoke(command, f"本批插件调用次数已达上限 {self.config.aigfm_invoke_max_per_batch}（本机与 peer 共用，含解析重试）")
+            batch.attempts += 1
+            return None
+
+        async def deliver(command, parts, uid, route, request_id, operation):
+            try:
+                result = await operation
+            except asyncio.CancelledError:
+                self._record_delivery(command, parts, uid, route, request_id,
+                                      DeliveryResult("uncertain", "调用等待被取消，命令可能已投递，请勿自动重试"))
+                raise
+            except Exception as e:
+                logger.error(f"[调用] request={request_id} 客户端异常: {type(e).__name__}")
+                result = DeliveryResult("uncertain", "调用客户端异常，命令可能已投递；结果不确定，请勿自动重试")
+            batch.last_delivery = result
+            if tool_context is not None and not tool_context.current:
+                return result.message
+            return self._record_delivery(command, parts, uid, route, request_id, result)
+
         async def handler(name: str, args: dict) -> str:
+            if name in {"invoke_plugin", "invoke_peer_plugin"} and name not in enabled_tools:
+                return self._reject_invoke(str(args.get("command", "")), "本批未开放此调用工具")
             if name == "search_internet" and self.search:
                 query = args.get("query", "")
                 results = await self.search.search(query, self.config.aigfm_search_max_results)
@@ -619,7 +761,10 @@ class MessageProcessor:
                 return formatted
             elif name == "invoke_plugin":
                 command = args.get("command", "")
-                uid = args.get("user_id", self._current_user_id)
+                if not isinstance(command, str) or not command.strip():
+                    return self._reject_invoke("", "缺少有效命令名")
+                command = command.strip()
+                uid = args.get("user_id") or batch.user_id
                 from .plugin_discovery import build_command_plugin_map
                 main = _command_head(command)
                 plugin = build_command_plugin_map().get(main) or self.learner.find_command_plugin(main)
@@ -633,42 +778,30 @@ class MessageProcessor:
                         logger.info(f"[调用] 拒绝: command={command}（插件 {plugin} 不在白名单）")
                         return "该插件不在允许调用的白名单内，已拒绝调用"
                 logger.info(f"[调用] invoke_plugin: command={command}, user_id={uid}")
-                parts, skipped_ats = await self._resolve_parts(args.get("parts"))
+                parts, skipped_ats = await self._resolve_parts(args.get("parts"), batch)
                 at_hint = self._at_hint(skipped_ats)
                 # 调用前置限制：社交能量不足 / 最近调过完全相同的命令 → 拒绝且不投递
                 gate = await self._invoke_gate(command, parts, uid)
                 if gate:
                     return gate
-                outcome = await self.invoker.invoke(
-                    self._bot, self._session, self._session_event, command,
+                limit = reserve(command)
+                if limit:
+                    return limit
+                request_id = uuid4().hex[:12]
+                return await deliver(command, parts, uid, "本机", request_id, self.invoker.invoke_detailed(
+                    batch.bot, batch.session, batch.event, command,
                     self.config.aigfm_invoke_timeout, user_id=uid, parts=parts,
-                )
-                self._consume_invoke_energy()
-                # 记录 bot 自述，让下一次批处理时 LLM 知道这条命令是自己发起的（含选用身份）
-                # 投递成功/超时/出错都要记，否则 LLM 会重复调用同一条命令
-                self.recent_messages.append(ChatMessage(
-                    time=datetime.now(),
-                    user_name=self.bot_name,
-                    content=f"已调用命令「{command}」（user_id={uid}）",
-                ))
-                self._log_invocation(command, parts, uid, f"`{command}`（本机，以 {uid} 身份）")
-                if outcome == "timeout":
-                    logger.warning(f"[调用] invoke_plugin 超时: {command}")
-                    return (f"命令已投递，但插件未在 {int(self.config.aigfm_invoke_timeout)} 秒内完成执行，"
-                            "响应稍后仍可能作为新消息出现，先不要断言失败" + at_hint)
-                if outcome == "error":
-                    logger.error(f"[调用] invoke_plugin 投递失败: {command}")
-                    return "命令投递失败（详见日志），插件不会响应"
-                logger.success(f"[调用] invoke_plugin 已投递: {command}")
-                return ("命令已投递。只有后续聊天记录里真的出现 [插件名]/[bot名] 的响应才算执行成功；"
-                        "一直没有响应说明该命令不存在或无人处理，不要当作已完成" + at_hint)
+                )) + at_hint
             elif name == "invoke_peer_plugin":
                 peer_name = args.get("bot", "")
                 command = args.get("command", "")
-                uid = args.get("user_id", self._current_user_id)
+                if not isinstance(command, str) or not command.strip():
+                    return self._reject_invoke("", "缺少有效命令名")
+                command = command.strip()
+                uid = args.get("user_id") or batch.user_id
                 logger.info(f"[调用] invoke_peer_plugin: bot={peer_name}, command={command}, user_id={uid}")
                 # @ 目标在 Bot A 侧解析（同群、成员列表一致）→ 传给 peer 的永远是纯数字
-                parts, skipped_ats = await self._resolve_parts(args.get("parts"))
+                parts, skipped_ats = await self._resolve_parts(args.get("parts"), batch)
                 at_hint = self._at_hint(skipped_ats)
                 # 调用前置限制：社交能量不足 / 最近调过完全相同的命令（不区分本机/peer）→ 拒绝
                 gate = await self._invoke_gate(command, parts, uid)
@@ -679,21 +812,15 @@ class MessageProcessor:
                     first_at = int(first_at)
                 except (TypeError, ValueError):
                     first_at = 0
-                result = await self.peer_client.invoke(
-                    peer_name, command, int(getattr(self._session, "numeric_chat_id", 0) or 0), uid,
+                limit = reserve(command)
+                if limit:
+                    return limit
+                request_id = uuid4().hex[:12]
+                return await deliver(command, parts, uid, peer_name, request_id, self.peer_client.invoke_detailed(
+                    peer_name, command, int(getattr(batch.session, "numeric_chat_id", 0) or 0), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
                     sender_name=self.bot_name, session=self.session_key,
-                )
-                self._consume_invoke_energy()
-                self.recent_messages.append(ChatMessage(
-                    time=datetime.now(),
-                    user_name=self.bot_name,
-                    content=f"已调用命令「{command}」（{peer_name}，user_id={uid}）",
-                ))
-                self._log_invocation(command, parts, uid, f"`{command}`（{peer_name}）")
-                if at_hint:
-                    result = f"{result}\n{at_hint}"
-                return result
+                )) + at_hint
             elif name == "generate_image":
                 prompt = args.get("prompt", "").strip()
                 if not prompt:
@@ -702,16 +829,33 @@ class MessageProcessor:
                 reference_id = args.get("reference_cache_id", "").strip()
                 uid = args.get("user_id", self._current_user_id)
                 logger.info(f"[生图] 开始: prompt={prompt[:60]}, size={size_desc or '默认方形'}, reference={reference_id or '无'}, user_id={uid}")
-                # 防重复：立即写自述，后台完成后另写一条结果自述
-                self.recent_messages.append(ChatMessage(
-                    time=datetime.now(), user_name=self.bot_name,
-                    content=f"已开始生成图片「{prompt}」",
-                ))
-                task = asyncio.create_task(self._generate_image_bg(prompt, size_desc, uid, reference_id))
-                self._image_gen_tasks.add(task)
-                task.add_done_callback(self._image_gen_tasks.discard)
-                return "图片生成任务已启动，完成后会自动发到群里；生成需要一点时间，期间请不要重复提交相同的生图请求"
+                from .tool_schemas import GenerateImage
+                context = BatchContext(batch, self._generation, self, float("inf"))
+                request = GenerateImage(prompt=prompt, size=size_desc, reference_cache_id=reference_id)
+                result = start_image_job(self, context, MessageSender(self, context, legacy=True), request)
+                await self._persist_recent()
+                if not result["ok"]:
+                    return "图片任务未创建，请查看日志"
+                return f"图片任务已接受（{result['data']['job_id']}），完成后会自动发布；不要重复提交相同请求"
             return f"未知工具: {name}"
+
+        if tool_context is not None:
+            data = self._tool_prompt_data
+            known = set(data["friends"]) | {m.user_id for m in data["new_messages"] if m.user_id}
+            actions = ToolHandlers(self, tool_context, plugin_commands, peer_commands, handler, known)
+            snapshots = []
+            if self.config.aigfm_tool_memory_enabled:
+                await actions.memory.prepare()
+                targets = [("short_term", None), ("long_term", None), ("culture", None)]
+                active = list(dict.fromkeys(m.user_id for m in data["new_messages"] if m.user_id))[:4]
+                targets += [(field, uid) for uid in active for field in ("friend_info", "friend_aliases")]
+                for target, uid in targets:
+                    snapshot = await actions.memory.query(QueryMemory(target=target, owner_id=uid, limit=8))
+                    if len(json.dumps(snapshots + [snapshot["data"]], ensure_ascii=False)) <= 20000:
+                        snapshots.append(snapshot["data"] if snapshot["ok"] else {"target": target, "owner_id": uid, "error": snapshot["code"]})
+            prompt = build_tool_prompt(**data, snapshots=snapshots)
+            runtime = ToolRuntime(self.llm, self.config.model_copy(deep=True), tool_context)
+            return await runtime.run(prompt, actions.tools(), actions, sticker_images)
 
         return await self.llm.chat_with_tools(
             prompt, self.config.aigfm_llm_model, tools, handler,
@@ -720,10 +864,15 @@ class MessageProcessor:
             images=sticker_images if sticker_images else None,
         )
 
-    async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = ""):
+    async def _generate_image_bg(self, prompt: str, size_desc: str, uid: int, reference_id: str = "",
+                                 context=None, job_id=""):
         """后台生图任务：生成 → 发送到群 → VLM 描述 → 写自述（LLM 下一次感知）"""
         try:
-            if not (self._bot and self.image_gen):
+            if context is not None and not context.current:
+                context.generation_jobs[job_id] = "cancelled"
+                return
+            native_bot = context.invocation.bot if context else self._bot
+            if not (native_bot and self.image_gen):
                 self.recent_messages.append(ChatMessage(
                     time=datetime.now(), user_name=self.bot_name,
                     content="图片生成失败：生图功能未就绪",
@@ -762,6 +911,9 @@ class MessageProcessor:
                     content=f"图片生成失败：服务未返回图片（「{prompt}」）",
                 ))
                 return
+            if context is not None and not context.current:
+                context.generation_jobs[job_id] = "cancelled"
+                return
             # 取图片数据（仅返回 url 时下载）
             b64 = result.get("b64")
             if not b64 and result.get("url"):
@@ -775,8 +927,16 @@ class MessageProcessor:
                     content="图片生成失败：无法获取图片数据",
                 ))
                 return
-            target = getattr(self._session, "target", None) or self._session_event
-            await send_unimsg(self._bot, target, UniMessage.image(raw=b64))
+            if context is not None:
+                delivery = await context.sender.send_image(job_id, b64)
+                context.generation_jobs[job_id] = delivery["status"]
+                if delivery["status"] != "sent":
+                    return
+            else:
+                target = getattr(self._session, "target", None) or self._session_event
+                await send_unimsg(native_bot, target, UniMessage.image(raw=base64.b64decode(b64, validate=True)))
+            if context is not None and not context.current:
+                return
             # VLM 描述（本插件自己发的图不会被钩子捕获，需主动描述让 LLM 感知结果）
             desc_text = ""
             if self.image_handler:
@@ -786,17 +946,29 @@ class MessageProcessor:
                         desc_text = f"，内容描述: {info.description}"
                 except Exception:
                     desc_text = ""
+            if context is not None and not context.current:
+                return
             logger.success(f"[生图] 已生成并发送: {prompt[:60]} ({size})")
             self.recent_messages.append(ChatMessage(
                 time=datetime.now(), user_name=self.bot_name,
                 content=f"图片已生成：「{prompt}」（{size}）{desc_text}{reference_note}",
             ))
         except Exception as e:
+            if context is not None:
+                context.generation_jobs[job_id] = "failed"
+                if not context.current:
+                    return
             logger.error(f"[生图] 失败: {e}")
             self.recent_messages.append(ChatMessage(
                 time=datetime.now(), user_name=self.bot_name,
                 content=f"图片生成失败：{e}",
             ))
+        finally:
+            if context is not None:
+                if context.generation_jobs.get(job_id) == "accepted":
+                    context.generation_jobs[job_id] = "failed" if context.current else "cancelled"
+                if context.current:
+                    await self._persist_recent()
 
     async def _save_memes(self, save_meme: list, cached_stickers: list[dict]):
         current_ids = {s["id"] for s in cached_stickers}

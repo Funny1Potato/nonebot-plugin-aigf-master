@@ -12,6 +12,7 @@ from nonebot import logger
 from PIL import Image
 
 from .models import MemeEntry
+from .store_coordinator import atomic_json, meme_write
 
 
 class MemeStore:
@@ -62,6 +63,7 @@ class MemeStore:
             logger.error(f"加载 {path.name} 失败: {e}")
             return {}
 
+    @meme_write
     async def _save_collected(self):
         path = self._data_dir / "collected.json"
         data = [
@@ -69,8 +71,7 @@ class MemeStore:
              "description": m.description, "usage_count": m.usage_count, "saved_at": m.saved_at}
             for m in self._collected_memes.values()
         ]
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        atomic_json(path, data)
 
     def prompt_list(self) -> str:
         lines = []
@@ -89,6 +90,7 @@ class MemeStore:
             self._recent.pop(0)
         return str(self._data_dir / meme.filename)
 
+    @meme_write
     async def persist(self):
         """持久化自动收集表情包索引（含使用次数/保存时间）"""
         await self._save_collected()
@@ -160,6 +162,7 @@ class MemeStore:
     def clear_cache(self, session_key: str):
         self._cache_index.pop(session_key, None)
 
+    @meme_write
     async def save_from_cache(self, session_key: str, cache_id: str, description: str, keywords: list[str]) -> bool:
         cache_info = self._cache_index.get(session_key, {}).get(cache_id)
         if not cache_info:
@@ -182,9 +185,16 @@ class MemeStore:
             id=cache_id, filename=filename, keywords=keywords, description=description,
             saved_at=time.time(),
         )
-        await self._save_collected()
+        try:
+            await self._save_collected()
+        except BaseException:
+            self._collected_memes.pop(cache_id, None)
+            raise
         logger.success(f"[表情包收藏] 已保存: {cache_id} - {description[:30]}")
-        await self.cleanup()
+        try:
+            await self.cleanup()
+        except Exception as error:
+            logger.warning(f"[表情包收藏] 已提交，后续清理失败: {type(error).__name__}")
         return True
 
     @staticmethod
@@ -199,6 +209,7 @@ class MemeStore:
         seldom = 1.0 - usage_norm
         return oldness * seldom
 
+    @meme_write
     async def cleanup(self, max_count: int = 0):
         """自动收集的表情包超过上限时清理。优先删除"旧且用得少"的，保留最近发过的"""
         from .config import plugin_config
@@ -221,10 +232,20 @@ class MemeStore:
         candidates = [m for m in sorted_memes if m.id not in recent_ids] + \
                      [m for m in sorted_memes if m.id in recent_ids]
         to_remove = candidates[:to_delete]
+        previous = self._collected_memes
+        self._collected_memes = {key: value for key, value in previous.items()
+                                 if key not in {m.id for m in to_remove}}
+        try:
+            await self._save_collected()
+        except BaseException:
+            self._collected_memes = previous
+            raise
+        retained_files = {m.filename for m in self.all_memes.values()}
         for meme in to_remove:
-            meme_path = self._data_dir / meme.filename
-            if meme_path.exists():
-                meme_path.unlink()
-            self._collected_memes.pop(meme.id, None)
-        await self._save_collected()
+            if meme.filename in retained_files:
+                continue
+            try:
+                (self._data_dir / meme.filename).unlink(missing_ok=True)
+            except OSError:
+                logger.warning("[清理] 表情包索引已提交，残留文件稍后清理")
         logger.info(f"[清理] 表情包清理: {len(to_remove)} 个")

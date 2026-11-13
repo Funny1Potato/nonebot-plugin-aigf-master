@@ -60,6 +60,12 @@ def register_hooks(bus: ContextBus, image_handler: ImageHandler,
         if plugin_config.aigfm_capture_plugins and source not in plugin_config.aigfm_capture_plugins:
             return
 
+        # Resolve sessions only for sends. uninfo can itself call member/group
+        # APIs; resolving those from this hook re-enters the same API hooks.
+        payload = _message_payload(bot, data)
+        if payload is None:
+            return
+
         # 会话：优先当前事件（响应器上下文里一定有），回落 API 参数
         session = None
         try:
@@ -78,10 +84,6 @@ def register_hooks(bus: ContextBus, image_handler: ImageHandler,
             return
 
         # 必须有消息体才算「发消息」：避免捕获 get_group_member_info 之类的调用
-        payload = _message_payload(bot, data)
-        if payload is None:
-            return
-
         logger.debug(f"[ContextBus] 捕获 outgoing: source={source}, session={session.key}, api={api}")
 
         async def render_image(seg, image_data: dict, is_sticker: bool) -> str:

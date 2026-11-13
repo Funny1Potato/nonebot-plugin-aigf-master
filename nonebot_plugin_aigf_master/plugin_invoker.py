@@ -15,6 +15,7 @@ from nonebot.message import handle_event
 from nonebot_plugin_alconna import UniMessage
 from nonebot_plugin_uninfo import get_interface
 
+from .invocation import DeliveryResult
 from .session import SessionInfo, display_name
 from .unimsg import compose_unimsg_list, plain_text
 
@@ -112,6 +113,11 @@ def _can_hold_message(template, message, expected_text: str) -> bool:
 
     做法是**实测**：塞进副本后能取到非空 `get_message()` 就认（拿不准时保留原行为、由文本替换兜底）。
     """
+    if getattr(type(getattr(template, "message", None)), "model_fields", None):
+        return False
+    descriptor = getattr(type(template), "message", None)
+    if isinstance(descriptor, property) and descriptor.fset is None:
+        return False
     try:
         probe = template.model_copy(update={"message": message})
         text = str(probe.get_message())
@@ -152,7 +158,7 @@ def _is_patchable(value) -> bool:
             or bool(getattr(type(value), "model_fields", None)))
 
 
-def _patch_text_fields(event, old_text: str, new_text: str) -> None:
+def _patch_text_fields(event, old_text: str, new_text: str, message=None) -> None:
     """把事件里出现的旧消息文本替换成新文本（递归进嵌套模型/字典/列表，先复制再改以免污染原事件）
 
     消息文本不总在统一的 `message` 字段里：discord 用 `content`、dodo 用 `message_body`、
@@ -164,6 +170,12 @@ def _patch_text_fields(event, old_text: str, new_text: str) -> None:
         return
 
     def visit(parent, name, value, depth: int, setter) -> None:
+        # Message containers (e.g. Kaiheila event.content) are authoritative,
+        # while a top-level message property may be read-only. Preserve segments.
+        if message is not None and isinstance(value, type(message)):
+            if old_text in value.extract_plain_text():
+                setter(name, deepcopy(message))
+                return
         if isinstance(value, str):
             if old_text in value:
                 try:
@@ -206,24 +218,24 @@ def _patch_text_fields(event, old_text: str, new_text: str) -> None:
     walk(event)
 
 
-def _reset_message_cache(event) -> None:
-    """清掉适配器「懒加载的消息缓存」私有属性（如 Discord 的 `_message` / `_original_message`）
+def _reset_message_cache(event, message=None) -> None:
+    """Refresh eager caches too: Satori stores _message in pydantic extras.
 
-    Discord 的 `get_message()` 是 `if not hasattr(self, "_message"): self._message = ...` —— 结果会
-    缓存在私有属性里，而 `model_copy` 会把这份缓存一起带过来。不清理的话，即使我们换掉了消息体，
-    目标插件调用 `get_message()` 读到的仍是**原来那条消息**，命令永远匹配不上。
-    只动「名字里带 message 的私有属性」，不碰任何协议字段。
+    Deleting constructor-generated caches cannot rebuild them. When the new
+    native message is known, replace message caches with independent copies.
     """
-    for holder in (getattr(event, "__dict__", None), getattr(event, "__pydantic_private__", None)):
+    for holder in (getattr(event, "__dict__", None),
+                   getattr(event, "__pydantic_private__", None),
+                   getattr(event, "__pydantic_extra__", None)):
         if not isinstance(holder, dict):
             continue
         stale = [k for k in holder
                  if k.startswith("_") and not k.startswith("__") and "message" in k.lower()]
         for key in stale:
-            try:
+            if message is not None and key in ("_message", "_original_message"):
+                holder[key] = deepcopy(message)
+            else:
                 holder.pop(key, None)
-            except Exception as e:
-                logger.debug(f"[Invoker] 清理消息缓存 {key} 失败: {e}")
 
 
 class PluginInvoker:
@@ -245,40 +257,36 @@ class PluginInvoker:
     async def invoke(self, bot, session: SessionInfo | None, template_event, command: str,
                      timeout: float = 30.0, user_id=None,
                      parts: list[dict] | None = None) -> InvokeResult:
-        """投递命令并等待分发结束
+        """Compatibility wrapper; use invoke_detailed when delivery state matters."""
+        result = await self.invoke_detailed(bot, session, template_event, command,
+                                            timeout, user_id=user_id, parts=parts)
+        return result.legacy_code
 
-        Args:
-            session: 会话信息（@ 解析、成员信息用）
-            template_event: 该会话最近一条真实消息事件，用作合成事件的模板
-            user_id: 触发命令的用户 id；默认沿用模板事件的发送者
-            parts: 命令参数段（与回复的 reply 字段同结构），如 [{"type":"at","target":12345}]；
-                   条目之间会以空格拼在命令之后
-
-        返回投递结果，不代表插件是否回复。超时只取消本次分发，
-        插件稍后的输出仍会经钩子进入消息缓冲区。
-        """
+    async def invoke_detailed(self, bot, session: SessionInfo | None, template_event,
+                              command: str, timeout: float = 30.0, user_id=None,
+                              parts: list[dict] | None = None) -> DeliveryResult:
+        """Report delivery certainty, never claim that a target plugin succeeded."""
         if template_event is None:
             logger.warning("[Invoker] 该会话没有可复制的真实事件，无法构造调用事件")
-            return "error"
+            return DeliveryResult("not_sent", "没有可复制的真实事件，命令未投递")
         try:
             event = await self._build_event(bot, session, template_event, command, user_id, parts)
         except Exception as e:
             logger.error(f"[Invoker] 构造调用事件失败: {e}")
-            return "error"
+            return DeliveryResult("not_sent", "构造调用事件失败，命令未投递（详见日志）")
 
         self._synthetic[id(event)] = event
         try:
             await asyncio.wait_for(handle_event(bot, event), timeout=timeout)
         except asyncio.TimeoutError:
-            logger.warning(f"[Invoker] 调用超时: {command}")
-            return "timeout"
+            logger.warning(f"[Invoker] 分发超时: {command}")
+            return DeliveryResult("uncertain", "命令已进入分发，但分发超时；可能已产生输出或后台任务，执行结果不确定，请勿自动重试", legacy_code="timeout")
         except Exception as e:
-            logger.error(f"[Invoker] 调用失败: {e}")
-            return "error"
+            logger.error(f"[Invoker] 分发异常: {command}: {e}")
+            return DeliveryResult("uncertain", "命令分发发生异常；部分操作可能已执行，结果不确定，请勿自动重试")
         finally:
             self._synthetic.pop(id(event), None)
-
-        return "ok"
+        return DeliveryResult("dispatched", "命令已投递，尚未确认目标插件执行结果；后续可能收到插件响应，请勿因暂未响应而重试", legacy_code="ok")
 
     @staticmethod
     async def _build_event(bot, session: SessionInfo | None, template, command: str,
@@ -295,10 +303,12 @@ class PluginInvoker:
         command_text = plain_text(unimsg) if unimsg is not None else command
         if _can_hold_message(template, message, command_text):
             update["message"] = message
-            # 部分适配器（onebot 等）另有 original_message（@ 机器人时保留的原文），一并换掉，
-            # 否则 alconna 的 use_origin 路径仍会读到原来的用户消息
-            if hasattr(template, "original_message"):
-                update["original_message"] = message
+        else:
+            structured = getattr(template, "message", None)
+            if getattr(type(structured), "model_fields", None) and isinstance(getattr(structured, "content", None), str):
+                update["message"] = structured.model_copy(update={"content": str(message)})
+        if hasattr(template, "original_message"):
+            update["original_message"] = deepcopy(message)
         if hasattr(template, "raw_message"):
             update["raw_message"] = command_text
         # 合成消息没有引用关系：清掉被复制消息的 reply，避免目标插件以为它在回复某条消息
@@ -324,8 +334,8 @@ class PluginInvoker:
                 pass
         # 消息文本不总在 `message` 字段里（见 _patch_text_fields），补齐后才对得上目标插件
         old_text = _plain_incoming(bot, template)
-        _patch_text_fields(event, old_text, plain_text(unimsg) if unimsg is not None else command)
-        _reset_message_cache(event)
+        _patch_text_fields(event, old_text, plain_text(unimsg) if unimsg is not None else command, message)
+        _reset_message_cache(event, message)
         _refresh_uniseg_cache(event, bot)
         logger.debug(f"[Invoker] 创建 synthetic event: command={command}, session="
                      f"{getattr(session, 'key', '')}, user={user_id}, parts={parts}")

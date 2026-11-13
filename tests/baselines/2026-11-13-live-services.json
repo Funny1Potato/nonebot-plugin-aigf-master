@@ -1,0 +1,2943 @@
+{
+  "date": "2026-11-13",
+  "real_chat_service": false,
+  "records": [
+    {
+      "run_id": "live-services-pkjg2b2b",
+      "report": {
+        "passed": false,
+        "checks": {
+          "master_startup": true,
+          "peer_startup": true,
+          "peer_unauthorized_rejected": true,
+          "peer_allowlist_rejected_management": true,
+          "master_graceful_shutdown": true,
+          "peer_graceful_shutdown": false
+        },
+        "blocked_services": {},
+        "failures": {
+          "setup": "ConnectionClosedError"
+        },
+        "api_actions": [],
+        "states": [],
+        "images": [],
+        "real_chat_service": false,
+        "real_peer_http": true,
+        "real_model_and_services": true
+      },
+      "server-services.json": {
+        "started": true,
+        "diagnostics": [
+          {
+            "level": "WARNING",
+            "message": "Legacy project format found! Upgrade with `nb upgrade-format`."
+          },
+          {
+            "level": "WARNING",
+            "message": "OneBot V11 | WebSocket for Bot 980000 closed by peer"
+          }
+        ],
+        "shutdown_returned": true
+      }
+    },
+    {
+      "run_id": "live-services-6ggrg49r",
+      "report": {
+        "passed": false,
+        "checks": {
+          "master_startup": true,
+          "peer_startup": true,
+          "peer_unauthorized_rejected": true,
+          "peer_allowlist_rejected_management": true,
+          "peer_real_output_pushed_commands": true,
+          "local_actual_plugin_invoked": true,
+          "local_quota_not_repeated": true,
+          "peer_http_invocation_executed": true,
+          "peer_output_return_path": true,
+          "search_failure_not_reported_as_empty_success": true,
+          "image_job_accepted": true,
+          "image_service_returned_valid_image": false,
+          "image_kept_original_session": false,
+          "image_job_not_duplicated": false,
+          "master_graceful_shutdown": true,
+          "peer_graceful_shutdown": true
+        },
+        "blocked_services": {
+          "search": {
+            "code": "SEARCH_HTTP_ERROR",
+            "http_status": 403
+          }
+        },
+        "failures": {},
+        "api_actions": [
+          {
+            "role": "peer",
+            "action": "get_group_info"
+          },
+          {
+            "role": "peer",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "get_group_info"
+          },
+          {
+            "role": "master",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          }
+        ],
+        "states": [
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440044374512,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440044374512,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440072763088,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440072763088,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440072763088,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440042942912,
+                "stop_reason": "completed",
+                "recent_count": 10,
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "failed",
+                    "code": "SEARCH_HTTP_ERROR"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13987,
+                  "completion_tokens": 855,
+                  "total_tokens": 14842
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "failed",
+                    "code": "SEARCH_HTTP_ERROR",
+                    "http_status": 403
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440043979376,
+                "stop_reason": "completed",
+                "recent_count": 14,
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13987,
+                  "completion_tokens": 855,
+                  "total_tokens": 14842
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "failed",
+                    "code": "SEARCH_HTTP_ERROR",
+                    "http_status": 403
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 14208,
+                  "completion_tokens": 304,
+                  "total_tokens": 14512
+                },
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1440043979376,
+                "stop_reason": "completed",
+                "recent_count": 14,
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13164,
+                  "completion_tokens": 586,
+                  "total_tokens": 13750
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13496,
+                  "completion_tokens": 296,
+                  "total_tokens": 13792
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13987,
+                  "completion_tokens": 855,
+                  "total_tokens": 14842
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "failed",
+                    "code": "SEARCH_HTTP_ERROR",
+                    "http_status": 403
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 14208,
+                  "completion_tokens": 304,
+                  "total_tokens": 14512
+                },
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          }
+        ],
+        "images": [],
+        "real_chat_service": false,
+        "real_peer_http": true,
+        "real_model_and_services": true
+      },
+      "server-services.json": {
+        "started": true,
+        "diagnostics": [
+          {
+            "level": "WARNING",
+            "message": "Legacy project format found! Upgrade with `nb upgrade-format`."
+          },
+          {
+            "level": "ERROR",
+            "message": "[搜索] Bocha 失败: Client error '403 ' for url 'https://api.bochaai.com/v1/web-search'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403"
+          },
+          {
+            "level": "ERROR",
+            "message": "[生图] 失败: Error code: 404 - {'error': {'code': 'UnsupportedModel', 'message': 'The requested model does not support the agent plan feature. Please refer to the documentation at https://www.volcengine.com/docs/82379/2366394 to select a compatible model. Request id: 021794558648661dc6263e9e52ba05a43f20bd75063a4f8fedf7f', 'param': '', 'type': ''}}"
+          },
+          {
+            "level": "WARNING",
+            "message": "OneBot V11 | WebSocket for Bot 980000 closed by peer"
+          }
+        ],
+        "shutdown_returned": true
+      }
+    },
+    {
+      "run_id": "live-services-fkj0lrtf",
+      "report": {
+        "passed": true,
+        "checks": {
+          "master_startup": true,
+          "peer_startup": true,
+          "peer_unauthorized_rejected": true,
+          "peer_allowlist_rejected_management": true,
+          "peer_real_output_pushed_commands": true,
+          "local_actual_plugin_invoked": true,
+          "local_quota_not_repeated": true,
+          "peer_http_invocation_executed": true,
+          "peer_output_return_path": true,
+          "search_live_results_received": true,
+          "image_job_accepted": true,
+          "image_service_returned_valid_image": true,
+          "image_kept_original_session": true,
+          "image_job_not_duplicated": true,
+          "master_graceful_shutdown": true,
+          "peer_graceful_shutdown": true
+        },
+        "blocked_services": {},
+        "failures": {},
+        "api_actions": [
+          {
+            "role": "peer",
+            "action": "get_group_info"
+          },
+          {
+            "role": "peer",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "get_group_info"
+          },
+          {
+            "role": "master",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "get_group_info"
+          },
+          {
+            "role": "master",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          }
+        ],
+        "states": [
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672615138768,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672615138768,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672614443232,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672614443232,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672614443232,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672643102320,
+                "stop_reason": "completed",
+                "recent_count": 11,
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "ok",
+                    "code": "SEARCH_RESULTS"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 18341,
+                  "completion_tokens": 688,
+                  "total_tokens": 19029
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "ok",
+                    "code": "SEARCH_RESULTS",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672614442992,
+                "stop_reason": "completed",
+                "recent_count": 14,
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 18341,
+                  "completion_tokens": 688,
+                  "total_tokens": 19029
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "ok",
+                    "code": "SEARCH_RESULTS",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 14828,
+                  "completion_tokens": 347,
+                  "total_tokens": 15175
+                },
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 1,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672614442992,
+                "stop_reason": "completed",
+                "recent_count": 16,
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": 1672614443328,
+                "stop_reason": "completed",
+                "recent_count": 2,
+                "effects": [
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": true,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13031,
+                  "completion_tokens": 620,
+                  "total_tokens": 13651
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13464,
+                  "completion_tokens": 303,
+                  "total_tokens": 13767
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 18341,
+                  "completion_tokens": 688,
+                  "total_tokens": 19029
+                },
+                "effects": [
+                  {
+                    "tool": "search_internet",
+                    "status": "ok",
+                    "code": "SEARCH_RESULTS",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 14828,
+                  "completion_tokens": 347,
+                  "total_tokens": 15175
+                },
+                "effects": [
+                  {
+                    "tool": "generate_image",
+                    "status": "accepted",
+                    "code": "IMAGE_JOB_ACCEPTED",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980102",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 8418,
+                  "completion_tokens": 143,
+                  "total_tokens": 8561
+                },
+                "effects": [
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0,
+              "onebot11:980102": 0
+            }
+          }
+        ],
+        "images": [
+          {
+            "file": "generated-2000015.png",
+            "size": [
+              2560,
+              2560
+            ],
+            "sha256": "e7cde71e02ccdcba5901043420bf1b605c037b6f945b889d0658a389d0af2b07"
+          }
+        ],
+        "real_chat_service": false,
+        "real_peer_http": true,
+        "real_model_and_services": true
+      },
+      "server-services.json": {
+        "started": true,
+        "diagnostics": [
+          {
+            "level": "WARNING",
+            "message": "Legacy project format found! Upgrade with `nb upgrade-format`."
+          },
+          {
+            "level": "WARNING",
+            "message": "[VLM] VLM 未启用，跳过图片分析"
+          },
+          {
+            "level": "WARNING",
+            "message": "OneBot V11 | WebSocket for Bot 980000 closed by peer"
+          }
+        ],
+        "shutdown_returned": true
+      }
+    },
+    {
+      "run_id": "live-services-6_btrkbz",
+      "report": {
+        "passed": false,
+        "checks": {
+          "master_startup": true,
+          "peer_startup": true,
+          "peer_unauthorized_rejected": true,
+          "peer_allowlist_rejected_management": true,
+          "peer_real_output_pushed_commands": true,
+          "local_actual_plugin_invoked": true,
+          "local_quota_not_repeated": true,
+          "peer_http_invocation_executed": true,
+          "master_graceful_shutdown": true,
+          "peer_graceful_shutdown": true
+        },
+        "blocked_services": {},
+        "failures": {
+          "peer": "TimeoutError"
+        },
+        "api_actions": [
+          {
+            "role": "peer",
+            "action": "get_group_info"
+          },
+          {
+            "role": "peer",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "get_group_info"
+          },
+          {
+            "role": "master",
+            "action": "get_group_member_info"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "peer",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          },
+          {
+            "role": "master",
+            "action": "send_msg"
+          }
+        ],
+        "states": [
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672886106672,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13054,
+                  "completion_tokens": 467,
+                  "total_tokens": 13521
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1672886106672,
+                "stop_reason": "completed",
+                "recent_count": 4,
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13054,
+                  "completion_tokens": 467,
+                  "total_tokens": 13521
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 0
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1670801494352,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13054,
+                  "completion_tokens": 467,
+                  "total_tokens": 13521
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13499,
+                  "completion_tokens": 366,
+                  "total_tokens": 13865
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          },
+          {
+            "plugins": [
+              "echo",
+              "nonebot_plugin_aigf_master",
+              "nonebot_plugin_alconna",
+              "nonebot_plugin_apscheduler",
+              "nonebot_plugin_localstore",
+              "nonebot_plugin_rollpig_plus",
+              "nonebot_plugin_uninfo",
+              "nonebot_plugin_waiter",
+              "uniseg"
+            ],
+            "bots": 1,
+            "batches": {
+              "onebot11:980101": {
+                "result_id": 1670801494352,
+                "stop_reason": "completed",
+                "recent_count": 7,
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY"
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY"
+                  }
+                ]
+              },
+              "onebot11:980102": {
+                "result_id": null,
+                "stop_reason": null,
+                "recent_count": 0,
+                "effects": []
+              }
+            },
+            "startup_tasks": 2,
+            "runtime_source": true,
+            "peer_commands": {
+              "integration_peer": [
+                {
+                  "name": "echo",
+                  "description": "重复你说的话"
+                }
+              ]
+            },
+            "peer_result_in_context": false,
+            "observed_batches": [
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13054,
+                  "completion_tokens": 467,
+                  "total_tokens": 13521
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_plugin",
+                    "status": "dispatched",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              },
+              {
+                "session": "onebot11:980101",
+                "stop_reason": "completed",
+                "usage": {
+                  "prompt_tokens": 13499,
+                  "completion_tokens": 366,
+                  "total_tokens": 13865
+                },
+                "effects": [
+                  {
+                    "tool": "invoke_peer_plugin",
+                    "status": "accepted",
+                    "code": "COMMAND_DELIVERY",
+                    "http_status": null
+                  },
+                  {
+                    "tool": "send_message",
+                    "status": "sent",
+                    "code": "MESSAGE_DELIVERY",
+                    "http_status": null
+                  }
+                ]
+              }
+            ],
+            "pending_images": 0,
+            "chunks": {
+              "onebot11:980101": 1
+            }
+          }
+        ],
+        "images": [],
+        "real_chat_service": false,
+        "real_peer_http": true,
+        "real_model_and_services": true
+      },
+      "server-services.json": {
+        "started": true,
+        "diagnostics": [
+          {
+            "level": "WARNING",
+            "message": "Legacy project format found! Upgrade with `nb upgrade-format`."
+          },
+          {
+            "level": "WARNING",
+            "message": "OneBot V11 | WebSocket for Bot 980000 closed by peer"
+          }
+        ],
+        "shutdown_returned": true
+      }
+    }
+  ],
+  "regression": {
+    "master_py310": [
+      {
+        "suite": "v_anime_chain_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_anime_chain_test.py.log"
+      },
+      {
+        "suite": "v_beta_port_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_beta_port_test.py.log"
+      },
+      {
+        "suite": "v_cache_cleanup_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_cache_cleanup_test.py.log"
+      },
+      {
+        "suite": "v_event_copy_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_event_copy_test.py.log"
+      },
+      {
+        "suite": "v_invocation_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_invocation_test.py.log"
+      },
+      {
+        "suite": "v_ma_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_ma_test.py.log"
+      },
+      {
+        "suite": "v_notice_fallback_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_notice_fallback_test.py.log"
+      },
+      {
+        "suite": "v_notice_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_notice_test.py.log"
+      },
+      {
+        "suite": "v_parser_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_parser_test.py.log"
+      },
+      {
+        "suite": "v_recent_persist_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_recent_persist_test.py.log"
+      },
+      {
+        "suite": "v_search_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_search_test.py.log"
+      },
+      {
+        "suite": "v_simulated_session_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_simulated_session_test.py.log"
+      },
+      {
+        "suite": "v_tool_protocol_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-457506/v_tool_protocol_test.py.log"
+      }
+    ],
+    "master_py314_matrix": [
+      {
+        "suite": "v_anime_chain_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_anime_chain_test.py.log"
+      },
+      {
+        "suite": "v_beta_port_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_beta_port_test.py.log"
+      },
+      {
+        "suite": "v_cache_cleanup_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_cache_cleanup_test.py.log"
+      },
+      {
+        "suite": "v_event_copy_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_event_copy_test.py.log"
+      },
+      {
+        "suite": "v_invocation_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_invocation_test.py.log"
+      },
+      {
+        "suite": "v_ma_adapters_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_ma_adapters_test.py.log"
+      },
+      {
+        "suite": "v_ma_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_ma_test.py.log"
+      },
+      {
+        "suite": "v_notice_adapters_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_notice_adapters_test.py.log"
+      },
+      {
+        "suite": "v_notice_fallback_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_notice_fallback_test.py.log"
+      },
+      {
+        "suite": "v_notice_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_notice_test.py.log"
+      },
+      {
+        "suite": "v_parser_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_parser_test.py.log"
+      },
+      {
+        "suite": "v_recent_persist_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_recent_persist_test.py.log"
+      },
+      {
+        "suite": "v_search_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_search_test.py.log"
+      },
+      {
+        "suite": "v_simulated_session_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_simulated_session_test.py.log"
+      },
+      {
+        "suite": "v_tool_protocol_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-533664/v_tool_protocol_test.py.log"
+      }
+    ],
+    "peer_py310": [
+      {
+        "suite": "v_event_copy_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-477300/v_event_copy_test.py.log"
+      },
+      {
+        "suite": "v_peer_ma_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163402-477300/v_peer_ma_test.py.log"
+      }
+    ],
+    "peer_py314_runtime": [
+      {
+        "suite": "v_event_copy_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163656-415120/v_event_copy_test.py.log"
+      },
+      {
+        "suite": "v_peer_ma_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163656-415120/v_peer_ma_test.py.log"
+      }
+    ],
+    "master_py314_runtime": [
+      {
+        "suite": "v_tool_protocol_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-163656-404096/v_tool_protocol_test.py.log"
+      }
+    ]
+  },
+  "updated_services": {
+    "search": "deepseek",
+    "image_model": "MiniMax-H3-Image"
+  },
+  "source_sha256": {
+    "master": {
+      "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+      "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+      "api_hooks.py": "020f2458e25287eaa7b980d01a6e0c5a5110fb82c8c491f62efad3bbd4887126",
+      "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+      "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+      "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+      "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+      "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+      "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+      "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+      "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+      "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+      "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+      "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+      "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+      "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+      "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+      "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+      "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+      "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+      "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+      "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+      "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+      "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+      "search_client.py": "e808333a041c019cbef66046aad509f08a461a89f119c7727d7a11b04a619259",
+      "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+      "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+      "tool_handlers.py": "dc07cf7be84ddb2406631ce711095c47e442fe09cf78534e3cdfd53bf3a3d9fc",
+      "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+      "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+      "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+      "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+      "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+      "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+    },
+    "peer": {
+      "config.py": "65c5b42d8d8272581d17dcdd13e3adaaf86aa49ca5173f5c22f9153413f091b0",
+      "__init__.py": "0d4934842edd62bd6196fce1efb72ab3e4443673b5404b826daf3abf26091f6d"
+    }
+  },
+  "harness_sha256": {
+    "run_service_checks.py": "16d4d47491b936ace2787da221b1ffc45044e4d5d88561b319cb74a45f072f24",
+    "run_connected_platform.py": "9772bc67d5c73c718aa368e9f08a4c35cc886938e783d98952997f7c19edbaae"
+  },
+  "openwebsearch-service-probe.json": {
+    "backend": "openwebsearch",
+    "daemon_ready": true,
+    "result_count": 2,
+    "error": null,
+    "nonempty_snippets": 2
+  },
+  "updated-search-service-probe.json": {
+    "backend": "deepseek",
+    "result_count": 2,
+    "error": null,
+    "valid_urls": true
+  },
+  "real-memory-copy-report.json": {
+    "copied_json_files": 6,
+    "groups_checked": 3,
+    "migration_errors": 0,
+    "semantic_content_preserved": true,
+    "references_stable_on_second_prepare": true,
+    "original_files_unchanged": true,
+    "pre_tools_backups": 3,
+    "network_used": false
+  }
+}

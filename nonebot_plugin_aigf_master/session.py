@@ -149,6 +149,39 @@ def _from_uninfo(bot: Bot, event: Event, sess) -> SessionInfo:
     )
 
 
+def _notice_session(bot: Bot, event: Event) -> SessionInfo | None:
+    """Narrow fallback for notice types absent from uninfo/Target exporters.
+
+    Only explicit room/group identifiers with the same shape as message sessions
+    are supported. Guild-only events must not be assigned to an arbitrary channel.
+    No sending target or user-message template is invented here.
+    """
+    if event.get_type() != "notice":
+        return None
+    slug = adapter_slug(bot.adapter.get_name())
+    paths = {
+        "feishu": (("event", "chat_id"), ("event", "event", "chat_id")),
+        "kritor": (("group_id",),),
+        "bilibililive": (("room_id",),),
+    }.get(slug, ())
+    native_id = ""
+    for path in paths:
+        value = event
+        for field in path:
+            value = value.get(field) if isinstance(value, dict) else getattr(value, field, None)
+        if isinstance(value, (str, int)) and not isinstance(value, bool) and str(value).strip() not in ("", "0"):
+            native_id = str(value).strip()
+            break
+    if not native_id:
+        return None
+    return SessionInfo(
+        key=session_key(slug, native_id), slug=slug, scene_path=native_id,
+        native_chat_id=native_id, adapter_name=bot.adapter.get_name(),
+        scene_type=SceneType.GROUP, member_scene_type=SceneType.GROUP,
+        member_scene_id=native_id, user_id=event_user_id(event),
+    )
+
+
 async def resolve_session(bot: Bot, event: Event) -> SessionInfo | None:
     """解析事件所属会话；适配器不支持时返回 None（该条消息跳过）"""
     try:
@@ -170,7 +203,10 @@ async def resolve_session(bot: Bot, event: Event) -> SessionInfo | None:
         target = get_target(event, bot)
     except Exception as e:
         logger.debug(f"[会话] {bot.adapter.get_name()} 无法解析会话: {e}")
-        return None
+        fallback = _notice_session(bot, event)
+        if fallback is not None:
+            logger.debug(f"[会话] 通知显式会话字段回落: {fallback.key}")
+        return fallback
     scene_path = f"{target.parent_id}_{target.id}" if (target.channel and target.parent_id) else target.id
     slug = adapter_slug(bot.adapter.get_name())
     return SessionInfo(

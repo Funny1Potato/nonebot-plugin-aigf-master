@@ -432,41 +432,16 @@ async def _batch_processor(session_key_: str):
         stickers = _memes.get_cached(session_key_)
 
         try:
-            responses = await processor.process(messages, cached_stickers=stickers)
+            batch_result = await processor.run_batch(messages, cached_stickers=stickers)
         except Exception as e:
             logger.error(f"[处理失败] {session_key_}: {e}")
             import traceback
             traceback.print_exc()
             continue
 
-        if not responses:
-            continue
-
-        # 发送回复（段落拼装与插件调用共用 compose_unimsg_list）
-        try:
-            parts = []
-            for resp in responses:
-                if resp.type == "text":
-                    parts.append({"type": "text", "content": resp.content})
-                elif resp.type == "at":
-                    parts.append({"type": "at", "target": resp.user_name})
-                elif resp.type == "meme":
-                    path = _memes.resolve(resp.meme_id)
-                    if path:
-                        parts.append({"type": "image", "path": path})
-            if not parts:
-                continue
-            target = getattr(processor._session, "target", None) or event
-            messages, _ = await compose_unimsg_list(bot, processor._session, parts)
-            for msg in messages:
-                await send_unimsg(bot, target, msg)
-            # 与旧实现一致的日志语义：仅当结尾还有文本消息要发时才记成功
-            if messages and messages[-1] and isinstance(messages[-1][0], Text):
-                logger.success("[发送] 消息已发送")
-            if any(p["type"] == "image" for p in parts):
-                await _memes.persist()
-        except Exception as e:
-            logger.error(f"发送消息失败: {e}")
+        # run_batch owns both protocol paths and all sending; no second reply path.
+        if batch_result.stop_reason not in ("completed", "turn_limit"):
+            logger.info(f"[处理] {session_key_} stop={batch_result.stop_reason}")
 
 
 # ========== 命令注册 ==========
@@ -559,6 +534,11 @@ async def _(bot: Bot, event: Event):
     processor = _get_processor(session.key)
     processor.bot_name = "小助手"
     processor.bot_role = "一个友好的群聊助手"
+    processor._generation += 1
+    from .store_coordinator import atomic_json
+    import time
+    atomic_json(processor.memory._group_dir / "tool_reset.json", {"at": time.time()})
+    processor._effect_recovery_loaded = True
     processor.recent_messages.clear()
     # 落盘的聊天记录一起清，否则重置后重启又会把旧历史读回来
     await processor.memory.clear_recent()
@@ -710,6 +690,8 @@ async def handle_group_notice(bot: Bot, event: Event):
 
 @get_driver().on_startup
 async def _on_startup():
+    from .effect_store import EffectStore
+    EffectStore.cleanup(_data_dir / "memory" / "tool_effects")
     logger.success(f"[启动] 图片理解模式: {plugin_config.aigfm_image_mode}")
     await _resolve_llm_multimodal()
     anime_backend = effective_backend()

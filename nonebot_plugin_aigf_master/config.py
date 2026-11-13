@@ -7,6 +7,13 @@ from pydantic import BaseModel, Field
 
 
 class PluginConfig(BaseModel):
+    aigfm_action_protocol: Literal["legacy_json", "tools"] = Field("legacy_json", description="整批动作协议；tools 不读取最终 JSON，也不发布普通结束文本")
+    aigfm_llm_max_tool_turns: int = Field(3, ge=1, le=8)
+    aigfm_tool_max_calls: int = Field(12, ge=1, le=64)
+    aigfm_tool_batch_timeout: float = Field(180.0, gt=0, le=1800)
+    aigfm_tool_send_max_messages: int = Field(3, ge=1, le=10)
+    aigfm_tool_memory_enabled: bool = Field(True)
+
     # LLM 配置
     aigfm_llm_api_key: str = Field(..., description="LLM API Key")
     aigfm_llm_model: str = Field("gpt-3.5-turbo", description="LLM 模型名称")
@@ -100,6 +107,7 @@ class PluginConfig(BaseModel):
     # 插件调用
     aigfm_invoke_enabled: bool = Field(True, description="是否允许 LLM 调用其它插件")
     aigfm_invoke_timeout: float = Field(30.0, description="插件调用超时时间（秒）")
+    aigfm_invoke_max_per_batch: int = Field(1, ge=1, description="每批命令投递尝试上限，本机与 peer 共用，含 JSON 解析重试；默认 1")
     aigfm_invoke_dedup_enabled: bool = Field(True, description="拒绝调用最近调用过的相同命令（命令+参数+调用身份完全相同）")
     aigfm_invoke_dedup_window: float = Field(1200.0, description="去重时间窗口（秒，默认 1200=20 分钟；0=不限时间，只看最近 N 条台账）")
     aigfm_invoke_dedup_records: int = Field(15, description="去重比对保留的调用台账条数（默认 15；prompt 里只展示其中最近 10 条）")

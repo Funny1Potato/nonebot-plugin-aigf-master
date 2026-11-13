@@ -1,0 +1,1541 @@
+{
+  "date": "2026-11-13",
+  "real_platform": false,
+  "synthetic_data_only": true,
+  "checks_per_run": 15,
+  "records": [
+    {
+      "run_id": "simulated-session-uxtb286s",
+      "parent": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-blr70rzm",
+      "parent": {
+        "live_model": true,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 6,
+        "requests": [
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3245
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": 3311
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": 3388
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3617
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": 3746
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "query_memory"
+            ],
+            "total_tokens": 3458
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": 3608
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3868
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3333
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": 3378
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": true,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3614
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": 3498
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-woyu8a99",
+      "parent": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-w42zapus",
+      "parent": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-i0l6jzki",
+      "parent": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-irs64f2b",
+      "parent": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": false,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": null
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": null
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    },
+    {
+      "run_id": "simulated-session-2odwx2lq",
+      "parent": {
+        "live_model": true,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": false,
+        "checks": {
+          "disabled_session_rejected": true,
+          "two_messages_batched": true,
+          "memory_committed": true,
+          "native_at_original_user": true,
+          "overlapping_sessions_keep_targets": true,
+          "other_session_memory_unchanged": true,
+          "migration_backup_preserved": true,
+          "correction_keeps_entry_identity": true,
+          "fresh_process_recovery": true,
+          "reset_clears_disk_and_memory_history": true,
+          "reset_retains_committed_memory": true,
+          "reset_history_not_reimported": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 5,
+        "requests": [
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3347
+          },
+          {
+            "session": "B",
+            "stage": "chat",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": 3303
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": 3679
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3755
+          },
+          {
+            "session": "A",
+            "stage": "add",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": 3720
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 1,
+            "tools": [
+              "update_memory"
+            ],
+            "total_tokens": 3693
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3661
+          },
+          {
+            "session": "A",
+            "stage": "modify",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": 3828
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 1,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3444
+          },
+          {
+            "session": "A",
+            "stage": "after_reset",
+            "turn": 2,
+            "tools": [],
+            "total_tokens": 3449
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      },
+      "recovery": {
+        "live_model": true,
+        "real_platform": false,
+        "synthetic_data_only": true,
+        "fresh_process": true,
+        "checks": {
+          "fresh_process_starts_without_history_cache": true,
+          "restored_color_from_disk": true,
+          "restored_chat_history": true
+        },
+        "passed": true,
+        "error_type": null,
+        "platform_sends": 1,
+        "requests": [
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 1,
+            "tools": [
+              "query_memory"
+            ],
+            "total_tokens": 3685
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 2,
+            "tools": [
+              "send_message"
+            ],
+            "total_tokens": 3602
+          },
+          {
+            "session": "A",
+            "stage": "recall",
+            "turn": 3,
+            "tools": [],
+            "total_tokens": 3703
+          }
+        ],
+        "harness_sha256": "61732ff4df2f02d71d8f62fec37b99860e72087c552e5569a216292a2ced1c3e",
+        "source_sha256": {
+          "animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+          "anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+          "api_hooks.py": "3dae9187070869675b292ebc39da8ec53830e2c0eef17b5ae85168a083fa23f2",
+          "cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+          "command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+          "config.py": "68f0b6f916ada318cab34c4b968d14ca59c68d0cf985f11d4ad39baa47913e8c",
+          "context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+          "effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+          "image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+          "image_handler.py": "cc740d649bdbf274c9250a4d18b21be754061d692f67fcd101bfff33c053625a",
+          "invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+          "llm_client.py": "bafbc2611fd3f996bfbc39006e5992a40a550e81826bfed2c7c687ab8544563a",
+          "meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+          "memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+          "message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+          "models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+          "notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+          "peer_client.py": "74c37976a375c10b96681c506047c2850a7bc186043e996e957c9e5eccb956fc",
+          "plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+          "plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+          "preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+          "processor.py": "dc54c590e3e3cd45ef3d0f842f9def6d69f2c5494272801a6984113c9b78e904",
+          "prompt_builder.py": "b7b6f3b24ada0759f0b4b5c2862d695c97cc15c62932d3d785cbb8d9f9ead7e5",
+          "response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+          "search_client.py": "f5c4fd68ec88c426a4852ad95971160315f9c0c1326c720f9ac4ba897999d470",
+          "session.py": "e6779c087d7f56c6d4ca92c80838f3c04e320c9ddca8cf2df90bee4cf042650a",
+          "store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+          "tool_handlers.py": "4e9df39f244cef8347fda52a20addcd4f79c1aa79f2ab7fd9b3be602238d2f37",
+          "tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+          "tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+          "tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+          "unimsg.py": "344bddc9527801c0c9c7bd7aabd1567fe92cebc7d4128bc879b873b275a78f5e",
+          "vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+          "__init__.py": "38ed915f42d62755be6f3ea123b741af365aae600cf4166e38fa084e1b3f85f7"
+        }
+      }
+    }
+  ],
+  "regression": {
+    "py310": [
+      {
+        "suite": "v_simulated_session_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-155112-309891/v_simulated_session_test.py.log"
+      }
+    ],
+    "runtime_py314": [
+      {
+        "suite": "v_simulated_session_test.py",
+        "status": "PASS",
+        "exit_code": 0,
+        "log": ".results/20261113-155112-331038/v_simulated_session_test.py.log"
+      }
+    ]
+  }
+}

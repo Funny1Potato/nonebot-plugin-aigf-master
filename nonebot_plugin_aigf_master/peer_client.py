@@ -3,6 +3,8 @@
 import httpx
 from nonebot import logger
 
+from .invocation import DeliveryResult
+
 
 class PeerClient:
     """向其它 bot 发起远程插件调用（结果由对方钩子推回，本客户端只发调用请求）"""
@@ -20,18 +22,19 @@ class PeerClient:
     async def invoke(self, peer_name: str, command: str, group_id: int, user_id: int = 0,
                      parts: list[dict] | None = None, at_user_id: int = 0,
                      timeout: float = 30.0, sender_name: str = "", session: str = "") -> str:
-        """远程调用其它 bot 的插件命令，返回确认信息
+        """Compatibility wrapper returning the acknowledgement text."""
+        result = await self.invoke_detailed(peer_name, command, group_id, user_id,
+                                            parts, at_user_id, timeout, sender_name, session)
+        return result.message
 
-        parts 为命令参数段（at 已在本侧解析成数字），at_user_id 取首个 at 供未升级的 peer 兼容。
-        sender_name 是对方合成事件的发送者昵称（当前群预设名），未升级的 peer 会忽略该字段。
-        session 是本会话键（`适配器:会话id`），peer 0.4.0+ 用它定位要复制哪个会话的真实事件；
-        未升级的 peer 忽略该字段、只用 group_id（仅 OneBot）。
-        插件执行结果由对方 on_calling_api 钩子推送到本 bot 的 /peer/capture，
-        因此这里只负责发出调用请求并返回执行确认。
-        """
+    async def invoke_detailed(self, peer_name: str, command: str, group_id: int,
+                              user_id: int = 0, parts: list[dict] | None = None,
+                              at_user_id: int = 0, timeout: float = 30.0,
+                              sender_name: str = "", session: str = "") -> DeliveryResult:
+        """HTTP acknowledgement only; peer execution and output arrive asynchronously."""
         cfg = self._peers.get(peer_name)
         if not cfg:
-            return f"未知 bot: {peer_name}"
+            return DeliveryResult("not_sent", f"未知 bot: {peer_name}，命令未投递")
         url = f"http://127.0.0.1:{cfg['port']}/peer/invoke"
         headers = {"Authorization": f"Bearer {cfg.get('token', '')}"}
         payload = {"command": command, "group_id": group_id, "user_id": user_id,
@@ -41,9 +44,22 @@ class PeerClient:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 resp.raise_for_status()
-                logger.success(f"[Peer] 调用 {peer_name} 成功: {command}")
-                return (f"命令已投递给 {peer_name}。只有后续聊天记录里出现 [{peer_name}] 的响应才算执行成功；"
-                        "一直没有响应说明该命令不存在或对方未处理，不要当作已完成")
+                body = resp.json()
+                if not isinstance(body, dict) or body.get("ok") is not True:
+                    logger.warning(f"[Peer] {peer_name} 回执无有效接收确认: {command}")
+                    return DeliveryResult("uncertain", f"{peer_name} 未返回有效接收确认，命令可能已接收；结果不确定，请勿自动重试")
+                logger.info(f"[Peer] {peer_name} 已接收调用请求（等待执行结果）: {command}")
+                return DeliveryResult("accepted", f"{peer_name} 已接收调用请求，尚未确认命令执行；后续可能收到 [{peer_name}] 的响应，请勿因暂未响应而重试")
+        except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout) as e:
+            logger.warning(f"[Peer] 未连接到 {peer_name}: {type(e).__name__}")
+            return DeliveryResult("not_sent", f"未能连接到 {peer_name}，命令未投递")
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            if 400 <= status < 500 and status not in (408,):
+                logger.warning(f"[Peer] {peer_name} 拒绝请求: HTTP {status}")
+                return DeliveryResult("not_sent", f"{peer_name} 拒绝请求（HTTP {status}），命令未被接收")
+            logger.warning(f"[Peer] {peer_name} 返回 HTTP {status}，接收状态不确定")
+            return DeliveryResult("uncertain", f"{peer_name} 返回 HTTP {status}，命令接收状态不确定，请勿自动重试")
         except Exception as e:
-            logger.error(f"[Peer] 调用 {peer_name} 失败: {e}")
-            return f"远程调用 {peer_name} 失败: {e}"
+            logger.warning(f"[Peer] {peer_name} 回执异常: {type(e).__name__}")
+            return DeliveryResult("uncertain", f"{peer_name} 的调用回执异常，命令可能已接收；结果不确定，请勿自动重试")

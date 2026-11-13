@@ -1,0 +1,426 @@
+{
+  "date": "2026-11-13",
+  "real_platform": false,
+  "synthetic_data_only": true,
+  "stable_acceptance": false,
+  "attempts": [
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": false,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": false,
+            "memory_written": true,
+            "commit_before_send": false
+          },
+          "stop_reason": "turn_limit",
+          "turns": 3,
+          "tool_calls": 3,
+          "captured_sends": 0,
+          "elapsed_seconds": 10.16,
+          "usage": {
+            "prompt_tokens": 8538,
+            "completion_tokens": 589,
+            "total_tokens": 9127
+          },
+          "effects": [
+            {
+              "tool": "query_memory",
+              "status": "ok",
+              "code": "MEMORY_SNAPSHOT"
+            },
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            },
+            {
+              "tool": "send_message",
+              "status": "failed",
+              "code": "INVALID_ARGUMENTS"
+            }
+          ]
+        }
+      ],
+      "passed": false,
+      "run_id": "live-tool-smoke-590zropm",
+      "stage": "initial"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": true,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": true,
+            "memory_written": true,
+            "commit_before_send": true
+          },
+          "stop_reason": "completed",
+          "turns": 3,
+          "tool_calls": 2,
+          "captured_sends": 1,
+          "elapsed_seconds": 8.22,
+          "usage": {
+            "prompt_tokens": 8403,
+            "completion_tokens": 291,
+            "total_tokens": 8694
+          },
+          "argument_errors": [],
+          "effects": [
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            },
+            {
+              "tool": "send_message",
+              "status": "sent",
+              "code": "MESSAGE_DELIVERY"
+            }
+          ]
+        }
+      ],
+      "passed": true,
+      "run_id": "live-tool-smoke-nhg3b2_6",
+      "stage": "initial"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": false,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": false,
+            "memory_written": true,
+            "commit_before_send": false
+          },
+          "stop_reason": "turn_limit",
+          "turns": 3,
+          "tool_calls": 3,
+          "captured_sends": 0,
+          "elapsed_seconds": 7.81,
+          "usage": {
+            "prompt_tokens": 8466,
+            "completion_tokens": 870,
+            "total_tokens": 9336
+          },
+          "argument_errors": [
+            {
+              "tool": "update_memory",
+              "errors": [
+                {
+                  "loc": [
+                    "operations",
+                    0,
+                    "value",
+                    "constrained-str"
+                  ],
+                  "type": "string_type"
+                },
+                {
+                  "loc": [
+                    "operations",
+                    0,
+                    "value",
+                    "CultureValue",
+                    "usage_examples"
+                  ],
+                  "type": "list_type"
+                }
+              ]
+            },
+            {
+              "tool": "update_memory",
+              "errors": [
+                {
+                  "loc": [
+                    "operations",
+                    0
+                  ],
+                  "type": "value_error"
+                }
+              ]
+            }
+          ],
+          "effects": [
+            {
+              "tool": "update_memory",
+              "status": "failed",
+              "code": "INVALID_ARGUMENTS"
+            },
+            {
+              "tool": "update_memory",
+              "status": "failed",
+              "code": "INVALID_ARGUMENTS"
+            },
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            }
+          ]
+        }
+      ],
+      "passed": false,
+      "run_id": "live-tool-smoke-y_e4eng4",
+      "stage": "initial"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": false,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": false,
+            "captured_send": false,
+            "memory_written": false,
+            "commit_before_send": false
+          },
+          "stop_reason": "request_error",
+          "turns": 0,
+          "tool_calls": 0,
+          "captured_sends": 0,
+          "elapsed_seconds": 0.0,
+          "usage": {},
+          "argument_errors": [],
+          "effects": []
+        }
+      ],
+      "passed": false,
+      "run_id": "live-tool-smoke-7b0ahc1j",
+      "stage": "schema_construction_error_no_request"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": false,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": false,
+            "memory_written": true,
+            "commit_before_send": false
+          },
+          "stop_reason": "turn_limit",
+          "turns": 3,
+          "tool_calls": 3,
+          "captured_sends": 0,
+          "elapsed_seconds": 6.56,
+          "usage": {
+            "prompt_tokens": 9587,
+            "completion_tokens": 410,
+            "total_tokens": 9997
+          },
+          "argument_errors": [
+            {
+              "tool": "send_message",
+              "errors": [
+                {
+                  "loc": [
+                    "messages",
+                    0,
+                    "parts"
+                  ],
+                  "type": "list_type"
+                }
+              ]
+            },
+            {
+              "tool": "send_message",
+              "errors": [
+                {
+                  "loc": [
+                    "messages",
+                    0,
+                    "parts"
+                  ],
+                  "type": "list_type"
+                }
+              ]
+            }
+          ],
+          "effects": [
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            },
+            {
+              "tool": "send_message",
+              "status": "failed",
+              "code": "INVALID_ARGUMENTS"
+            },
+            {
+              "tool": "send_message",
+              "status": "failed",
+              "code": "INVALID_ARGUMENTS"
+            }
+          ]
+        }
+      ],
+      "passed": false,
+      "run_id": "live-tool-smoke-flz4660k",
+      "stage": "after_schema_clarification"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "chat",
+          "passed": true,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": true,
+            "no_memory_write": true
+          },
+          "stop_reason": "completed",
+          "turns": 2,
+          "tool_calls": 1,
+          "captured_sends": 1,
+          "elapsed_seconds": 3.81,
+          "usage": {
+            "prompt_tokens": 5941,
+            "completion_tokens": 134,
+            "total_tokens": 6075
+          },
+          "argument_errors": [],
+          "effects": [
+            {
+              "tool": "send_message",
+              "status": "sent",
+              "code": "MESSAGE_DELIVERY"
+            }
+          ]
+        }
+      ],
+      "passed": true,
+      "run_id": "live-tool-smoke-bbff6i3l",
+      "stage": "after_schema_clarification"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "modify",
+          "passed": true,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": true,
+            "memory_written": true,
+            "commit_before_send": true,
+            "replaced_without_duplicate": true
+          },
+          "stop_reason": "completed",
+          "turns": 3,
+          "tool_calls": 2,
+          "captured_sends": 1,
+          "elapsed_seconds": 9.97,
+          "usage": {
+            "prompt_tokens": 9581,
+            "completion_tokens": 490,
+            "total_tokens": 10071
+          },
+          "argument_errors": [],
+          "effects": [
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            },
+            {
+              "tool": "send_message",
+              "status": "sent",
+              "code": "MESSAGE_DELIVERY"
+            }
+          ]
+        }
+      ],
+      "passed": true,
+      "run_id": "live-tool-smoke-odm9n1c0",
+      "stage": "after_schema_clarification"
+    },
+    {
+      "live_model": true,
+      "real_platform": false,
+      "synthetic_data_only": true,
+      "cases": [
+        {
+          "case": "add",
+          "passed": true,
+          "assertions": {
+            "tools_protocol": true,
+            "bounded": true,
+            "transport_completed": true,
+            "captured_send": true,
+            "memory_written": true,
+            "commit_before_send": true
+          },
+          "stop_reason": "completed",
+          "turns": 3,
+          "tool_calls": 2,
+          "captured_sends": 1,
+          "elapsed_seconds": 6.72,
+          "usage": {
+            "prompt_tokens": 9326,
+            "completion_tokens": 412,
+            "total_tokens": 9738
+          },
+          "argument_errors": [],
+          "effects": [
+            {
+              "tool": "update_memory",
+              "status": "committed",
+              "code": "MEMORY_UPDATED"
+            },
+            {
+              "tool": "send_message",
+              "status": "sent",
+              "code": "MESSAGE_DELIVERY"
+            }
+          ]
+        }
+      ],
+      "passed": true,
+      "run_id": "live-tool-smoke-3q8_nloj",
+      "stage": "after_schema_clarification"
+    }
+  ]
+}

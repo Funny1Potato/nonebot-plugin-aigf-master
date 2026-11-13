@@ -6,6 +6,21 @@ import httpx
 from nonebot import logger
 
 
+class SearchResults(list):
+    """List-compatible results with per-request failure metadata."""
+
+    def __init__(self, values=(), *, error=None):
+        super().__init__(values)
+        self.error = error
+
+
+def _failed_search(error=None, *, status=None):
+    response = getattr(error, "response", None)
+    status = status or getattr(response, "status_code", None) or getattr(error, "status_code", None)
+    return SearchResults(error={"code": "SEARCH_HTTP_ERROR" if isinstance(status, int) else "SEARCH_SERVICE_ERROR",
+                                "http_status": status if isinstance(status, int) else None})
+
+
 class SearchClient(ABC):
     """搜索客户端基类"""
 
@@ -14,6 +29,10 @@ class SearchClient(ABC):
         ...
 
     def format_results(self, results: list[dict]) -> str:
+        error = getattr(results, "error", None)
+        if error:
+            suffix = f"（HTTP {error['http_status']}）" if error.get("http_status") else ""
+            return f"搜索服务失败{suffix}，本次没有可用的搜索证据；不能当作没有相关结果。"
         if not results:
             return "未找到相关搜索结果"
         formatted = []
@@ -42,7 +61,7 @@ class TavilySearchClient(SearchClient):
             return results
         except Exception as e:
             logger.error(f"[搜索] Tavily 失败: {e}")
-            return []
+            return _failed_search(e)
 
 
 class BochaSearchClient(SearchClient):
@@ -63,7 +82,7 @@ class BochaSearchClient(SearchClient):
             return results
         except Exception as e:
             logger.error(f"[搜索] Bocha 失败: {e}")
-            return []
+            return _failed_search(e)
 
 
 class BingSearchClient(SearchClient):
@@ -84,7 +103,7 @@ class BingSearchClient(SearchClient):
             return results
         except Exception as e:
             logger.error(f"[搜索] Bing 失败: {e}")
-            return []
+            return _failed_search(e)
 
 
 class OpenWebSearchClient(SearchClient):
@@ -103,13 +122,13 @@ class OpenWebSearchClient(SearchClient):
             if data.get("status") != "ok":
                 logger.warning(f"[搜索] openwebsearch 返回异常: status={data.get('status')}, "
                                f"error={data.get('error')}, hint={data.get('hint')}")
-                return []
+                return _failed_search()
             results = [{"title": r.get("title", ""), "content": r.get("description", ""), "url": r.get("url", "")}
                        for r in data.get("data", {}).get("results", [])]
             return results
         except Exception as e:
             logger.error(f"[搜索] openwebsearch 失败: {e}")
-            return []
+            return _failed_search(e)
 
 
 class DeepSeekSearchClient(SearchClient):
@@ -135,7 +154,7 @@ class DeepSeekSearchClient(SearchClient):
                 resp = await client.post(f"{self._base_url}/v1/tools/search", headers=headers, json=payload)
                 if resp.status_code != 200:
                     self._log_failure(resp)
-                    return []
+                    return _failed_search(status=resp.status_code)
                 data = resp.json()
             results = []
             for r in data.get("results", []):
@@ -144,7 +163,7 @@ class DeepSeekSearchClient(SearchClient):
             return results
         except Exception as e:
             logger.error(f"[搜索] DeepSeek 失败: {e}")
-            return []
+            return _failed_search(e)
 
     def _log_failure(self, resp):
         """DeepSeek 的错误体是 OpenAI 兼容格式，挑出人能看懂的说明"""

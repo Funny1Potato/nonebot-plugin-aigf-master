@@ -1,0 +1,258 @@
+{
+  "initial_py310": [
+    {
+      "suite": "v_anime_chain_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_anime_chain_test.py.log"
+    },
+    {
+      "suite": "v_beta_port_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_beta_port_test.py.log"
+    },
+    {
+      "suite": "v_cache_cleanup_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_cache_cleanup_test.py.log"
+    },
+    {
+      "suite": "v_event_copy_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_event_copy_test.py.log"
+    },
+    {
+      "suite": "v_invocation_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_invocation_test.py.log"
+    },
+    {
+      "suite": "v_ma_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_ma_test.py.log"
+    },
+    {
+      "suite": "v_notice_fallback_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_notice_fallback_test.py.log"
+    },
+    {
+      "suite": "v_notice_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_notice_test.py.log"
+    },
+    {
+      "suite": "v_parser_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_parser_test.py.log"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "FAIL",
+      "exit_code": 1,
+      "log": ".results/20261113-153338-581243/v_recent_persist_test.py.log"
+    },
+    {
+      "suite": "v_search_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_search_test.py.log"
+    },
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-581243/v_tool_protocol_test.py.log"
+    }
+  ],
+  "py314_matrix": [
+    {
+      "suite": "v_anime_chain_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_anime_chain_test.py.log"
+    },
+    {
+      "suite": "v_beta_port_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_beta_port_test.py.log"
+    },
+    {
+      "suite": "v_cache_cleanup_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_cache_cleanup_test.py.log"
+    },
+    {
+      "suite": "v_event_copy_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_event_copy_test.py.log"
+    },
+    {
+      "suite": "v_invocation_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_invocation_test.py.log"
+    },
+    {
+      "suite": "v_ma_adapters_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_ma_adapters_test.py.log"
+    },
+    {
+      "suite": "v_ma_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_ma_test.py.log"
+    },
+    {
+      "suite": "v_notice_adapters_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_notice_adapters_test.py.log"
+    },
+    {
+      "suite": "v_notice_fallback_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_notice_fallback_test.py.log"
+    },
+    {
+      "suite": "v_notice_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_notice_test.py.log"
+    },
+    {
+      "suite": "v_parser_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_parser_test.py.log"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_recent_persist_test.py.log"
+    },
+    {
+      "suite": "v_search_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_search_test.py.log"
+    },
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153338-627469/v_tool_protocol_test.py.log"
+    }
+  ],
+  "final_py310": [
+    {
+      "suite": "v_anime_chain_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_anime_chain_test.py.log"
+    },
+    {
+      "suite": "v_beta_port_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_beta_port_test.py.log"
+    },
+    {
+      "suite": "v_cache_cleanup_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_cache_cleanup_test.py.log"
+    },
+    {
+      "suite": "v_event_copy_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_event_copy_test.py.log"
+    },
+    {
+      "suite": "v_invocation_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_invocation_test.py.log"
+    },
+    {
+      "suite": "v_ma_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_ma_test.py.log"
+    },
+    {
+      "suite": "v_notice_fallback_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_notice_fallback_test.py.log"
+    },
+    {
+      "suite": "v_notice_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_notice_test.py.log"
+    },
+    {
+      "suite": "v_parser_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_parser_test.py.log"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_recent_persist_test.py.log"
+    },
+    {
+      "suite": "v_search_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_search_test.py.log"
+    },
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-197161/v_tool_protocol_test.py.log"
+    }
+  ],
+  "py314_fixture_recheck": [
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153840-244308/v_recent_persist_test.py.log"
+    }
+  ],
+  "runtime_recheck": [
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153933-623833/v_tool_protocol_test.py.log"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "log": ".results/20261113-153933-623833/v_recent_persist_test.py.log"
+    }
+  ]
+}

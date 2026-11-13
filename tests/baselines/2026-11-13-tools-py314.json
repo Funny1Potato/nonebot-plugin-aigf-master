@@ -1,0 +1,86 @@
+[
+  {
+    "suite": "v_anime_chain_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_anime_chain_test.py.log"
+  },
+  {
+    "suite": "v_beta_port_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_beta_port_test.py.log"
+  },
+  {
+    "suite": "v_cache_cleanup_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_cache_cleanup_test.py.log"
+  },
+  {
+    "suite": "v_event_copy_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_event_copy_test.py.log"
+  },
+  {
+    "suite": "v_invocation_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_invocation_test.py.log"
+  },
+  {
+    "suite": "v_ma_adapters_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_ma_adapters_test.py.log"
+  },
+  {
+    "suite": "v_ma_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_ma_test.py.log"
+  },
+  {
+    "suite": "v_notice_adapters_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_notice_adapters_test.py.log"
+  },
+  {
+    "suite": "v_notice_fallback_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_notice_fallback_test.py.log"
+  },
+  {
+    "suite": "v_notice_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_notice_test.py.log"
+  },
+  {
+    "suite": "v_parser_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_parser_test.py.log"
+  },
+  {
+    "suite": "v_recent_persist_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_recent_persist_test.py.log"
+  },
+  {
+    "suite": "v_search_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_search_test.py.log"
+  },
+  {
+    "suite": "v_tool_protocol_test.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "log": ".results/20261113-101426-418908/v_tool_protocol_test.py.log"
+  }
+]

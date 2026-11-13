@@ -1,0 +1,53 @@
+{
+ "OneBot V11": {
+  "群通知": "OK key=onebot11:11001 text='李四 加入了群聊'"
+ },
+ "OneBot V12": {
+  "群通知": "OK key=onebot12:11001 text='20001 加入了群聊'"
+ },
+ "Satori": {
+  "群通知": "OK key=satori:g-1_c-1 text='u-1 加入了群聊'"
+ },
+ "Telegram": {
+  "群通知": "OK key=telegram:-100 text='20001 加入了群聊'"
+ },
+ "Discord": {
+  "群通知": "OK key=discord:10 text='3 加入了群聊'"
+ },
+ "QQ": {
+  "群通知": "OK key=qq:g-1_u-1 text='u-1 加入了群聊'"
+ },
+ "Feishu": {
+  "群通知": "OK key=feishu:oc-1 text='加入了群聊'"
+ },
+ "Milky": {
+  "群通知": "OK key=milky:11001 text='20001 加入了群聊'"
+ },
+ "Mirai": {
+  "群通知": "OK key=mirai:11001 text='20001 加入了群聊'"
+ },
+ "Kaiheila": {
+  "群通知": "OK key=kaiheila:g-1 text='李四 加入了群聊'"
+ },
+ "DoDo": {
+  "群通知": "OK key=dodo:isl-1_ch-1 text='u-1 加入了群聊'"
+ },
+ "Kritor": {
+  "群通知": "OK key=kritor:11001 text='20001 加入了群聊'"
+ },
+ "Minecraft": {
+  "群通知": "N/A 事件无群/频道字段（会话按私聊处理，按预期跳过）"
+ },
+ "WXMP": {
+  "群通知": "N/A 事件无群/频道字段（会话按私聊处理，按预期跳过）"
+ },
+ "EFChat": {
+  "群通知": "OK key=efchat:room-1 text='加入了群聊'"
+ },
+ "YunHu": {
+  "群通知": "OK key=yunhu:g-1 text='20001 加入了群聊'"
+ },
+ "bilibili Live": {
+  "群通知": "OK key=bilibililive:12345 text='的禁言状态发生了变化'"
+ }
+}

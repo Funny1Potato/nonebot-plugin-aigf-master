@@ -1,5 +1,6 @@
 """命令学习器：通过 LLM 学习命令，支持编辑和删除"""
 
+from copy import deepcopy
 import json
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,8 @@ import anyio
 from nonebot import logger
 
 from .models import PluginCommand
+from .store_coordinator import atomic_json, coordinated
+from .tool_runtime import receipt
 
 
 class CommandLearner:
@@ -42,11 +45,62 @@ class CommandLearner:
                 logger.error(f"[命令学习] 加载{label}命令失败: {e}")
 
     async def _save(self):
-        self._data_dir.mkdir(parents=True, exist_ok=True)
-        for target, f in [(self._commands, self._commands_file), (self._peer_commands, self._peer_commands_file)]:
-            data = {"commands": list(target.values())}
-            async with await anyio.open_file(f, "w", encoding="utf-8") as fp:
-                await fp.write(json.dumps(data, ensure_ascii=False, indent=2))
+        async with coordinated(self._data_dir):
+            self._data_dir.mkdir(parents=True, exist_ok=True)
+            for target, path in [(self._commands, self._commands_file),
+                                 (self._peer_commands, self._peer_commands_file)]:
+                atomic_json(path, {"commands": list(target.values())})
+
+    async def query_tools(self, args):
+        async with coordinated(self._data_dir):
+            target = self._commands if args.route == "current" else self._peer_commands
+            values = [deepcopy(cmd) for cmd in target.values()
+                      if (not args.source or cmd.get("plugin") == args.source)
+                      and (not args.name or cmd["name"] == args.name)]
+            return receipt("ok", "COMMAND_SNAPSHOT", {"commands": values[args.offset:args.offset + args.limit],
+                           "total": len(values), "next_offset": args.offset + args.limit if args.offset + args.limit < len(values) else None})
+
+    async def manage_tools(self, args):
+        async with coordinated(self._data_dir):
+            target = self._commands if args.route == "current" else self._peer_commands
+            path = self._commands_file if args.route == "current" else self._peer_commands_file
+            updated = deepcopy(target)
+            cmd = updated.get(args.name)
+            if cmd and cmd.get("plugin") != args.source:
+                return receipt("conflict", "COMMAND_SOURCE_CONFLICT")
+            if args.action != "learn" and cmd is None:
+                return receipt("failed", "COMMAND_NOT_FOUND")
+            status = "committed"
+            if args.action == "learn":
+                if cmd is None:
+                    cmd = {"name": args.name, "plugin": args.source, "hook_type": args.route,
+                           "parameters": args.parameters or "", "usage": args.usage or "",
+                           "examples": args.examples or [], "confidence": 0,
+                           "first_seen": datetime.now().strftime("%Y-%m-%d")}
+                    updated[args.name] = cmd
+                cmd["confidence"] = cmd.get("confidence", 0) + 1
+                for key in ("parameters", "usage", "examples"):
+                    value = getattr(args, key)
+                    if value is not None:
+                        cmd[key] = value
+            elif args.action == "edit":
+                for key in ("parameters", "usage", "examples"):
+                    value = getattr(args, key)
+                    if value is not None:
+                        cmd[key] = value
+            else:
+                cmd["delete_confidence"] = cmd.get("delete_confidence", 0) + 1
+                status = "pending_delete"
+                if cmd["delete_confidence"] >= self._min_confidence:
+                    updated.pop(args.name)
+                    status = "deleted"
+            # Cache is swapped only after the file commit succeeds.
+            atomic_json(path, {"commands": list(updated.values())})
+            target.clear()
+            target.update(updated)
+            return receipt(status, "COMMAND_UPDATED", {"name": args.name, "route": args.route,
+                           "source": args.source, "confidence": cmd.get("confidence", 0),
+                           "delete_confidence": cmd.get("delete_confidence", 0)})
 
     def _schedule_save(self):
         """立即异步保存到文件"""

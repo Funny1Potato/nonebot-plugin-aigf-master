@@ -228,7 +228,7 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 - 落盘目录名不能含 `:`，因此磁盘上写作 `onebot11_123456789`；`memory/` 下旧版裸数字目录会在启动时**一次性自动迁移**（目标已存在则跳过，幂等）
 - 非启用会话不发请求、不入缓冲：插件只会为启用的会话解析成员信息与图片
 
-### 功能 × 适配器支持表（2026-09-25 实测）
+### 功能 × 适配器支持表（2026-11-12 离线复核，本地未发布改动）
 
 为每个适配器**构造真实事件**跑同一套功能路径（会话解析 → 渲染 → 回复发送 → 跨插件捕获 → 插件调用），bot 是记录型 mock，**未连真实平台**。
 
@@ -237,20 +237,20 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 | OneBot V11 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | OneBot V12 | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Console | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
-| Satori | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
+| Satori | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Telegram | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Discord | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 | QQ（频道/C2C/群） | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
+| Feishu | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Milky | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Mirai | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
+| Kaiheila（Kook） | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | DoDo | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Kritor | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ❌ | ✅ |
+| Kritor | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Mail | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
 | Minecraft | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
 | WXMP | ✅（仅私聊） | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
-| EFChat | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ✅ |
+| EFChat | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | YunHu | ✅ | ✅ | ✅ | 未测 | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | bilibili Live | ✅ | ✅ | ✅ | ❌ 无好友私聊类型 | ⚠️ | ✅ | ✅ | ⚠️ | ✅ |
 
@@ -263,8 +263,8 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 **已知特例**
 
 - **@ 按昵称**：只有 OneBot V11 能按群昵称反查用户 id，其余适配器请让 LLM 直接用用户 id
-- **插件调用**：Satori / Kaiheila 的事件结构特殊，离线未验证通过；其余 14 个已实测目标响应器收到命令
-- **群通知**：为每个适配器构造真实通知事件实测，**10 个通过**（OneBot V11/V12、Satori、Telegram、QQ、Milky、Mirai、Kaiheila、DoDo、YunHu）；Discord / bilibili 未验证（离线 mock 不够 / 只有部分通知类在库的覆盖范围内）；**Feishu、Kritor、EFChat** 的通知 uninfo 与 alconna 都无法定位到群/频道会话，**Minecraft、WXMP** 的通知事件没有群/频道字段（会话按私聊处理）——这几种会被跳过（库层限制，非本插件可修）
+- **插件调用**：消息/调用矩阵 206 个检查点通过，包含 Satori / Kaiheila 目标响应器收到命令。已修复构造期消息缓存与只读消息属性；仍不等于真实平台联调通过。
+- **群通知**：17 个通知检查点中 15 个通过、2 个按预期跳过（Minecraft / WXMP 无群会话字段；Console / Mail 无通知类型，不在该矩阵内）。飞书、Kritor、bilibili Live 对上游尚不支持的通知按明确群/房间字段定位；Discord / Kaiheila 的服务器级事件只进入服务器会话，不广播到子频道。详见 [能力边界](docs/ADAPTER_SUPPORT.md)。
 - **YunHu / bilibili Live**：需要把 bot 跑在 **Python ≥ 3.12**（3.10 里导入即失败；这两行的 ✅ 是在 3.14 实测的）
 - **Kaiheila**：请装 `nonebot-adapter-kaiheila`（社区包 `nonebot-adapter-kook` 的模块名与 alconna/uninfo 期望的不一致）
 - **跨 bot**：按 peer 0.4.0+ 的 `session` 协议可用；旧 peer（0.3.x）只有 OneBot V11 的会话能对上
@@ -390,6 +390,7 @@ LLM 调用：invoke_plugin(command="决斗", parts=[
 
 | 限制 | 默认 | 配置项 |
 |---|---|---|
+| **每批调用尝试上限** | 1（本机与 peer 共用） | `AIGFM_INVOKE_MAX_PER_BATCH`（正整数，含 JSON 解析重试） |
 | **重复调用去重** | 开启 | `AIGFM_INVOKE_DEDUP_ENABLED` |
 | **去重时间窗口** | 20 分钟 | `AIGFM_INVOKE_DEDUP_WINDOW`（秒；0 = 不限时间） |
 | **去重比对条数** | 15 | `AIGFM_INVOKE_DEDUP_RECORDS` |
@@ -398,11 +399,18 @@ LLM 调用：invoke_plugin(command="决斗", parts=[
 
 - 去重判定为**命令 + 参数 + 调用身份（QQ 号）三者完全相同**；拦截范围 = **时间窗口内**（`AIGFM_INVOKE_DEDUP_WINDOW`）∩ **调用台账保留的最近 N 条**（`AIGFM_INVOKE_DEDUP_RECORDS`）
 - **不区分本机与其它 bot**：同一命令、同一身份在范围内只执行一次
-- 换个参数（`决斗 @张三` → `决斗 @李四`）或换个身份（不同 QQ 号）视为不同调用，正常放行
+- 换参数或身份不命中相同调用去重，但仍受每批共享额度与能量限制；明确未投递的尝试也占本批额度，下一批重新计算
 - prompt 里的「你最近代为执行过的命令」段只展示**其中最近 10 条**（防止 prompt 随条数膨胀）
 - 执行 `/reset` 会一并清空调用台账（重置后不再被"刚调用过"挡住）
-- 每次**实际投递**扣 `AIGFM_INVOKE_ENERGY_COST` 点社交能量（被拒绝时不扣）；能量会按社交能量机制自然回充，所以能量不足只是暂时无法代为执行命令
+- 已投递、peer 已接收及投递结果不确定时，扣 `AIGFM_INVOKE_ENERGY_COST` 点社交能量并写入去重台账；明确未投递和前置拒绝不扣能量、不写去重台账；能量会按社交能量机制自然回充，所以能量不足只是暂时无法代为执行命令
 - 被拒绝时：工具结果**当场**告知 LLM 原因，同时在聊天记录里留下 `已拒绝调用命令「xxx」（原因）`，**下一轮** LLM 能看到；拒绝**不写入调用台账**（不会阻止之后真正的再调用）
+
+### 调用回执与身份
+
+回执区分未投递、本机已投递、peer 已接收、结果不确定。peer 的 HTTP `ok: true` 只表示请求已被接收；超时、分发异常、读写超时不证明没有执行，因此保留去重。后续没有输出也不能直接断定成功或失败。
+每次投递尝试附带请求编号，供本机日志、工具回执和台账相互核对；编号尚不随 peer 输出回传，也不自动将输出判定为某次命令执行成功。
+本批调用使用批处理开始时保存的 bot、会话、真实事件和默认用户身份；等待 LLM 期间到达的新消息不会替换这些调用依据。显式指定 user_id 的能力保持原样。
+搜索、插件调用和生图按各自开关进入工具路径，关闭搜索不会关闭后两者。本批调用额度仅限制 `invoke_plugin` 与 `invoke_peer_plugin`，不包含搜索或生图任务。
 
 ### 命令前缀自动适配
 
@@ -808,3 +816,25 @@ LLM 支持以下回复类型：
 ## License
 
 MIT
+
+## 开发与验证
+
+当前实现与边界见 [项目状态](docs/CURRENT_STATE.md)，维护流程见 [开发与同步](docs/DEVELOPMENT.md)。
+
+离线验证入口与环境要求见 [tests/README.md](tests/README.md)。
+
+## 工具动作协议（本地开发功能，尚未发布）
+
+新增 tools 协议，用函数调用完成发言、四层记忆、群友别名、表情包收藏及命令学习，不再执行最终 reply/memory JSON；普通结束文字不会发送。
+默认仍是 legacy_json。显式设置 `AIGFM_ACTION_PROTOCOL=tools` 后按新协议运行，不能在同一批混用两套动作。
+
+```env
+AIGFM_ACTION_PROTOCOL=tools
+AIGFM_LLM_MAX_TOOL_TURNS=3
+AIGFM_TOOL_MAX_CALLS=12
+AIGFM_TOOL_BATCH_TIMEOUT=180
+AIGFM_TOOL_SEND_MAX_MESSAGES=3
+AIGFM_TOOL_MEMORY_ENABLED=true
+```
+
+首次使用会备份并初始化记忆条目引用；非 OneBot 群友使用独立命名空间。建议先运行源码仓库中的只读迁移预览。完整契约、部分发送/重启处理、回退与验证边界见 [工具协议说明](docs/TOOL_PROTOCOL.md)。

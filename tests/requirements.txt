@@ -1,0 +1,5 @@
+# Plugin dependencies are installed with pip install -e .
+nonebot-adapter-console==0.10.0
+nonebot-adapter-mirai==2.3.3
+nonebot-adapter-satori==1.3.0
+nonebot-adapter-kaiheila==0.3.4

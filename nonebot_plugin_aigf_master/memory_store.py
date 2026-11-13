@@ -11,6 +11,7 @@ import anyio
 from nonebot import logger
 
 from .models import ChatMessage, MemoryOps
+from .store_coordinator import atomic_json, collection_meta, commit_collection, fingerprint, memory_write, read_json
 
 
 class MemoryStore:
@@ -18,6 +19,7 @@ class MemoryStore:
 
     def __init__(self, group_id: str, data_dir: Path):
         self.group_id = group_id
+        self.adapter_slug = group_id.split("_", 1)[0] if "_" in group_id else "onebot11"
         self._group_dir = data_dir / "memory" / group_id
         self._group_dir.mkdir(parents=True, exist_ok=True)
         self._friends_dir = data_dir / "memory" / "friends"
@@ -36,10 +38,13 @@ class MemoryStore:
             logger.error(f"加载短期记忆失败: {e}")
             return []
 
+    @memory_write
     async def save_short_term(self, items: list[str]):
         path = self._group_dir / "short_term.json"
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps({"items": items}, ensure_ascii=False, indent=2))
+        if path.exists() and "_aigfm_meta" in read_json(path):
+            commit_collection(path, "items", items)
+        else:
+            atomic_json(path, {"items": items})
 
     # ========== 长期记忆 ==========
 
@@ -54,10 +59,13 @@ class MemoryStore:
             logger.error(f"加载长期记忆失败: {e}")
             return []
 
+    @memory_write
     async def save_long_term(self, facts: list[str]):
         path = self._group_dir / "long_term.json"
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps({"facts": facts}, ensure_ascii=False, indent=2))
+        if path.exists() and "_aigfm_meta" in read_json(path):
+            commit_collection(path, "facts", facts)
+        else:
+            atomic_json(path, {"facts": facts})
 
     # ========== 最近的聊天记录（重启后仍可读） ==========
 
@@ -86,6 +94,7 @@ class MemoryStore:
                 continue          # 单条坏数据丢弃，不影响其余记录
         return messages
 
+    @memory_write
     async def save_recent(self, messages: list[ChatMessage]):
         path = self._group_dir / "recent.json"
         data = {"messages": [
@@ -95,9 +104,9 @@ class MemoryStore:
             }
             for m in messages
         ]}
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        atomic_json(path, data)
 
+    @memory_write
     async def clear_recent(self):
         path = self._group_dir / "recent.json"
         try:
@@ -109,9 +118,12 @@ class MemoryStore:
     # ========== 群友信息 ==========
 
     async def load_friend(self, user_id: str) -> dict | None:
-        path = self._friends_dir / f"{user_id}.json"
+        path = self._friend_path(user_id)
         if not path.exists():
-            return None
+            legacy = self._legacy_friend_path(user_id)
+            if legacy is None or not legacy.exists() or self._record_adapter(read_json(legacy)) != self.adapter_slug:
+                return None
+            path = legacy
         try:
             async with await anyio.open_file(path, encoding="utf-8") as f:
                 return json.loads(await f.read())
@@ -119,28 +131,52 @@ class MemoryStore:
             logger.error(f"加载群友 {user_id} 信息失败: {e}")
             return None
 
+    @staticmethod
+    def _record_adapter(data):
+        groups = data.get("groups", [])
+        slugs = {str(g).split("_", 1)[0] if "_" in str(g) else "onebot11" for g in groups}
+        return next(iter(slugs)) if len(slugs) == 1 else None
+
+    def _legacy_friend_path(self, user_id):
+        text = str(user_id)
+        if not text or any(c in text for c in '/\\:') or text in (".", ".."):
+            return None
+        return self._friends_dir / (text + ".json")
+
+    def _friend_path(self, user_id):
+        legacy = self._legacy_friend_path(user_id)
+        if self.adapter_slug == "onebot11" and str(user_id).isdigit():
+            if legacy is not None and (not legacy.exists() or self._record_adapter(read_json(legacy)) in (None, "onebot11") and not read_json(legacy).get("groups")):
+                return legacy
+            if legacy is not None and self._record_adapter(read_json(legacy)) == "onebot11":
+                return legacy
+        return self._friends_dir / self.adapter_slug / (fingerprint(str(user_id)) + ".json")
+
+    @memory_write
     async def save_friend(self, user_id: str, data: dict):
-        path = self._friends_dir / f"{user_id}.json"
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        document = dict(data)
+        if "_aigfm_meta" in document:
+            collection_meta(document, "info")
+            collection_meta(document, "aliases")
+        atomic_json(self._friend_path(user_id), document)
 
     async def load_group_friends(self) -> dict[str, dict]:
-        """加载当前群所有有记录的群友"""
         result = {}
-        if not self._friends_dir.exists():
-            return result
-        for path in self._friends_dir.glob("*.json"):
+        paths = list(self._friends_dir.glob("*.json"))
+        paths += list((self._friends_dir / self.adapter_slug).glob("*.json"))
+        for path in paths:
             try:
-                async with await anyio.open_file(path, encoding="utf-8") as f:
-                    data = json.loads(await f.read())
+                data = read_json(path)
+                if self._record_adapter(data) != self.adapter_slug:
+                    continue
                 if data.get("id") and self.group_id in data.get("groups", []):
-                    # card 只带当前群的群名片（cards 按群保存，避免跨群串名片）
                     data["card"] = data.get("cards", {}).get(self.group_id, "")
-                    result[data["id"]] = data
+                    result[str(data["id"])] = data
             except Exception:
                 continue
         return result
 
+    @memory_write
     async def update_nickname(self, user_id: str, nickname: str):
         """自动更新群友的 QQ 全局昵称"""
         if not user_id or not nickname:
@@ -164,6 +200,7 @@ class MemoryStore:
                 friend.setdefault("groups", []).append(self.group_id)
         await self.save_friend(user_id, friend)
 
+    @memory_write
     async def update_card(self, user_id: str, card: str):
         """自动更新群友在本群的群名片（按群保存，名片为空则清除该群记录）"""
         if not user_id:
@@ -197,13 +234,17 @@ class MemoryStore:
             logger.error(f"加载文化记忆失败: {e}")
             return []
 
+    @memory_write
     async def save_culture(self, terms: list[dict]):
         path = self._group_dir / "culture.json"
-        async with await anyio.open_file(path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps({"terms": terms}, ensure_ascii=False, indent=2))
+        if path.exists() and "_aigfm_meta" in read_json(path):
+            commit_collection(path, "terms", terms)
+        else:
+            atomic_json(path, {"terms": terms})
 
     # ========== 操作执行 ==========
 
+    @memory_write
     async def apply_ops(self, ops: MemoryOps):
         """执行记忆操作」
 
@@ -255,6 +296,7 @@ class MemoryStore:
             return [val]
         return []
 
+    @memory_write
     async def _apply_list_ops(self, loader, saver, ops):
         items = await loader()
         # LLM 可能输出裸数组（把展示结构当输出结构）→ 视为 add
@@ -282,17 +324,18 @@ class MemoryStore:
                 items.append(item)
         await saver(items)
 
+    @memory_write
     async def _apply_friends_ops(self, friends_ops):
         if not isinstance(friends_ops, dict):
             logger.warning(f"[记忆] 忽略非法的群友操作: {friends_ops!r}")
             return
         nickname_to_id: dict[str, str] = {}
-        for f in self._friends_dir.iterdir():
+        for f in self._friends_dir.rglob("*.json"):
             if f.suffix == ".json":
                 try:
                     async with await anyio.open_file(f, encoding="utf-8") as fh:
                         data = json.loads(await fh.read())
-                    if data.get("nickname") and data.get("id"):
+                    if self._record_adapter(data) == self.adapter_slug and data.get("nickname") and data.get("id"):
                         nickname_to_id[data["nickname"]] = data["id"]
                 except Exception:
                     pass
@@ -344,6 +387,7 @@ class MemoryStore:
 
             await self.save_friend(user_id, friend)
 
+    @memory_write
     async def _apply_culture_ops(self, ops):
         # LLM 可能输出裸数组（视为 add）
         if not isinstance(ops, dict):
