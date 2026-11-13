@@ -1,13 +1,13 @@
 # 当前状态
 
-核对日期：2026-11-13。以下版本和分支状态来自本地 Git、配置和源码；未联网验证 GitHub/PyPI，已补充隔离真实模型冒烟检查，但未验证真实平台运行状况。远端跟踪分支可能落后于服务器。
+核对日期：2026-11-13。本体 2.0.0b5 已核对 GitHub Release、发布工作流和 PyPI 下载包；其余版本/分支来自本地 Git。已完成隔离真实模型及非聊天平台实服务验证，尚未验证真实聊天服务或长期运行。
 
 ## 代码位置与版本
 
 | 对象 | 本地状态 |
 | --- | --- |
-| 本体当前 checkout | beta，HEAD `a7c7836`，pyproject `2.0.0b5` |
-| 本体远端跟踪状态 | 相对本地 origin/beta 领先 1 个提交；不能据此认定 b5 已发布 |
+| 本体 b5 发布源码 | beta，tag `v2.0.0b5`，提交 `d9069d3`，pyproject `2.0.0b5` |
+| 本体发布状态 | GitHub 预发布已创建，Actions 成功；PyPI wheel/sdist 已下载核对，与 b5 提交一致 |
 | 本体 main | 本地 `f9f88c8`，版本 `1.6.4`；本次没有切换或修改 main |
 | peer 当前 checkout | beta，HEAD `c826f55`，pyproject `0.4.0b1` |
 | peer 远端跟踪状态 | 与本地 origin/beta 一致 |
@@ -81,3 +81,9 @@ Satori / Kaiheila 消息复制修复同时落在本体与 peer；消息/调用�
 用户更换搜索与生图配置后，实际双实例联调 16 项检查通过：本机 echo、peer HTTP 调用/输出回传、DeepSeek 搜索、MiniMax-H3-Image 后台生图。搜索独立查询得到 2 条结果，图像实际生成 2560×2560 且发回原会话。修复本体/peer 捕获钩子的查询 API 重入风险，以及搜索异常被当作空结果成功的问题；均已同步运行副本。
 
 本体 3.10 默认 13/13、3.14 含矩阵 15/15；peer 两种环境各 2/2 通过。真实记忆副本离线迁移检查通过，源文件未改。没有真实聊天平台或长期运行验收；API 更换由用户操作，测试未改 .env*。详情见 [LIVE_SERVICES.md](LIVE_SERVICES.md)。
+
+## 2026-11-13：2.0.0b5 已发布
+
+已创建 [GitHub 预发布](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/releases/tag/v2.0.0b5)，发布说明非空；[发布工作流](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43396623135) 成功，[PyPI 2.0.0b5](https://pypi.org/project/nonebot-plugin-aigf-master/2.0.0b5/) 可用。下载校验 wheel/sdist 哈希，并逐一对比 wheel 中的 34 个 Python 模块与 tag 提交。详情见 [发布核验记录](releases/2.0.0b5-verification.json)。
+
+默认仍为 legacy_json，tools 需显式启用；尚未完成真实聊天服务与 24 小时灰度。peer 的本地修复没有在本次发布中提交、推送或发版，需要独立处理。本页较早的“本地未发布”小节保留为开发历史，当前本体状态以此发布记录为准。
