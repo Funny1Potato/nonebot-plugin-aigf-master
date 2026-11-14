@@ -3,11 +3,20 @@
 from typing import Literal
 
 from nonebot import get_driver, get_plugin_config
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PluginConfig(BaseModel):
     aigfm_action_protocol: Literal["legacy_json", "tools"] = Field("legacy_json", description="整批动作协议；tools 不读取最终 JSON，也不发布普通结束文本")
+    aigfm_session_protocols: dict[str, Literal["legacy_json", "tools"]] = Field(default_factory=dict, description="按完整会话键覆盖动作协议；管理员持久化覆盖优先")
+    aigfm_peer_output_timeout: float = Field(60.0, gt=0, le=3600, description="peer 接收请求后等待首次输出的诊断期限；超时不重发")
+
+    @field_validator("aigfm_session_protocols")
+    @classmethod
+    def validate_session_protocols(cls, value):
+        if any(":" not in key or not all(key.split(":", 1)) or any(c.isspace() for c in key) for key in value):
+            raise ValueError("protocol overrides require full adapter:session keys")
+        return value
     aigfm_llm_max_tool_turns: int = Field(3, ge=1, le=8)
     aigfm_tool_max_calls: int = Field(12, ge=1, le=64)
     aigfm_tool_batch_timeout: float = Field(180.0, gt=0, le=1800)

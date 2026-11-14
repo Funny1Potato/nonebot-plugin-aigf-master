@@ -1,6 +1,6 @@
 # 工具动作协议：使用与维护
 
-2026-11-13，本地源码实现，尚未发布。开发方案见 [TOOL_ONLY_AGENT_PLAN.md](TOOL_ONLY_AGENT_PLAN.md)。
+2026-11-13，首版随 2.0.0b5 发布；文末的 b5 后开发补充尚未发布。开发方案见 [TOOL_ONLY_AGENT_PLAN.md](TOOL_ONLY_AGENT_PLAN.md)。
 
 ## 启用
 
@@ -114,7 +114,7 @@ python tools/preview_tool_migration.py --data-dir <插件数据目录>
 - JSON 小文件采用 fsync + 同目录原子替换。首次初始化大量文件会增加本地 IO；迁移预览和备份用于评估这部分变化。
 - 查询结果有分页和体积限制，过大的旧条目返回预览，不修改原文。
 - 新模式的轮次、工具数、停止原因、耗时以及服务商实际提供的 token 用量进入 ProcessResult；不猜测缺失的用量数据。
-- 已进行隔离真实模型冒烟检查，补充修复后 7 类场景 17 次通过，保留修复前错误记录；见 [验证记录](LIVE_TOOL_SMOKE.md)。尚未进行真实平台、双 bot HTTP 联调或 24 小时灰度，不能视为稳定性验收。
+- 已进行隔离真实模型冒烟检查，补充修复后 7 类场景 17 次通过，保留修复前错误记录；见 [验证记录](LIVE_TOOL_SMOKE.md)。后续已完成真实模型、双实例 peer HTTP、搜索与生图实服务联调，见 [实服务记录](LIVE_SERVICES.md)；尚未连接真实聊天平台或完成 24 小时灰度，不能视为长期稳定性验收。
 
 验证结果与日志入口见 [tests/BASELINE.md](../tests/BASELINE.md)。
 
@@ -123,3 +123,7 @@ python tools/preview_tool_migration.py --data-dir <插件数据目录>
 实际工作区启动、生命周期及外部反向 WebSocket 连接验证见 [CONNECTED_PLATFORM.md](CONNECTED_PLATFORM.md)，仍使用模拟聊天服务。
 
 本机插件、peer HTTP、搜索和后台生图的实服务验证见 [LIVE_SERVICES.md](LIVE_SERVICES.md)。搜索异常使用 SEARCH_HTTP_ERROR/SEARCH_SERVICE_ERROR 失败回执，正常空结果不属于服务失败。
+
+## b5 后 beta 源码补充
+
+新增按会话协议覆盖、管理员 `action_protocol` 命令、`status` 诊断及 peer 请求输出关联，均已在 beta 源码实现，尚未发布到 PyPI。配置优先级、下一批生效规则与兼容边界见 [运维说明](OPERATIONS.md)。全局默认仍为 legacy_json。

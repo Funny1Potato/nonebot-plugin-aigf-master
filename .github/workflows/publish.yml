@@ -6,7 +6,11 @@ on:
       - "v*"
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
   publish:
+    needs: quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -15,14 +19,16 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install build tooling
-        run: pip install build twine
+      - name: Install upload tooling
+        run: python -m pip install twine
 
-      - name: Build sdist and wheel
-        run: python -m build
+      - uses: actions/download-artifact@v4
+        with:
+          name: checked-distributions
+          path: dist/
 
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload --skip-existing dist/*
+        run: python -m twine upload dist/*

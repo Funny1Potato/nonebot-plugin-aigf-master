@@ -26,3 +26,4 @@
 - 长说明写入文件，`gh release create ... --notes-file <文件>`；发完核对 release body 非空、Actions 和 PyPI 实际结果。
 - 沿用本机仓库已有代理，不绕过代理；不要将凭据或 `.env*` 纳入 Git。
 - 打包后确认只包含插件包；tests/docs 不应进入安装包。已增加明确的包发现范围。
+- b5 后新增质量门槛：`quality.yml` 执行双 Python 回归、源码/包内容与 tag 版本检查、wheel/sdist 独立干净安装；发布仅上传门槛验证过的产物。详见 [运维说明](OPERATIONS.md)。未提交推送的工作流不能记为远端 CI 已通过。

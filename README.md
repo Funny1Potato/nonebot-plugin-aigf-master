@@ -228,7 +228,7 @@ AIGFM_PEER_CAPTURE_PLUGINS=[]          # 要捕获输出的插件名列表，为
 - 落盘目录名不能含 `:`，因此磁盘上写作 `onebot11_123456789`；`memory/` 下旧版裸数字目录会在启动时**一次性自动迁移**（目标已存在则跳过，幂等）
 - 非启用会话不发请求、不入缓冲：插件只会为启用的会话解析成员信息与图片
 
-### 功能 × 适配器支持表（2026-11-12 离线复核，本地未发布改动）
+### 功能 × 适配器支持表（2026-11-12 离线复核，首版随 2.0.0b5 发布）
 
 为每个适配器**构造真实事件**跑同一套功能路径（会话解析 → 渲染 → 回复发送 → 跨插件捕获 → 插件调用），bot 是记录型 mock，**未连真实平台**。
 
@@ -823,7 +823,7 @@ MIT
 
 离线验证入口与环境要求见 [tests/README.md](tests/README.md)。
 
-## 工具动作协议（本地开发功能，尚未发布）
+## 工具动作协议（2.0.0b5 起提供，需显式启用）
 
 新增 tools 协议，用函数调用完成发言、四层记忆、群友别名、表情包收藏及命令学习，不再执行最终 reply/memory JSON；普通结束文字不会发送。
 默认仍是 legacy_json。显式设置 `AIGFM_ACTION_PROTOCOL=tools` 后按新协议运行，不能在同一批混用两套动作。
@@ -838,3 +838,15 @@ AIGFM_TOOL_MEMORY_ENABLED=true
 ```
 
 首次使用会备份并初始化记忆条目引用；非 OneBot 群友使用独立命名空间。建议先运行源码仓库中的只读迁移预览。完整契约、部分发送/重启处理、回退与验证边界见 [工具协议说明](docs/TOOL_PROTOCOL.md)。
+
+
+### b5 后 beta 源码中的会话灰度与诊断
+
+以下能力提供于 b5 之后的 beta 源码，尚未发布到 PyPI；2.0.0b5 安装包不包含这些新增能力：
+
+- `AIGFM_SESSION_PROTOCOLS={"onebot11:123456":"tools"}` 按会话覆盖全局协议。
+- 超级用户执行 `action_protocol tools` / `action_protocol legacy_json`，持久化切换当前会话；下一批生效。`action_protocol default` 恢复环境配置。命令前缀沿用 `COMMAND_START`。
+- `status` 增加当前/下一批协议、近期停止原因、耗时、token、被忽略的结束文字、工具失败及 peer 请求状态。
+- peer 新增 `request_id` 关联；accepted、收到输出和等待超时分别记录，不将其作为执行成功证明，超时不重发。
+
+完整配置与发布质量检查见 [运维说明](docs/OPERATIONS.md)。默认仍为 `legacy_json`。

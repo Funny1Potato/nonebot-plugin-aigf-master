@@ -1,0 +1,70 @@
+name: Quality gate
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e . -r tests/requirements.txt
+      - if: matrix.python == '3.14'
+        run: python -m pip install -r tests/requirements-matrix.txt
+      - name: Offline regressions
+        run: python tests/run_offline.py ${{ matrix.python == '3.14' && '--matrix' || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-${{ matrix.python }}
+          path: tests/.results/
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - name: Tag, metadata and complete source check
+        env:
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            python tools/check_distribution.py --tag "$RELEASE_TAG"
+          else
+            python tools/check_distribution.py
+          fi
+          python -m twine check dist/*
+      - name: Install wheel and sdist in separate clean environments
+        shell: bash
+        run: |
+          NAME=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          VERSION=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          for kind in whl tar.gz; do
+            python -m venv "$RUNNER_TEMP/install-$kind"
+            PY="$RUNNER_TEMP/install-$kind/bin/python"
+            "$PY" -m pip install dist/*.$kind
+            "$PY" -m pip check
+            "$PY" -I tools/check_installed.py "$NAME" "$VERSION"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checked-distributions
+          path: dist/

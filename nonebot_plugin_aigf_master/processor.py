@@ -1,6 +1,8 @@
 """消息处理编排器"""
 
 import asyncio
+from contextvars import ContextVar
+import time
 import base64
 from copy import deepcopy
 import json
@@ -22,7 +24,7 @@ from .context_bus import ContextBus
 from .image_gen_client import ImageGenClient
 from .image_handler import ImageHandler
 from .invocation import DeliveryResult
-from .llm_client import ImagePayload, LLMClient
+from .llm_client import ImagePayload, LLMClient, batch_usage
 from .meme_store import MemeStore
 from .memory_store import MemoryStore
 from .models import ChatMessage, PluginCommand, ReplySegment
@@ -38,6 +40,9 @@ from .response_parser import extract_command_learning, extract_memory_ops, extra
 from .session import SessionInfo, resolve_at_target
 from .unimsg import send_unimsg
 from .search_client import SearchClient
+from .operations import BatchDiagnostics
+
+_batch_protocol = ContextVar("aigfm_batch_protocol", default=None)
 
 
 def _command_head(command: str) -> str:
@@ -125,6 +130,7 @@ def _normalize_size(size_desc: str, max_size: str, min_size: str = "") -> str:
 SELF_PLUGIN_NAMES = {"nonebot_plugin_aigf_master", "nonebot-plugin-aigf-master"}
 # 与 __init__.py 的 on_command 主名 + 别名保持同步（新增/改名管理命令需一并维护）
 SELF_COMMANDS = {
+    "action_protocol", "动作协议",
     "status", "状态",
     "reset", "重置",
     "set_role", "设置角色",
@@ -143,6 +149,7 @@ class _InvocationBatch:
     user_id: str
     attempts: int = 0
     last_delivery: DeliveryResult | None = None
+    last_request_id: str = ""
 
 
 class _Invocation(NamedTuple):
@@ -217,6 +224,9 @@ class MessageProcessor:
         # 也作为「最近调用过相同命令」去重的比对依据（见 _find_recent_same）
         self._invoke_log: list[_Invocation] = []
         self.last_process_result = None
+        self.protocol_overrides = None
+        self.diagnostics = BatchDiagnostics()
+        self._active_protocol = None
         self._generation = 0
         self.social_energy = 0.75
         self._bot = None
@@ -245,11 +255,25 @@ class MessageProcessor:
         self.current_preset = name
         return True
 
+    @property
+    def next_protocol(self):
+        if self.protocol_overrides is not None:
+            return self.protocol_overrides.resolve(self.session_key, self.config)
+        return self.config.aigfm_session_protocols.get(self.session_key, self.config.aigfm_action_protocol)
+
+    @property
+    def action_protocol(self):
+        frozen = _batch_protocol.get()
+        return frozen[1] if frozen and frozen[0] is self else self.next_protocol
+
     def status(self) -> str:
         recent = "\n".join(f"{m.user_name}: {m.content}" for m in self.recent_messages[-15:]) or "没有消息"
         result = getattr(self, "last_process_result", None)
         execution = f"{result.stop_reason}（轮次 {result.turns}，工具 {result.tool_calls}）" if result else "尚无批次"
-        return f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n动作协议：{self.config.aigfm_action_protocol}\n最近执行：{execution}\n\n最近消息：\n{recent}"
+        peer = self.peer_client.status(self.session_key) if isinstance(self.peer_client, PeerClient) else ""
+        return (f"名字：{self.bot_name}\n设定：{self.bot_role}\n\n社交能量：{self.social_energy:.2f}\n"
+                f"下一批动作协议：{self.next_protocol}\n当前批协议：{self._active_protocol or '空闲'}\n最近执行：{execution}\n"
+                f"{self.diagnostics.render()}\n{peer}\n最近消息：\n{recent}")
 
     def _log_invocation(self, command: str, parts: list[dict], user_id, label: str,
                         status: str = "dispatched", request_id: str = "") -> None:
@@ -304,7 +328,7 @@ class MessageProcessor:
         """拒绝调用：记进最近消息（下一轮 LLM 能看见）并返回给本次调用方"""
         logger.info(f"[调用] 拒绝: command={command}（{reason}）")
         self.recent_messages.append(ChatMessage(
-            time=datetime.now(), user_name="系统" if self.config.aigfm_action_protocol == "tools" else self.bot_name,
+            time=datetime.now(), user_name="系统" if self.action_protocol == "tools" else self.bot_name,
             content=f"已拒绝调用命令「{command}」（{reason}）",
         ))
         return f"本次调用被拒绝：{reason}。不要重试这条命令；可以改用其它方式，或先和群友说明情况。"
@@ -338,7 +362,7 @@ class MessageProcessor:
         logger.info(f"[调用] request={request_id} session={self.session_key} route={route} "
                     f"command={command} user_id={uid} status={result.status}")
         self.recent_messages.append(ChatMessage(
-            time=datetime.now(), user_name="系统" if self.config.aigfm_action_protocol == "tools" else self.bot_name,
+            time=datetime.now(), user_name="系统" if self.action_protocol == "tools" else self.bot_name,
             content=f"命令「{command}」{state}（{route}，user_id={uid}，请求 {request_id}）",
         ))
         if result.may_have_run:
@@ -385,6 +409,27 @@ class MessageProcessor:
         return f"（没能识别 @ 目标：{'、'.join(skipped_ats)} —— parts 里的 at 请填群友昵称；本次已跳过该 @）"
 
     async def run_batch(self, messages, cached_stickers=None) -> ProcessResult:
+        started = time.monotonic()
+        protocol = self.next_protocol
+        token = _batch_protocol.set((self, protocol))
+        metrics = {"turns": 0, "usage": {}}
+        usage_token = batch_usage.set(metrics)
+        self._active_protocol = protocol
+        try:
+            result = await self._run_batch(messages, cached_stickers)
+            result.elapsed = time.monotonic() - started
+            if result.protocol == "legacy_json":
+                result.usage = metrics["usage"]
+                result.turns = metrics["turns"]
+            self.last_process_result = result
+            self.diagnostics.record(result)
+            return result
+        finally:
+            self._active_protocol = None
+            _batch_protocol.reset(token)
+            batch_usage.reset(usage_token)
+
+    async def _run_batch(self, messages, cached_stickers=None) -> ProcessResult:
         context = BatchContext(self._invocation_batch(), self._generation, self, float("inf"))
         try:
             result = await self.process(messages, cached_stickers)
@@ -399,13 +444,20 @@ class MessageProcessor:
             raise
         except Exception as error:
             logger.error(f"[处理] {self.session_key} error={type(error).__name__}")
-            result = ProcessResult(self.config.aigfm_action_protocol, "request_error")
+            result = ProcessResult(self.action_protocol, "request_error")
         self.last_process_result = result
         return result
 
     async def process(
         self, messages: list[ChatMessage], cached_stickers: list[dict] | None = None,
     ) -> list[ReplySegment] | None:
+        token = _batch_protocol.set((self, self.action_protocol))
+        try:
+            return await self._process(messages, cached_stickers)
+        finally:
+            _batch_protocol.reset(token)
+
+    async def _process(self, messages, cached_stickers=None):
         messages = deepcopy(messages)
         self._legacy_stop = "silent"
         start_generation = self._generation
@@ -423,7 +475,7 @@ class MessageProcessor:
                 logger.error(f"[记忆] 加载聊天记录失败: {e}")
                 restored = []
             if self._generation != start_generation:
-                return ProcessResult(self.config.aigfm_action_protocol, "reset")
+                return ProcessResult(self.action_protocol, "reset")
             if restored:
                 self.recent_messages = restored + self.recent_messages
                 logger.info(f"[记忆] {self.session_key} 恢复聊天记录 {len(restored)} 条")
@@ -512,7 +564,7 @@ class MessageProcessor:
         peer_commands = list(peer_map.values())
         logger.debug(f"[命令] 静态: {len(static_commands)}, 学习: {len(learned_commands)}, peer: {len(peer_commands)}")
 
-        if self.config.aigfm_action_protocol == "tools":
+        if self.action_protocol == "tools":
             context = BatchContext(invocation_batch, start_generation, self,
                                    self.config.aigfm_tool_batch_timeout)
             if not self._effect_recovery_loaded:
@@ -735,6 +787,7 @@ class MessageProcessor:
             return None
 
         async def deliver(command, parts, uid, route, request_id, operation):
+            batch.last_request_id = request_id
             try:
                 result = await operation
             except asyncio.CancelledError:
@@ -819,7 +872,8 @@ class MessageProcessor:
                 return await deliver(command, parts, uid, peer_name, request_id, self.peer_client.invoke_detailed(
                     peer_name, command, int(getattr(batch.session, "numeric_chat_id", 0) or 0), uid,
                     parts=parts, at_user_id=first_at, timeout=self.config.aigfm_invoke_timeout,
-                    sender_name=self.bot_name, session=self.session_key,
+                    sender_name=self.bot_name, session=self.session_key, request_id=request_id,
+                    output_timeout=self.config.aigfm_peer_output_timeout,
                 )) + at_hint
             elif name == "generate_image":
                 prompt = args.get("prompt", "").strip()

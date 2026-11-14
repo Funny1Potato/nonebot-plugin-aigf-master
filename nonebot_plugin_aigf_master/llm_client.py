@@ -5,6 +5,7 @@ import base64
 import json
 import re
 from dataclasses import dataclass
+from contextvars import ContextVar
 
 import httpx
 from nonebot import logger
@@ -12,6 +13,7 @@ from openai import AsyncOpenAI
 
 # 工具回填后最终回复的墙钟超时（openai 的 timeout 是逐读块语义，慢响应可能无界拖住）
 _FINAL_ROUND_TIMEOUT = 300.0
+batch_usage = ContextVar("aigfm_batch_usage", default=None)
 
 # 探测主模型是否接受图片输入用的 16x16 PNG（base64 仅 112 字符，一次请求成本可忽略）
 _PROBE_IMAGE_B64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGklEQVR42mOs6FnAQApgYiARjGoY1TB0NAAANysBxN46f1oAAAAASUVORK5CYII="
@@ -138,7 +140,16 @@ class LLMClient:
         标记只影响「下一批消息」（解析期才知道要不要走 VLM 描述），当前这批仍按失败处理。
         """
         try:
-            return await self._client.chat.completions.create(**kwargs)
+            response = await self._client.chat.completions.create(**kwargs)
+            metrics = batch_usage.get()
+            if metrics is not None:
+                metrics["turns"] += 1
+                reported = getattr(response, "usage", None)
+                for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+                    value = getattr(reported, key, None)
+                    if isinstance(value, int):
+                        metrics["usage"][key] = metrics["usage"].get(key, 0) + value
+            return response
         except Exception as e:
             if _has_image(kwargs.get("messages")) and _is_content_rejected(e):
                 self._multimodal = False

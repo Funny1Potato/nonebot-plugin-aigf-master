@@ -116,7 +116,7 @@ class ToolHandlers:
             result = ctx.invocation.last_delivery
             if result is None:
                 return receipt("not_sent", "COMMAND_REJECTED", {"message": message})
-            return receipt(result.status, "COMMAND_DELIVERY", {"message": message})
+            return receipt(result.status, "COMMAND_DELIVERY", {"message": message, "request_id": ctx.invocation.last_request_id})
         if name == "search_internet":
             results = await proc.search.search(args.query, proc.config.aigfm_search_max_results)
             error = getattr(results, "error", None)

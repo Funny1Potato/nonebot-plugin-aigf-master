@@ -79,7 +79,7 @@ def serve(spec):
         async def observed_run(processor, *args, **kwargs):
             result = await original_run(processor, *args, **kwargs)
             observed_batches.append({"session": processor.session_key, "stop_reason": result.stop_reason,
-                "usage": result.usage, "effects": [{"tool": e["tool"], "status": e["status"],
+                "usage": result.usage, "effects": [{"tool": e.get("tool", "send_legacy"), "status": e["status"],
                     "code": e["code"], "http_status": e.get("data", {}).get("http_status")}
                     for e in result.effects]})
             return result
@@ -95,6 +95,9 @@ def serve(spec):
         pig_service.PIGHUB_STARTUP_REFRESH_DELAY_SECONDS = (3600, 3600)
     if not spec["live"]:
         async def scripted(**kwargs):
+            if "tools" not in kwargs:
+                return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(
+                    content=json.dumps({"reply": ["WS_LEGACY"]}), tool_calls=[]))])
             prompt = kwargs["messages"][0]["content"]
             current = prompt.split("## 本批新消息与证据引用", 1)[-1].split("## 可用的本机命令", 1)[0]
             if kwargs["messages"][-1]["role"] == "tool":
@@ -136,13 +139,17 @@ def serve(spec):
         for key, proc in mod._processors.items():
             result = proc.last_process_result
             batches[key] = {"result_id": id(result) if result else None,
+                "protocol": result.protocol if result else None,
+                "next_protocol": proc.next_protocol,
                 "stop_reason": result.stop_reason if result else None,
                 "recent_count": len(proc.recent_messages),
-                "effects": [{k: e[k] for k in ("tool", "status", "code")} for e in result.effects] if result else []}
+                "effects": [{"tool": e.get("tool", "send_legacy"), "status": e["status"], "code": e["code"]} for e in result.effects] if result else []}
         return {"plugins": sorted(p.name for p in nonebot.get_loaded_plugins()),
                 "bots": len(nonebot.get_bots()), "batches": batches,
                 "startup_tasks": len(mod._tasks), "runtime_source": True,
                 "peer_commands": mod._peer_scanned_commands,
+                "peer_requests": [{k: v for k, v in row.items() if k in ("id", "peer", "session", "state", "outputs")}
+                                  for row in mod._peer_client.requests.values()] if mod._peer_client else [],
                 "peer_result_in_context": any("PEER_RESULT_29" in message.content and message.user_name == "integration_peer"
                     for proc in mod._processors.values() for message in proc.recent_messages)
                     or any("PEER_RESULT_29" in message.content and message.user_name == "integration_peer"
@@ -303,7 +310,37 @@ async def exercise(args, repo, run, settings):
                 await send("请只回复 WS_AFTER_RESET，不改记忆。")
                 await wait_batch(980101, changed["result_id"])
                 checks["chat_after_reset"] = any("WS_AFTER_RESET" in text(o) for o in outputs if o["group"] == 980101)
+                if args.offline:
+                    async def wait_protocol(protocol):
+                        async def poll():
+                            while True:
+                                state = await health()
+                                if state["batches"]["onebot11:980101"]["next_protocol"] == protocol:
+                                    return state
+                                await asyncio.sleep(0.1)
+                        return await asyncio.wait_for(poll(), 10)
+                    await send("action_protocol legacy_json", user=980999, mention=False)
+                    state = await wait_protocol("legacy_json")
+                    checks["session_protocol_does_not_change_other_group"] = state["batches"]["onebot11:980102"]["next_protocol"] == "tools"
+                    await send("请回复 WS_LEGACY")
+                    legacy_batch = await wait_batch(980101, state["batches"]["onebot11:980101"]["result_id"])
+                    checks["admin_protocol_command_changes_next_batch"] = legacy_batch["protocol"] == "legacy_json" and any("WS_LEGACY" in text(o) for o in outputs)
+                    await send("status", user=980999, mention=False)
+                    for _ in range(100):
+                        if any("运行诊断" in text(o) for o in outputs):
+                            break
+                        await asyncio.sleep(0.1)
+                    checks["status_exposes_diagnostics"] = any("运行诊断" in text(o) for o in outputs)
             else:
+                if args.offline:
+                    state = await health()
+                    checks["restart_keeps_session_protocol"] = state["batches"]["onebot11:980101"]["next_protocol"] == "legacy_json"
+                    await send("action_protocol default", user=980999, mention=False)
+                    for _ in range(100):
+                        if (await health())["batches"]["onebot11:980101"]["next_protocol"] == "tools":
+                            break
+                        await asyncio.sleep(0.1)
+                    checks["session_protocol_can_revert_to_config"] = (await health())["batches"]["onebot11:980101"]["next_protocol"] == "tools"
                 recent = memory / "onebot11_980101/recent.json"
                 before = json.loads(recent.read_text(encoding="utf-8"))["messages"]
                 await send("根据长期记忆，连接测试项目现在的主题色是什么？只回复颜色，不改记忆。")

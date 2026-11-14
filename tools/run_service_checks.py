@@ -223,6 +223,8 @@ async def exercise(args, repo, run, settings):
             # Peer output returns via the real capture HTTP endpoint into master.
             h = await wait(lambda h: h.get("peer_result_in_context") is True)
             checks["peer_output_return_path"] = h["peer_result_in_context"]
+            rows = [r for r in h.get("peer_requests", []) if r["peer"] == "integration_peer"]
+            checks["peer_request_id_roundtrip"] = len(rows) == 1 and rows[0]["state"] == "output_received" and rows[0]["outputs"] > 0
         if args.checks in ("all", "routing"):
             await case("peer", peer_case)
 

@@ -1,0 +1,237 @@
+{
+  "date": "2026-11-13",
+  "published": false,
+  "github_actions_executed": false,
+  "real_chat_platform": false,
+  "workflow_yaml_parsed": true,
+  "offline_py310": [
+    {
+      "suite": "v_anime_chain_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_beta_port_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_cache_cleanup_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_distribution_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_event_copy_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_invocation_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_ma_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_notice_fallback_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_notice_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_operations_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_parser_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_search_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_simulated_session_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS"
+    }
+  ],
+  "runtime_py314_matrix": [
+    {
+      "suite": "v_anime_chain_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_beta_port_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_cache_cleanup_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_distribution_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_event_copy_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_invocation_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_ma_adapters_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_ma_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_notice_adapters_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_notice_fallback_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_notice_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_operations_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_parser_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_recent_persist_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_search_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_simulated_session_test.py",
+      "status": "PASS"
+    },
+    {
+      "suite": "v_tool_protocol_test.py",
+      "status": "PASS"
+    }
+  ],
+  "connected_platform": {
+    "phase_1_startup_hooks": true,
+    "phase_1_project_plugins": true,
+    "unauthorized_connection_rejected": true,
+    "startup_migrated_legacy_directory": true,
+    "connected_over_real_websocket": true,
+    "memory_then_native_reply": true,
+    "native_at_preserved": true,
+    "sessions_isolated": true,
+    "disabled_session_not_processed": true,
+    "tool_migration_backup": true,
+    "memory_correction_in_place": true,
+    "reset_cleared_history": true,
+    "reset_kept_memory": true,
+    "chat_after_reset": true,
+    "session_protocol_does_not_change_other_group": true,
+    "admin_protocol_command_changes_next_batch": true,
+    "status_exposes_diagnostics": true,
+    "phase_1_graceful_shutdown": true,
+    "phase_2_startup_hooks": true,
+    "phase_2_project_plugins": true,
+    "restart_keeps_session_protocol": true,
+    "session_protocol_can_revert_to_config": true,
+    "restart_restored_history": true,
+    "restart_recalled_fact": true,
+    "phase_2_graceful_shutdown": true
+  },
+  "live_routing": {
+    "master_startup": true,
+    "peer_startup": true,
+    "peer_unauthorized_rejected": true,
+    "peer_allowlist_rejected_management": true,
+    "peer_real_output_pushed_commands": true,
+    "local_actual_plugin_invoked": true,
+    "local_quota_not_repeated": true,
+    "peer_http_invocation_executed": true,
+    "peer_output_return_path": true,
+    "peer_request_id_roundtrip": true,
+    "master_graceful_shutdown": true,
+    "peer_graceful_shutdown": true
+  },
+  "clean_install": [
+    {
+      "artifact": "nonebot_plugin_aigf_master-2.0.0b5-py3-none-any.whl",
+      "status": "passed"
+    },
+    {
+      "artifact": "nonebot_plugin_aigf_master-2.0.0b5.tar.gz",
+      "status": "passed"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "nonebot_plugin_aigf_master-2.0.0b5-py3-none-any.whl",
+      "sha256": "ba9a0f7a7a2b8739fc114843b7324bf975d884139d7098155e0c1b8de124e561"
+    },
+    {
+      "name": "nonebot_plugin_aigf_master-2.0.0b5.tar.gz",
+      "sha256": "53646099a2324f5c213354cc149d54f6e01fbc8a9b097336d43db0c9e979292c"
+    }
+  ],
+  "source_sha256": {
+    "nonebot_plugin_aigf_master/animetrace_client.py": "a651874d1523a728536f9f2e702205c03a5d6381445aac87a584bb757218bdc1",
+    "nonebot_plugin_aigf_master/anime_recognizer.py": "8824c3bb5c62365dc817eb5575e79e452faee15af806410c35e4dbebabc8d9de",
+    "nonebot_plugin_aigf_master/api_hooks.py": "020f2458e25287eaa7b980d01a6e0c5a5110fb82c8c491f62efad3bbd4887126",
+    "nonebot_plugin_aigf_master/cache_cleanup.py": "d4c976cf1f0766bb90c3216a3db64914a5f823a3aafb82de121dfb64020ef030",
+    "nonebot_plugin_aigf_master/command_learner.py": "9f1d9ae1b0b4e5028373a5b93c7865aaeef228e0efee1dc898ea64c6e7a1d897",
+    "nonebot_plugin_aigf_master/config.py": "7272a05f49884fbd0db964ed12201cb94d6d312ffa8a76accee7339ad97ac864",
+    "nonebot_plugin_aigf_master/context_bus.py": "f70426fb96bc45a5add56620e0f109bff38309f87f99223ad582966edf7fccf1",
+    "nonebot_plugin_aigf_master/effect_store.py": "063aa9a1c3adf7b7a4c6df287057eecf769b02080d0de10b3b95db2c40896c1f",
+    "nonebot_plugin_aigf_master/image_gen_client.py": "d06b8f0197bb517affd928dc739a04a91c780cc71ff0d4108ad3cca9e5c51a27",
+    "nonebot_plugin_aigf_master/image_handler.py": "b9c687d75fbc8dd1388aaf29ba1688ab4fbfc5a9ba96afa420805d9a4118ed08",
+    "nonebot_plugin_aigf_master/invocation.py": "c40e4d2583cbcc9f439ded45ad0484a8d7483f2671d85664336a3934683d0471",
+    "nonebot_plugin_aigf_master/llm_client.py": "0ebaf78487987a468897479cb693ea69e2c240e4f61c937ebad19daf99383f3e",
+    "nonebot_plugin_aigf_master/meme_store.py": "eec69436dd7b2de09962157a3d77b1c8d5c8fa412918bfdd731cf68d7b76dc4e",
+    "nonebot_plugin_aigf_master/memory_store.py": "c10e39b6ef1f74f64bf5fd8bbb9cfcc155afee6a7b2bbd5a6620e107072c48a6",
+    "nonebot_plugin_aigf_master/message_sender.py": "1b53f33e09db98a750d7901a60d9f6d4586d5bc84d9d56d05591906d9c49a9b7",
+    "nonebot_plugin_aigf_master/models.py": "65989a41c081edf0858ad92af12c55caed54a66fd63ac0bf983dddf0cb8bb911",
+    "nonebot_plugin_aigf_master/notice.py": "2a1528ce66781e27df5d3338916dde68e023c31e3b657ecb4a40f729ae9d6159",
+    "nonebot_plugin_aigf_master/operations.py": "6914e52d939220dc8e174f99bc82aeecf81ab9fefe5f01e12b05a03cc3e044eb",
+    "nonebot_plugin_aigf_master/peer_client.py": "121eedca255e2688814d6a58d117684cd2913192e391e5d95dc80b5a7aee7a59",
+    "nonebot_plugin_aigf_master/plugin_discovery.py": "fcf5468d33ff7a2c803b5ddf813def36605335cc67c33c8db6fcd30d29da1951",
+    "nonebot_plugin_aigf_master/plugin_invoker.py": "0c39cf89675984d8a81e7229bc396341ced805037a1d2b16901e9f6219e62132",
+    "nonebot_plugin_aigf_master/preset_store.py": "653eb33934cdab27d125b2a2c66279a9a17c2602c40e46571bde55c420353de9",
+    "nonebot_plugin_aigf_master/processor.py": "b49d83f0600139825ad51c960c4a3b7e6f640bc2cfe1eb46e22b027e109cbc2d",
+    "nonebot_plugin_aigf_master/prompt_builder.py": "810d5d2b54c3138701bb5564d78ad74054764f5e5e1d0c2394193e1b1dc340de",
+    "nonebot_plugin_aigf_master/response_parser.py": "494c969113e8e69e0db508e40224cad305a5f7814e74cccc91150954520ed2de",
+    "nonebot_plugin_aigf_master/search_client.py": "e808333a041c019cbef66046aad509f08a461a89f119c7727d7a11b04a619259",
+    "nonebot_plugin_aigf_master/session.py": "72a894506ccc1dfcd39c49da7c289c03ab29858c1dd3bc5502205deae78b5a74",
+    "nonebot_plugin_aigf_master/store_coordinator.py": "f7edafb364095b34496e3e2187dfc9a4b7a5ebf6d68f55324f95c37baf5fcb7d",
+    "nonebot_plugin_aigf_master/tool_handlers.py": "195b0692ebc64787b98796360ebaecc86e83fd6512b5ed583db6da68f1e706d1",
+    "nonebot_plugin_aigf_master/tool_memory.py": "419e2e493b0fe5f1569ff5a40cb4b0761e09d5ff3e69aab7dfc1e602a6f45448",
+    "nonebot_plugin_aigf_master/tool_runtime.py": "ac17fb993d56820486ab690c40a05d03f68b58f3adba055a7c747db758950abe",
+    "nonebot_plugin_aigf_master/tool_schemas.py": "81c063b39ba7974f6d0feb26d75267cdc3b326f007527ec3bac5441d8c41e3d8",
+    "nonebot_plugin_aigf_master/unimsg.py": "1f35de372c4c1e34f32c8d61db821cdc710e1d8b8f7124f96b0d0968a860d68d",
+    "nonebot_plugin_aigf_master/vlm_client.py": "0dcd57bc1b48ec99c4441f6dd3a109c396b37b7f430c0b21506f379b5aa71cd7",
+    "nonebot_plugin_aigf_master/__init__.py": "e8bd183d613c881579b3004c1e9eac22ef481a7bcfe4f0e184a8f9318ed78b96"
+  }
+}

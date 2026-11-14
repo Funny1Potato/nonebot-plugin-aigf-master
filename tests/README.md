@@ -65,3 +65,10 @@ python tests/run_offline.py --matrix
 实际启动工作区驱动并由外部 OneBot 模拟器通过反向 WebSocket 连接的测试需单独运行，会绑定本地端口并加载项目插件；入口和结果见 [CONNECTED_PLATFORM.md](../docs/CONNECTED_PLATFORM.md)。不属于默认离线测试集。
 
 双实例 peer HTTP、本机插件、搜索与后台生图实服务检查见 [LIVE_SERVICES.md](../docs/LIVE_SERVICES.md)，需显式 --live；默认离线套件不会调用这些付费服务。
+
+
+## b5 后新增检查
+
+`v_distribution_test.py` 验证发布门槛会拒绝 tag/版本不符、缺失源码和混入私有数据。质量工作流还会实际构建 wheel/sdist 并分别在干净环境安装、检查依赖和加载插件。Python 3.10 需要测试依赖中的 tomli；干净安装工具为 `python tools/check_clean_install.py --dist dist`，结果保存在 tests/.results/install-*。
+
+`v_operations_test.py` 覆盖会话协议持久化、跨 await 切换边界、会话隔离、坏文件保留、取消清理、诊断内容边界、token 统计及 peer 早到/迟到/不匹配输出。实际 FastAPI/外部 OneBot 模拟检查见 `tools/run_connected_platform.py --offline`；实际模型及 peer HTTP 往返见 `tools/run_service_checks.py --live --checks routing`，这两个工具不纳入默认离线套件。

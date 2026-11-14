@@ -44,6 +44,7 @@ from .peer_client import PeerClient
 from .plugin_invoker import PluginInvoker
 from .preset_store import PresetStore
 from .processor import MessageProcessor
+from .operations import ProtocolOverrides
 from .search_client import create_search_client
 from .session import (
     SessionInfo, adapter_slug, disk_key, is_enabled, migrate_legacy_dirs,
@@ -70,6 +71,7 @@ __plugin_meta__ = PluginMetadata(
 _data_dir = store.get_plugin_data_dir()
 _cache_dir = store.get_plugin_cache_dir()
 _config_dir = store.get_plugin_config_dir()
+_protocol_overrides = ProtocolOverrides(_config_dir / "session_protocols.json")
 
 _proxy = (plugin_config.aigfm_https_proxy or plugin_config.aigfm_http_proxy) if plugin_config.aigfm_proxy_enabled else None
 _llm = LLMClient(plugin_config.aigfm_llm_api_key, plugin_config.aigfm_llm_base_url, _proxy)
@@ -161,6 +163,7 @@ def _get_processor(key: str) -> MessageProcessor:
             peer_scanned_commands=_peer_scanned_commands,
             image_gen=_image_gen, image_handler=_image_handler,
         )
+        _processors[key].protocol_overrides = _protocol_overrides
     return _processors[key]
 
 
@@ -364,6 +367,8 @@ async def _handle_peer_capture(group_id, source: str, data: dict):
     # 未启用会话：不入缓冲、不做 VLM
     if key not in _enabled_keys():
         return
+    if _peer_client and data.get("request_id") and (data.get("text") or data.get("image_url") or data.get("image_base64")):
+        _peer_client.observe_output(source, key, data["request_id"])
     if data.get("text"):
         _add_external_message(key, source, data["text"])
     # 与本机插件捕获同开关：关闭时不下载、不做 VLM、也不入缓冲
@@ -495,6 +500,8 @@ set_preset_cmd = on_alconna(_cmd("set_preset", Args["rest", MultiVar(str, "*")])
                             aliases={"set_presets"}, permission=SUPERUSER, priority=0, block=True)
 reload_meme_cmd = on_alconna(_cmd("reload_meme", Args["rest", MultiVar(str, "*")]),
                              aliases={"重载表情包"}, permission=SUPERUSER, priority=0, block=True)
+action_protocol_cmd = on_alconna(_cmd("action_protocol", Args["rest", MultiVar(str, "*")]),
+                                 aliases={"动作协议"}, permission=SUPERUSER, priority=0, block=True)
 auto_chat = on_message(rule=_is_message, priority=1, block=False)
 # 类型闸门是内核给的（Matcher.check_rule 按 event.get_type() == "notice" 过滤，见 notice.py 开头），
 # 所以这里收的是所有适配器的通知事件；rule 只做「带会话线索」的廉价预筛
@@ -508,6 +515,22 @@ async def _(bot: Bot, event: Event):
         await status_cmd.finish("无法识别当前会话（该适配器缺少会话信息）")
     processor = _get_processor(session.key)
     await status_cmd.finish(processor.status())
+
+
+@action_protocol_cmd.handle()
+async def _(bot: Bot, event: Event, result: CommandResult):
+    session = await _command_session(bot, event)
+    if session is None:
+        await action_protocol_cmd.finish("无法识别当前会话")
+    parts = [str(item) for item in (result.result.all_matched_args.get("rest") or ())]
+    if len(parts) != 1 or parts[0] not in {"tools", "legacy_json", "default"}:
+        await action_protocol_cmd.finish("用法: action_protocol <tools|legacy_json|default>（当前会话；default 恢复配置值）")
+    try:
+        _protocol_overrides.set(session.key, parts[0])
+        protocol = _get_processor(session.key).next_protocol
+    except (OSError, ValueError, TypeError):
+        await action_protocol_cmd.finish("协议设置未保存，请检查 session_protocols.json；原文件未覆盖")
+    await action_protocol_cmd.finish(f"{session.key} 下一批使用 {protocol}；已保存，重启保留，当前批继续原协议")
 
 
 @set_role_cmd.handle()
@@ -748,9 +771,12 @@ async def _on_startup():
                     data = await request.json()
                 except Exception:
                     return JSONResponse({"error": "bad json"}, status_code=400)
-                group_id = data.get("group_id")
-                if not group_id:
-                    return JSONResponse({"error": "no group_id"}, status_code=400)
+                group_id = data.get("group_id") or 0
+                if not group_id and not data.get("session"):
+                    return JSONResponse({"error": "no session or group_id"}, status_code=400)
+                request_id = data.get("request_id", "")
+                if not isinstance(request_id, str) or len(request_id) > 64:
+                    return JSONResponse({"error": "invalid request_id"}, status_code=400)
                 source = peer_name
                 logger.info(f"[Peer] 收到推送: bot={source}, group={group_id}, "
                             f"text={str(data.get('text', ''))[:80]}, "
