@@ -32,6 +32,8 @@ jobs:
         with:
           name: offline-${{ matrix.python }}
           path: tests/.results/
+          include-hidden-files: true
+          if-no-files-found: error
 
   package:
     runs-on: ubuntu-latest
