@@ -58,9 +58,9 @@
 >
 > 从 2.0 起插件还依赖 `nonebot-plugin-alconna` 与 `nonebot-plugin-uninfo`（跨适配器收发与会话/成员信息），用下面的方式安装时会自动装上。
 
-### 安装 beta 版本（2.0.0b5）
+### 安装 beta 版本（2.0.0b6）
 
-`2.0.0b5` 是**预发布（pre-release）版本**，因此：
+`2.0.0b6` 是**预发布（pre-release）版本**，因此：
 
 - `pip install nonebot-plugin-aigf-master` 装的仍是稳定版 **1.6.x**
 - `nb plugin install nonebot-plugin-aigf-master` 同样只装稳定版，而且 nb-cli **不支持指定版本**，所以 beta 只能用 pip 装
@@ -68,7 +68,7 @@
 要装 beta，**必须显式写出版本号**：
 
 ```bash
-pip install nonebot-plugin-aigf-master==2.0.0b5
+pip install nonebot-plugin-aigf-master==2.0.0b6
 ```
 
 在 `pyproject.toml` 中添加：
@@ -840,9 +840,9 @@ AIGFM_TOOL_MEMORY_ENABLED=true
 首次使用会备份并初始化记忆条目引用；非 OneBot 群友使用独立命名空间。建议先运行源码仓库中的只读迁移预览。完整契约、部分发送/重启处理、回退与验证边界见 [工具协议说明](docs/TOOL_PROTOCOL.md)。
 
 
-### b5 后 beta 源码中的会话灰度与诊断
+### 会话灰度与诊断（2.0.0b6 起提供）
 
-以下能力提供于 b5 之后的 beta 源码，尚未发布到 PyPI；2.0.0b5 安装包不包含这些新增能力：
+2.0.0b6 增加以下能力；2.0.0b5 安装包不包含这些新增能力：
 
 - `AIGFM_SESSION_PROTOCOLS={"onebot11:123456":"tools"}` 按会话覆盖全局协议。
 - 超级用户执行 `action_protocol tools` / `action_protocol legacy_json`，持久化切换当前会话；下一批生效。`action_protocol default` 恢复环境配置。命令前缀沿用 `COMMAND_START`。

@@ -1,6 +1,6 @@
 # 工具动作协议：使用与维护
 
-2026-11-13，首版随 2.0.0b5 发布；文末的 b5 后开发补充尚未发布。开发方案见 [TOOL_ONLY_AGENT_PLAN.md](TOOL_ONLY_AGENT_PLAN.md)。
+首版随 2.0.0b5 提供；文末的会话灰度、诊断和主端 peer 请求关联自 2.0.0b6 提供。开发方案见 [TOOL_ONLY_AGENT_PLAN.md](TOOL_ONLY_AGENT_PLAN.md)。
 
 ## 启用
 
@@ -124,6 +124,6 @@ python tools/preview_tool_migration.py --data-dir <插件数据目录>
 
 本机插件、peer HTTP、搜索和后台生图的实服务验证见 [LIVE_SERVICES.md](LIVE_SERVICES.md)。搜索异常使用 SEARCH_HTTP_ERROR/SEARCH_SERVICE_ERROR 失败回执，正常空结果不属于服务失败。
 
-## b5 后 beta 源码补充
+## 2.0.0b6 补充
 
-新增按会话协议覆盖、管理员 `action_protocol` 命令、`status` 诊断及 peer 请求输出关联，均已在 beta 源码实现，尚未发布到 PyPI。配置优先级、下一批生效规则与兼容边界见 [运维说明](OPERATIONS.md)。全局默认仍为 legacy_json。
+新增按会话协议覆盖、管理员 `action_protocol` 命令、`status` 诊断及 peer 请求输出关联，均在 2.0.0b6 提供；完整请求回传关联还需要 peer 侧包含相应支持。配置优先级、下一批生效规则与兼容边界见 [运维说明](OPERATIONS.md)。全局默认仍为 legacy_json。

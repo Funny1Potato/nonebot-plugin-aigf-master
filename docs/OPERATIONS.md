@@ -1,6 +1,6 @@
 # 会话灰度、诊断与发布检查
 
-本文描述 b5 之后的 beta 源码能力，尚未发布到 PyPI。全局默认仍为 `legacy_json`；无需改生产配置即可保持现有行为。
+本文描述 2.0.0b6 新增的会话灰度、诊断和主端 peer 请求关联能力。全局默认仍为 `legacy_json`；无需改生产配置即可保持现有行为。
 
 ## 按会话选择协议
 
@@ -69,7 +69,7 @@ peer 通过请求局部上下文关联输出，包含继承上下文的后台任
 python -m pip install build twine
 python -m build
 python tools/check_distribution.py --dist dist
-python tools/check_distribution.py --dist dist --tag v2.0.0b5
+python tools/check_distribution.py --dist dist --tag v2.0.0b6
 python -m twine check dist/*
 python tools/check_clean_install.py --dist dist
 python tests/run_offline.py
