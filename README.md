@@ -13,10 +13,13 @@
 </div>
 
 > [!TIP]
-> **有个跨适配器 beta 版正在测试中**：`2.0.0-beta` 已作为**预发布**发到 PyPI，消息收发与会话身份改走 `nonebot-plugin-alconna` / `nonebot-plugin-uninfo`，OneBot / Satori / Telegram / Discord 等适配器共用同一套聊天、记忆与命令逻辑。
-> 稳定版仍是 **1.6.x**（`pip install` 与 `nb plugin install` 默认只会装稳定版），装 beta 必须显式写出版本号：
-> `pip install nonebot-plugin-aigf-master==2.0.0b4`
-> 最新版本号与支持边界见 [beta 分支的 README](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/tree/beta)。
+> **跨适配器 beta：`2.0.0b6`（预发布）**。消息收发与会话身份使用 `nonebot-plugin-alconna` / `nonebot-plugin-uninfo`，提供跨适配器聊天、记忆及插件调用支持。
+>
+> beta 新增可选的多轮工具协议：发言、记忆、表情收藏和命令学习通过工具执行；b6 增加按会话切换协议、`status` 运行诊断及 peer 请求/输出关联。**默认仍为 `legacy_json`**，tools 需显式启用，也可由超级用户在目标会话执行 `action_protocol tools`，下一批生效并持久化保留。
+>
+> main 稳定系列仍为 **1.6.x**；安装 beta 请显式指定版本：`pip install --upgrade nonebot-plugin-aigf-master==2.0.0b6`。
+>
+> 已通过离线回归、远端 Linux CI、隔离模拟平台及相关实服务检查；真实聊天平台和长期灰度尚未完成。完整功能、启用方式及适配器边界见 [beta README](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/blob/beta/README.md)。peer 独立部署，完整请求关联需要 peer 侧也包含相应支持。
 
 ## 📖 介绍
 
