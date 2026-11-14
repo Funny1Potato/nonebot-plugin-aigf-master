@@ -91,3 +91,16 @@ Satori / Kaiheila 消息复制修复同时落在本体与 peer；消息/调用�
 已创建 [GitHub 预发布](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/releases/tag/v2.0.0b5)，发布说明非空；[发布工作流](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43396623135) 成功，[PyPI 2.0.0b5](https://pypi.org/project/nonebot-plugin-aigf-master/2.0.0b5/) 可用。下载校验 wheel/sdist 哈希，并逐一对比 wheel 中的 34 个 Python 模块与 tag 提交。详情见 [发布核验记录](releases/2.0.0b5-verification.json)。
 
 默认仍为 legacy_json，tools 需显式启用；尚未完成真实聊天服务与 24 小时灰度。peer 的本地修复没有在本次发布中提交、推送或发版，需要独立处理。本页较早的“本地未发布”小节保留为开发历史，当前本体状态以此发布记录为准。
+
+## 2026-11-14：beta 已推送，远端质量门槛通过
+
+四项新增能力和文档已提交并推送两个 beta 分支；尚未发布到 PyPI。真实聊天服务、24 小时灰度与压力验收仍未完成，全局默认仍为 legacy_json。
+
+| 仓库 | 远端被测提交 | 回归结果 | 远端运行 |
+| --- | --- | --- | --- |
+| 本体 | `dd9983a` | Ubuntu / Python 3.10：15/15；3.14 含矩阵：17/17 | [Quality gate 成功](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43545288155) |
+| peer | `a66be63` | Ubuntu / Python 3.10、3.14 各 4/4 | [Quality gate 成功](https://github.com/Funny1Potato/nonebot-plugin-aigfm-peer/actions/runs/43545298564) |
+
+两个仓库的构建任务均通过包内容与源码核对、twine check，并分别在全新 Python 3.11 环境安装 wheel/sdist、检查依赖和加载插件。修复了隐藏测试结果目录未被上传的问题，已核对每个仓库均保留两套测试日志及构建包共三个 Actions 产物。
+
+完整可追溯记录见 [本体 CI 摘要](../tests/baselines/2026-11-14-ci.json) 和 peer 仓库 tests/baselines/2026-11-14-ci.json。以上 CI 针对代码/工作流提交；后续仅补充文档和基线，不改包内源码、依赖或工作流。没有创建新 tag、Release 或执行 PyPI 上传，也没有修改生产配置或重启现有机器人。

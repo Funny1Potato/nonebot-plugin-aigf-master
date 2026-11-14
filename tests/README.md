@@ -72,3 +72,5 @@ python tests/run_offline.py --matrix
 `v_distribution_test.py` 验证发布门槛会拒绝 tag/版本不符、缺失源码和混入私有数据。质量工作流还会实际构建 wheel/sdist 并分别在干净环境安装、检查依赖和加载插件。Python 3.10 需要测试依赖中的 tomli；干净安装工具为 `python tools/check_clean_install.py --dist dist`，结果保存在 tests/.results/install-*。
 
 `v_operations_test.py` 覆盖会话协议持久化、跨 await 切换边界、会话隔离、坏文件保留、取消清理、诊断内容边界、token 统计及 peer 早到/迟到/不匹配输出。实际 FastAPI/外部 OneBot 模拟检查见 `tools/run_connected_platform.py --offline`；实际模型及 peer HTTP 往返见 `tools/run_service_checks.py --live --checks routing`，这两个工具不纳入默认离线套件。
+
+2026-11-14 远端 Linux 验证已通过，见 [CI 记录](baselines/2026-11-14-ci.json) 与 [基线说明](BASELINE.md)。测试日志保留在 Actions 的 offline-3.10 / offline-3.14 产物中，构建包在 checked-distributions 中；历史产物有保留期限。

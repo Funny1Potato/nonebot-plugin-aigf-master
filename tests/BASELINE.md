@@ -117,3 +117,11 @@ Python 3.10 工作区虚拟环境实际运行 FastAPI/Uvicorn 与 OneBot 适配�
 最终源码构建的 wheel/sdist 均通过完整包内容核对，分别在全新 3.10 虚拟环境安装、pip check 和隔离目录插件加载通过。公开脱敏摘要：[2026-11-13-operations.json](baselines/2026-11-13-operations.json)。
 
 GitHub Actions 仅完成工作流实现与本地 YAML 解析，未提交推送执行；没有发布、修改生产配置或重启现有机器人。真实聊天平台与长期灰度仍未验证。中途测试失败和修复日志保留在 .results；最终通过结果见上述摘要。
+
+## 2026-11-14：远端 Linux CI 已通过
+
+已提交并推送 beta；被测代码提交 `dd9983a` 的 [Quality gate](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43545288155) 为 completed/success。Ubuntu 远端回归：3.10 为 15/15 套件，3.14 含适配器矩阵为 17/17；Python 3.11 构建、包内完整源码核对、twine check，以及 wheel/sdist 各自独立干净环境安装、pip check 和安装包加载全部通过。
+
+首轮任务通过但上传器默认忽略隐藏目录，未保留测试日志；现已设置 include-hidden-files=true 和 if-no-files-found=error，复跑确认 offline-3.10、offline-3.14、checked-distributions 三个产物均上传成功。精确提交、任务编号、日志摘录及产物摘要见 [2026-11-14-ci.json](baselines/2026-11-14-ci.json)。
+
+后续仅更新文档和基线记录，未修改被测包内 Python、依赖或工作流；无需重复业务回归。未创建新版本/tag，未执行上传 PyPI 的发布任务；真实聊天平台和长期灰度仍未验证。

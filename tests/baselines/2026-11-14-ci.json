@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-14",
+  "repository": "Funny1Potato/nonebot-plugin-aigf-master",
+  "branch": "beta",
+  "tested_revision": "dd9983a9312b74318212ff749fc2feddbb44fe37",
+  "workflow": "Quality gate",
+  "run_id": 43545288155,
+  "run_url": "https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43545288155",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "job_id": 132295071610,
+      "name": "package",
+      "conclusion": "success",
+      "runner_image": "ubuntu-26.04",
+      "summary": [
+        "PASS: nonebot-plugin-aigf-master 2.0.0b5, 35 modules, wheel + sdist",
+        "No broken requirements found.",
+        "PASS: clean installed nonebot-plugin-aigf-master 2.0.0b5",
+        "No broken requirements found.",
+        "PASS: clean installed nonebot-plugin-aigf-master 2.0.0b5",
+        "Artifact checked-distributions has been successfully uploaded! Final size is 341264 bytes. Artifact ID is 14093806731"
+      ]
+    },
+    {
+      "job_id": 132295071865,
+      "name": "offline (3.14)",
+      "conclusion": "success",
+      "runner_image": "ubuntu-26.04",
+      "summary": [
+        "17/17 suites passed",
+        "Artifact offline-3.14 has been successfully uploaded! Final size is 42986 bytes. Artifact ID is 14093512834"
+      ]
+    },
+    {
+      "job_id": 132295071897,
+      "name": "offline (3.10)",
+      "conclusion": "success",
+      "runner_image": "ubuntu-26.04",
+      "summary": [
+        "15/15 suites passed",
+        "Artifact offline-3.10 has been successfully uploaded! Final size is 37943 bytes. Artifact ID is 14093587554"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14093806731,
+      "name": "checked-distributions",
+      "size_in_bytes": 341264,
+      "digest": "sha256:b3388063cd4c35e63d22ccadb3f9ce72be8aeace2da657cab7f1c69f00163e33",
+      "expires_at": "2027-02-12T02:15:42Z"
+    },
+    {
+      "id": 14093587554,
+      "name": "offline-3.10",
+      "size_in_bytes": 37943,
+      "digest": "sha256:a6e7ecf7caf1df56e7a6183976eeb1821433b6bcd06530d30eb4219e34a86606",
+      "expires_at": "2027-02-12T02:15:42Z"
+    },
+    {
+      "id": 14093512834,
+      "name": "offline-3.14",
+      "size_in_bytes": 42986,
+      "digest": "sha256:2dbec586fce13c8afa6cd34ce882535a78b36d9ff622bc1699d36c4b8e87fe40",
+      "expires_at": "2027-02-12T02:15:42Z"
+    }
+  ],
+  "diagnostic_upload_fix": "include-hidden-files=true for tests/.results; if-no-files-found=error",
+  "tag_publish_pipeline_executed": false,
+  "new_release_created": false,
+  "real_chat_platform_verified": false,
+  "long_running_rollout_verified": false
+}
