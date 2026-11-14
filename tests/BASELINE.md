@@ -125,3 +125,9 @@ GitHub Actions 仅完成工作流实现与本地 YAML 解析，未提交推送�
 首轮任务通过但上传器默认忽略隐藏目录，未保留测试日志；现已设置 include-hidden-files=true 和 if-no-files-found=error，复跑确认 offline-3.10、offline-3.14、checked-distributions 三个产物均上传成功。精确提交、任务编号、日志摘录及产物摘要见 [2026-11-14-ci.json](baselines/2026-11-14-ci.json)。
 
 后续仅更新文档和基线记录，未修改被测包内 Python、依赖或工作流；无需重复业务回归。未创建新版本/tag，未执行上传 PyPI 的发布任务；真实聊天平台和长期灰度仍未验证。
+
+## 2026-11-14：b6 tag 发布验收
+
+[Publish to PyPI](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43547125581) 在 tag v2.0.0b6 / 提交 8db6d62 上运行成功：复用质量门槛的 Python 3.10、3.14 回归和独立干净安装全部通过，tag/pyproject 版本核对通过，随后上传同一组构建产物到 PyPI。
+
+实际下载 PyPI wheel/sdist 并核对元数据哈希，与 Actions checked-distributions 中的同名文件逐字节一致，wheel 的 35 个 Python 模块与 tag 一致。main README 更新提交 f7cf422 已推送，且远端 blob 与本地相符。公开记录见 [2.0.0b6-verification.json](../docs/releases/2.0.0b6-verification.json)。没有真实平台、长期灰度或压力验收证明；peer 本轮未发版。

@@ -1,20 +1,20 @@
 # 当前状态
 
-核对日期：2026-11-14。本体 2.0.0b5 已核对 GitHub Release、发布工作流和 PyPI 下载包；其余版本/分支来自本地 Git。已完成隔离真实模型及非聊天平台实服务验证，尚未验证真实聊天服务或长期运行。
+核对日期：2026-11-14。本体 2.0.0b6 已核对 GitHub Release、发布工作流和 PyPI 下载包，main README 的 beta 说明已更新；其余版本/分支来自本地 Git。已完成隔离真实模型及非聊天平台实服务验证，尚未验证真实聊天服务或长期运行。
 
-本体正在准备发布 2.0.0b6，新增改动为：会话协议覆盖、运行诊断、peer 请求关联及 CI 发布门槛。使用与边界见 [运维说明](OPERATIONS.md)。当前源码 35 个 Python 文件，b5 tag/安装包仍为 34 个；不能将工作区新能力当作 b5 已发布功能。
+本体 2.0.0b6 已发布，新增改动为：会话协议覆盖、运行诊断、peer 请求关联及 CI 发布门槛。使用与边界见 [运维说明](OPERATIONS.md)。当前源码 35 个 Python 文件，b5 tag/安装包仍为 34 个；不能将工作区新能力当作 b5 已发布功能。
 
 ## 代码位置与版本
 
 | 对象 | 本地状态 |
 | --- | --- |
-| 本体当前版本 | beta，pyproject `2.0.0b6`；tag、Release、PyPI 正在按发布流程核验 |
+| 本体当前版本 | beta，pyproject `2.0.0b6`；tag `v2.0.0b6` 指向 `8db6d62`，Release/PyPI 已核验 |
 | 上一个已核验发布 | tag `v2.0.0b5`，提交 `d9069d3` |
 | 本体发布状态 | GitHub 预发布已创建，Actions 成功；PyPI wheel/sdist 已下载核对，与 b5 提交一致 |
-| 本体 main | 本地 `f9f88c8`，版本 `1.6.4`；本次没有切换或修改 main |
+| 本体 main | `f7cf422`，版本仍为 `1.6.4`；仅更新 README 的 beta 说明 |
 | peer 当前 checkout | beta，pyproject `0.4.0b1`；包含尚未发版的捕获修复与请求关联，提交以 Git 为准 |
 | peer 远端跟踪状态 | 与本地 origin/beta 一致 |
-| 运行副本 | 本体 35 个、peer 2 个 Python 文件与各自仓库一致（忽略 CRLF/LF）；包含 b5 后本地开发改动 |
+| 运行副本 | 本体 35 个、peer 2 个 Python 文件与各自仓库一致（忽略 CRLF/LF）；本体与 b6 包内源码一致，peer 仍为独立 beta 源码 |
 
 该表是接手快照，不是永久版本声明。每次发版、切分支或源码同步后应更新；日常以 Git 和 pyproject 为准。
 
@@ -105,3 +105,11 @@ Satori / Kaiheila 消息复制修复同时落在本体与 peer；消息/调用�
 两个仓库的构建任务均通过包内容与源码核对、twine check，并分别在全新 Python 3.11 环境安装 wheel/sdist、检查依赖和加载插件。修复了隐藏测试结果目录未被上传的问题，已核对每个仓库均保留两套测试日志及构建包共三个 Actions 产物。
 
 完整可追溯记录见 [本体 CI 摘要](../tests/baselines/2026-11-14-ci.json) 和 peer 仓库 tests/baselines/2026-11-14-ci.json。以上 CI 针对代码/工作流提交；后续仅补充文档和基线，不改包内源码、依赖或工作流。没有创建新 tag、Release 或执行 PyPI 上传，也没有修改生产配置或重启现有机器人。
+
+## 2026-11-14：2.0.0b6 已发布，main README 已更新
+
+[GitHub 预发布](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/releases/tag/v2.0.0b6) 已创建，说明非空；[发布工作流](https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43547125581) 的质量门槛及 PyPI 上传全部成功。[PyPI 2.0.0b6](https://pypi.org/project/nonebot-plugin-aigf-master/2.0.0b6/) 的 wheel/sdist 均已下载，哈希与 CI 使用的构建产物逐字节一致，35 个 Python 模块与 tag `8db6d62` 一致。详见 [b6 发布核验记录](releases/2.0.0b6-verification.json)。
+
+main 的 README 在独立目录完成修改，提交 `f7cf422` 已推送，GitHub README blob 已核对；更新 beta 安装版本、工具协议、按会话切换、诊断、peer 关联和验证边界。main 仍为 1.6.4，本次未改其包内源码或版本。
+
+默认仍为 legacy_json；真实聊天平台、长期灰度与压力验收尚未完成。本次只发布本体，未对 peer 创建新版本。运行副本源码一致，没有改生产配置或重启现有机器人。此前记录中的“未发布/未创建 tag”属于对应阶段历史，当前交付以本节为准。

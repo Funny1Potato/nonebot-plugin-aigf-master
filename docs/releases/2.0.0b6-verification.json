@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-14",
+  "version": "2.0.0b6",
+  "commit": "8db6d62e751f7b5a71cc793c07465cc65a831df0",
+  "tag": "v2.0.0b6",
+  "workflow_url": "https://github.com/Funny1Potato/nonebot-plugin-aigf-master/actions/runs/43547125581",
+  "release_url": "https://github.com/Funny1Potato/nonebot-plugin-aigf-master/releases/tag/v2.0.0b6",
+  "pypi_url": "https://pypi.org/project/nonebot-plugin-aigf-master/2.0.0b6/",
+  "downloaded_packages_verified": true,
+  "matches_ci_artifacts": true,
+  "tag_sources_match": true,
+  "python_modules": 35,
+  "files": [
+    {
+      "name": "nonebot_plugin_aigf_master-2.0.0b6-py3-none-any.whl",
+      "sha256": "ee5315d5a5f7d7fde51960341714fd55d8b100994824ad4f1d25715247dadb56"
+    },
+    {
+      "name": "nonebot_plugin_aigf_master-2.0.0b6.tar.gz",
+      "sha256": "61a32cfcad0ab0fb394e5ac63903e174fd2fb01dc00dc337c0e8c8d705980eed"
+    }
+  ],
+  "github_prerelease": true,
+  "release_draft": false,
+  "release_body_nonempty": true,
+  "release_body_length": 1741,
+  "workflow_conclusion": "success",
+  "main_readme_commit": "f7cf422ba30b97e60219f56855d86a0b3634b758",
+  "main_readme_blob": "9b7978eab19fe2510ec93b83f090d618097b63b2",
+  "main_package_version": "1.6.4",
+  "peer_released": false
+}
